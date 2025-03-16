@@ -41,31 +41,14 @@
  *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
- #if defined(OPENFIRE_WIRELESS_ENABLE) && defined(ARDUINO_ARCH_ESP32)
-
-
 #pragma once
 
+#if defined(OPENFIRE_WIRELESS_ENABLE) && defined(ARDUINO_ARCH_ESP32)
 
 #include <Arduino.h>
 
-/*
 
-#ifdef USE_TINYUSB
-  //#define CFG_TUD_ENABLED
-     //#define CFG_TUD_CDC
-     //#define CFG_TUD_HID
-  //#define CFG_TUH_ENABLED 1
-     //#define CFG_TUH_CDC
-  #include <Adafruit_TinyUSB.h>
-#elif defined(CFG_TUSB_MCU)
-  #error Incompatible USB stack. Use Adafruit TinyUSB.
-#else
-  #include <HID.h>
-#endif
-*/
-
-//#include <Adafruit_TinyUSB.h>
+#include <Adafruit_TinyUSB.h>
 #include "TinyUSB_Devices.h"
 #include "../OpenFIRE_Packet/OpenFIRE_Packet.h"
 
