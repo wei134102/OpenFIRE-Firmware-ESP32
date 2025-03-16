@@ -41,6 +41,8 @@
  *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#pragma once
+
 #ifndef _TINYUSB_DEVICES_H_
 #define _TINYUSB_DEVICES_H_
 
@@ -59,6 +61,9 @@
 /*****************************
  *   GLOBAL SECTION
  *****************************/
+#ifndef _GLOBAL_H_
+#define _GLOBAL_H_
+
 
 class TinyUSBDevices_ {
 public:
@@ -69,9 +74,6 @@ public:
   uint8_t wireless_mode = 0; // 0 = nessuna connessione wireless altro valore connessione // qualsiasi altro valore deve essere diverso da zero - spostato in SerialWireless
 };
 extern TinyUSBDevices_ TinyUSBDevices;
-
-
-
 
 enum HID_RID_e{
   HID_RID_KEYBOARD = 1,
@@ -85,6 +87,7 @@ uint8_t const desc_hid_report[] = {
   TUD_HID_REPORT_DESC_GAMEPAD16(HID_REPORT_ID(HID_RID_e::HID_RID_GAMEPAD))
 };
 
+#endif // _GLOBAL_H_
 
 
 /*****************************
@@ -130,7 +133,10 @@ extern AbsMouse5_ AbsMouse5;
 /******************************
  *    KEYBOARD SECTION
  ******************************/
-  //  Keyboard codes
+#ifndef _KEYBOARD_H_
+#define _KEYBOARD_H_
+
+ //  Keyboard codes
   //  Note these are different in some respects to the TinyUSB codes but 
   //  are compatible with Arduino Keyboard.h API
   
@@ -338,9 +344,13 @@ class Keyboard_ : public Print
 
 extern Keyboard_ Keyboard;
 
+#endif // _KEYBOARD_H_
+
 /*****************************
  *   GAMEPAD SECTION
  *****************************/
+#ifndef _GAMEPAD_H_
+#define _GAMEPAD_H_
 
 // Using the Adafruit Gamepad desc as the basis, but with 4 16-bit axis and a 16-bit 15 button report
 // OpenFIRE define       TinyUSB define in hid.h    
@@ -401,5 +411,7 @@ class Gamepad16_ {
     bool stickRight;
   };
   extern Gamepad16_ Gamepad16;
+
+#endif // _GAMEPAD_H_
 
 #endif // _TINYUSB_DEVICES_H_
