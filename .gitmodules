@@ -1,0 +1,3 @@
+[submodule "src/boards"]
+	path = src/boards
+	url = https://github.com/alessandro-satanassi/OpenFIRE-Boards-ESP32
