@@ -744,7 +744,8 @@ void SerialWireless_::begin() {
   xSemaphoreGive(tx_sem);
   
   WiFi.mode(WIFI_STA);
-  
+  //esp_wifi_init(WIFI_INIT_CONFIG_DEFAULT);
+  //esp_wifi_set_mode(WIFI_MODE_STA);
   //WiFi.setChannel(ESPNOW_WIFI_CHANNEL, WIFI_SECOND_CHAN_NONE);
   
   
