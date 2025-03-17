@@ -114,44 +114,14 @@ void AbsMouse5_::report_absmouse5(void)
       #ifdef OPENFIRE_WIRELESS_DEVICE_ESPNOW
       case ENABLE_ESP_NOW_TO_DONGLE:  
         /* code */
-        // use this variable to keep track of how many
-        // bytes we're stuffing in the transmit buffer
-        //uint16_t sendSize = 0;
-        ///////////////////////////////////////// Stuff buffer with struct
-        //sendSize = OpenFIRE_serialTransfer.txObj(testStruct, sendSize);
-        ///////////////////////////////////////// Stuff buffer with array
-        
-        //int avaliable_num = ESP32_NOW_Serial_OpenFIRE.availableForWrite(); // di default 1000 byte di buffer (si può cambiare)
-
         sendSize = 0;
-        if (SerialWireless.availableForWriteBin() > (sizeof(absmouse5Report) + PREAMBLE_SIZE + POSTAMBLE_SIZE)) {
-          //sendSize = SerialWireless.Packet::txObj(&report_aux, sendSize, sizeof(report_aux));
-          //sendSize = SerialWireless.packet.txObj(&report_aux, sendSize, sizeof(report_aux));
-          //SerialWireless.Packet::sendData(sendSize,PACKET_TX::MOUSE_TX);
-          //SerialWireless.packet.sendData(sendSize,PACKET_TX::MOUSE_TX);
-
-          
+        if (SerialWireless.availableForWriteBin() > (sizeof(absmouse5Report) + PREAMBLE_SIZE + POSTAMBLE_SIZE)) {         
           sendSize = SerialWireless.packet.txObj(&report_aux, sendSize,sizeof(report_aux));
           SerialWireless.packet.constructPacket(sizeof(report_aux), PACKET_TX::MOUSE_TX);
           //SerialWireless.packet.sendData(sendSize,PACKET_TX::GAMEPADE_TX);
           SerialWireless.writeBin(SerialWireless.packet.txBuff, sizeof(report_aux) + PREAMBLE_SIZE+POSTAMBLE_SIZE);
           SerialWireless.SendData(); // try_Send
-
-
-
         }
-        
-        /*
-        // ===============================================================================================================
-        if (ESP32_NOW_Serial_OpenFIRE.availableForWrite() > (sizeof(absmouse5Report) + PREAMBLE_SIZE + POSTAMBLE_SIZE)) {
-          sendSize = OpenFIRE_serialTransfer.txObj(report_aux, sendSize);
-          ///////////////////////////////////////// Send buffer
-          OpenFIRE_serialTransfer.sendData(sendSize,PACKET_TX::MOUSE_TX);
-        }
-        // ===============================================================================================================
-        */
-
-        
         break;
       #endif //OPENFIRE_WIRELESS_DEVICE_ESPNOW
       case ENABLE_WIFI_TO_DONGLE:
@@ -257,39 +227,14 @@ void Keyboard_::report_keyboard(void)
       #ifdef OPENFIRE_WIRELESS_DEVICE_ESPNOW
       case ENABLE_ESP_NOW_TO_DONGLE:
         /* code */
-        //uint16_t sendSize = 0;
-        ///////////////////////////////////////// Stuff buffer with struct
-        //sendSize = OpenFIRE_serialTransfer.txObj(testStruct, sendSize);
-        ///////////////////////////////////////// Stuff buffer with array
-        
         sendSize = 0;
         if (SerialWireless.availableForWriteBin() > (sizeof(_keyReport) + PREAMBLE_SIZE + POSTAMBLE_SIZE)) {
-          //sendSize = SerialWireless.packet.txObj(&report_aux, sendSize, sizeof(report_aux));
-          
-          //SerialWireless.packet.sendData(sendSize,PACKET_TX::KEYBOARD_TX);
-        
           sendSize = SerialWireless.packet.txObj(&report_aux, sendSize,sizeof(report_aux));
           SerialWireless.packet.constructPacket(sizeof(report_aux), PACKET_TX::KEYBOARD_TX);
           //SerialWireless.packet.sendData(sendSize,PACKET_TX::GAMEPADE_TX);
           SerialWireless.writeBin(SerialWireless.packet.txBuff, sizeof(report_aux) + PREAMBLE_SIZE+POSTAMBLE_SIZE);
           SerialWireless.SendData(); // try_Send
-
-        
-        
-        
-        
         }
-
-        /*
-        // ===============================================================================================================
-        if (ESP32_NOW_Serial_OpenFIRE.availableForWrite() > (sizeof(_keyReport) + PREAMBLE_SIZE + POSTAMBLE_SIZE)) {
-          sendSize = OpenFIRE_serialTransfer.txObj(report_aux, sendSize);
-          ///////////////////////////////////////// Send buffer
-          OpenFIRE_serialTransfer.sendData(sendSize,PACKET_TX::KEYBOARD_TX);
-        }
-        // ===============================================================================================================
-        */
-        
         break;
         #endif //OPENFIRE_WIRELESS_DEVICE_ESPNOW
       case ENABLE_WIFI_TO_DONGLE:
@@ -527,11 +472,6 @@ void Gamepad16_::report_gamepad16()
       #ifdef OPENFIRE_WIRELESS_DEVICE_ESPNOW
       case ENABLE_ESP_NOW_TO_DONGLE:
         /* code */
-        //uint16_t sendSize = 0;
-        ///////////////////////////////////////// Stuff buffer with struct
-        //sendSize = OpenFIRE_serialTransfer.txObj(testStruct, sendSize);
-        ///////////////////////////////////////// Stuff buffer with array
-        
         sendSize = 0;
         if (SerialWireless.availableForWriteBin() > (sizeof(gamepad16Report) + PREAMBLE_SIZE + POSTAMBLE_SIZE)) {
           sendSize = SerialWireless.packet.txObj(&report_aux, sendSize,sizeof(report_aux));
@@ -540,17 +480,6 @@ void Gamepad16_::report_gamepad16()
           SerialWireless.writeBin(SerialWireless.packet.txBuff, sizeof(report_aux) + PREAMBLE_SIZE+POSTAMBLE_SIZE);
           SerialWireless.SendData(); // try_Send
         }
-        
-        /*
-        // ===============================================================================================================
-        if (ESP32_NOW_Serial_OpenFIRE.availableForWrite() > (sizeof(gamepad16Report) + PREAMBLE_SIZE + POSTAMBLE_SIZE)) {
-          sendSize = OpenFIRE_serialTransfer.txObj(report_aux, sendSize);
-          ///////////////////////////////////////// Send buffer
-          OpenFIRE_serialTransfer.sendData(sendSize,PACKET_TX::GAMEPADE_TX);
-        }
-        // ===============================================================================================================
-        */
-        
         break;
         #endif //OPENFIRE_WIRELESS_DEVICE_ESPNOW
       case ENABLE_WIFI_TO_DONGLE:
