@@ -87,15 +87,9 @@ AbsMouse5_::AbsMouse5_() {}
 
 void AbsMouse5_::report_absmouse5(void)
 {
-
-  uint8_t sendSize = 0;
-  hid_abs_mouse_report_t report_aux;
-  memcpy(&report_aux, &absmouse5Report, sizeof(absmouse5Report)); //VALUTARE SE TENERLO
-
   if(!TinyUSBDevices.onBattery) {
     while(!usbHid.ready()) yield();  
-    usbHid.sendReport(HID_RID_e::HID_RID_MOUSE, &report_aux, sizeof(report_aux));
-    //usbHid.sendReport(HID_RID_MOUSE, &absmouse5Report, sizeof(absmouse5Report));
+    usbHid.sendReport(HID_RID_e::HID_RID_MOUSE, &absmouse5Report, sizeof(absmouse5Report));
   }
   #ifdef OPENFIRE_WIRELESS_ENABLE
     else {
@@ -103,25 +97,14 @@ void AbsMouse5_::report_absmouse5(void)
     {
       #if defined(ENABLE_BLUETOOTH_OPENFIRE)
       case ENABLE_BLUETOOTH_TO_PC:
-        /* code */
-        //BT_OpenFIRE.send(HID_BT_MOUSE, &absmouse5Report, sizeof(absmouse5Report));
-        BT_OpenFIRE.send(HID_BT_MOUSE, &report_aux, sizeof(report_aux));
-        break;
+        BT_OpenFIRE.send(HID_BT_MOUSE, &absmouse5Report, sizeof(absmouse5Report));
       case ENABLE_BLUETOOTH_TO_DONGLE:
         /* code */
         break;
       #endif // ENABLE_BLUETOOTH_OPENFIRE
       #ifdef OPENFIRE_WIRELESS_DEVICE_ESPNOW
       case ENABLE_ESP_NOW_TO_DONGLE:  
-        /* code */
-        sendSize = 0;
-        if (SerialWireless.availableForWriteBin() > (sizeof(absmouse5Report) + PREAMBLE_SIZE + POSTAMBLE_SIZE)) {         
-          sendSize = SerialWireless.packet.txObj(&report_aux, sendSize,sizeof(report_aux));
-          SerialWireless.packet.constructPacket(sizeof(report_aux), PACKET_TX::MOUSE_TX);
-          //SerialWireless.packet.sendData(sendSize,PACKET_TX::GAMEPADE_TX);
-          SerialWireless.writeBin(SerialWireless.packet.txBuff, sizeof(report_aux) + PREAMBLE_SIZE+POSTAMBLE_SIZE);
-          SerialWireless.SendData(); // try_Send
-        }
+        SerialWireless.SendPacket((const uint8_t *)&absmouse5Report, sizeof(absmouse5Report), PACKET_TX::MOUSE_TX);
         break;
       #endif //OPENFIRE_WIRELESS_DEVICE_ESPNOW
       case ENABLE_WIFI_TO_DONGLE:
@@ -200,15 +183,10 @@ Keyboard_::Keyboard_(void) {}
 
 void Keyboard_::report_keyboard(void) 
 {
-  uint8_t sendSize = 0;
-  hid_keyboard_report_t report_aux; //VALUTARE SE USARE UNA COPIA PER EVENTUALE PROBLEMI CON MULTITASKING  
-  memcpy(&report_aux, &_keyReport, sizeof(_keyReport)); //VALUTARE SE USARE UNA COPIA PER EVENTUALE PROBLEMI CON MULTITASKING
-   
   if(!TinyUSBDevices.onBattery) {
     if (TinyUSBDevice.suspended())  { TinyUSBDevice.remoteWakeup(); }
     while(!usbHid.ready()) yield();   
-    //usbHid.sendReport(HID_RID_KEYBOARD,&_keyReport, sizeof(_keyReport));
-    usbHid.sendReport(HID_RID_e::HID_RID_KEYBOARD,&report_aux, sizeof(report_aux));
+    usbHid.sendReport(HID_RID_e::HID_RID_KEYBOARD,&_keyReport, sizeof(_keyReport));
   }
   #ifdef OPENFIRE_WIRELESS_ENABLE
   else {
@@ -216,9 +194,7 @@ void Keyboard_::report_keyboard(void)
     {
       #if defined(ENABLE_BLUETOOTH_OPENFIRE)
       case ENABLE_BLUETOOTH_TO_PC:
-        /* code */
-        //BT_OpenFIRE.send(HID_BT_KEYBOARD, &_keyReport, sizeof(_keyReport));
-        BT_OpenFIRE.send(HID_BT_KEYBOARD, &report_aux, sizeof(report_aux));
+        BT_OpenFIRE.send(HID_BT_KEYBOARD, &_keyReport, sizeof(_keyReport));
         break;
       case ENABLE_BLUETOOTH_TO_DONGLE:
         /* code */
@@ -226,15 +202,7 @@ void Keyboard_::report_keyboard(void)
       #endif // ENABLE_BLUETOOTH_OPENFIRE
       #ifdef OPENFIRE_WIRELESS_DEVICE_ESPNOW
       case ENABLE_ESP_NOW_TO_DONGLE:
-        /* code */
-        sendSize = 0;
-        if (SerialWireless.availableForWriteBin() > (sizeof(_keyReport) + PREAMBLE_SIZE + POSTAMBLE_SIZE)) {
-          sendSize = SerialWireless.packet.txObj(&report_aux, sendSize,sizeof(report_aux));
-          SerialWireless.packet.constructPacket(sizeof(report_aux), PACKET_TX::KEYBOARD_TX);
-          //SerialWireless.packet.sendData(sendSize,PACKET_TX::GAMEPADE_TX);
-          SerialWireless.writeBin(SerialWireless.packet.txBuff, sizeof(report_aux) + PREAMBLE_SIZE+POSTAMBLE_SIZE);
-          SerialWireless.SendData(); // try_Send
-        }
+        SerialWireless.SendPacket((const uint8_t *)&_keyReport, sizeof(_keyReport), PACKET_TX::KEYBOARD_TX);
         break;
         #endif //OPENFIRE_WIRELESS_DEVICE_ESPNOW
       case ENABLE_WIFI_TO_DONGLE:
@@ -444,16 +412,11 @@ void Gamepad16_::releaseAll() {
 }
 
 void Gamepad16_::report_gamepad16()
-{
-  uint8_t sendSize = 0;
-  hid_gamepad16_report_t report_aux; //VALUTARE SE USARE UNA COPIA PER EVENTUALE PROBLEMI CON MULTITASKING  
-  memcpy(&report_aux, &gamepad16Report, sizeof(gamepad16Report)); //VALUTARE SE USARE UNA COPIA PER EVENTUALE PROBLEMI CON MULTITASKING
-   
+{  
   if(!TinyUSBDevices.onBattery) {
     if (TinyUSBDevice.suspended())  { TinyUSBDevice.remoteWakeup(); }
     while(!usbHid.ready()) yield();   
-    //usbHid.sendReport(HID_RID_GAMEPAD,&gamepad16Report,sizeof(gamepad16Report));
-    usbHid.sendReport(HID_RID_e::HID_RID_GAMEPAD,&report_aux, sizeof(report_aux));
+    usbHid.sendReport(HID_RID_e::HID_RID_GAMEPAD,&gamepad16Report,sizeof(gamepad16Report));
   }
   #ifdef OPENFIRE_WIRELESS_ENABLE
   else {
@@ -461,9 +424,7 @@ void Gamepad16_::report_gamepad16()
     {
       #if defined(ENABLE_BLUETOOTH_OPENFIRE)
       case ENABLE_BLUETOOTH_TO_PC:
-        /* code */
-        //BT_OpenFIRE.send(HID_BT_GAMEPAD, &gamepad16Report, sizeof(gamepad16Report));
-        BT_OpenFIRE.send(HID_BT_GAMEPAD, &report_aux, sizeof(report_aux));
+        BT_OpenFIRE.send(HID_BT_GAMEPAD, &gamepad16Report, sizeof(gamepad16Report));
         break;
       case ENABLE_BLUETOOTH_TO_DONGLE:
         /* code */
@@ -471,15 +432,7 @@ void Gamepad16_::report_gamepad16()
       #endif // ENABLE_BLUETOOTH_OPENFIRE
       #ifdef OPENFIRE_WIRELESS_DEVICE_ESPNOW
       case ENABLE_ESP_NOW_TO_DONGLE:
-        /* code */
-        sendSize = 0;
-        if (SerialWireless.availableForWriteBin() > (sizeof(gamepad16Report) + PREAMBLE_SIZE + POSTAMBLE_SIZE)) {
-          sendSize = SerialWireless.packet.txObj(&report_aux, sendSize,sizeof(report_aux));
-          SerialWireless.packet.constructPacket(sizeof(report_aux), PACKET_TX::GAMEPADE_TX);
-          //SerialWireless.packet.sendData(sendSize,PACKET_TX::GAMEPADE_TX);
-          SerialWireless.writeBin(SerialWireless.packet.txBuff, sizeof(report_aux) + PREAMBLE_SIZE+POSTAMBLE_SIZE);
-          SerialWireless.SendData(); // try_Send
-        }
+        SerialWireless.SendPacket((const uint8_t *)&gamepad16Report, sizeof(gamepad16Report), PACKET_TX::GAMEPADE_TX);
         break;
         #endif //OPENFIRE_WIRELESS_DEVICE_ESPNOW
       case ENABLE_WIFI_TO_DONGLE:

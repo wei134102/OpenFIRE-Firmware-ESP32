@@ -48,7 +48,7 @@
 #include <Arduino.h>
 
 
-#include <Adafruit_TinyUSB.h>
+#include <Adafruit_TinyUSB.h> // serve per alcune intestazioni
 #include "TinyUSB_Devices.h"
 #include "../OpenFIRE_Packet/OpenFIRE_Packet.h"
 
@@ -64,29 +64,9 @@
   // vediamo
 #endif
 
-//#include "tusb_gamepad16.h"
-
-//SerialTransfer OpenFIRE_transfer_ab;
-
-
-
-
 /*****************************
  *   ESP_NOW
  *****************************/
-
-/*
- class ESP_NOW_Serial_Class_OpenFIRE : public ESP_NOW_Serial_Class {
-  public:
-  // Constructor of the class
-  ESP_NOW_Serial_Class_OpenFIRE(const uint8_t *mac_addr, uint8_t channel, wifi_interface_t iface = WIFI_IF_STA, const uint8_t *lmk = NULL, bool remove_on_fail = false) : ESP_NOW_Serial_Class(mac_addr, channel, iface, lmk, remove_on_fail) {}
-
-  // Destructor of the class
-  ~ESP_NOW_Serial_Class_OpenFIRE() {}
-
-
-};
-*/
 
 enum WIRELESS_MODE {
   NONE =  0,
@@ -111,25 +91,11 @@ enum PACKET_TX {
 #define _SERIAL_STREAM_H_
 
 
-//#define ESPNOW_WIFI_CHANNEL 4
-
-class SerialWireless_ : public Stream       //, public Packet
+class SerialWireless_ : public Stream       
   {
     
   public:
-  //uint8_t wireless_mode = 0;  
-  // espo32s3 n16r8 workkit
-  //const uint8_t peerAddress[6] = {0xA0, 0x85, 0xE3, 0xE8, 0x0F, 0xB8}; // altra periferica con cui si vuole comunicare indirizzo del ESP32
   
-  //ESP_NOW_Serial_Class_OpenFIRE ESP32_NOW_Serial_OpenFIRE(peerAddress,ESPNOW_WIFI_CHANNEL,WIFI_IF_STA,NULL,false);
-  //ESP_NOW_Serial_Class_OpenFIRE ESP32_NOW_Serial_OpenFIRE;
-
-  //SerialTransfer OpenFIRE_serialTransfer;
-  //configST myConfig;
-
-  //SemaphoreHandle_t tx_sem = NULL;
-  //SemaphoreHandle_t tx_sem = NULL;
-
   // ======= per FIFO SERIAL ===============
   // ===== per write === buffer lineare ====
   #define FIFO_SIZE_WRITE_SERIAL 200
@@ -148,9 +114,7 @@ class SerialWireless_ : public Stream       //, public Packet
   // ============================================
 
   Packet  packet;
-  //uint8_t buffer_espnow[ESP_NOW_MAX_DATA_LEN]; // buffer di utilità per inviare con ESP_NOW
-
-
+  
   // per buffer lettura
   volatile uint16_t _readLen = 0;
   volatile uint16_t _writer = 0;
@@ -167,24 +131,9 @@ class SerialWireless_ : public Stream       //, public Packet
   #define BUFFER_SIZE 1024 //buffer scrittura
   uint8_t buffer[BUFFER_SIZE];
   bool _overflow_write = false; 
-  /*
-  volatile uint16_t _readLen = 0;
-  volatile uint16_t _writer = 0;
-  volatile uint16_t _reader = 0;
-  #define FIFO_SIZE_READ 256
-  uint8_t _queue[FIFO_SIZE_READ];
-  bool _overflow = false; 
-  */
   // fine per buffer scrittura
-  
-
-
-
-
-  SerialWireless_() : Stream() {
-    //ESP_NOW_Serial_Class_OpenFIRE ESP32_NOW_Serial_OpenFIRE(peerAddress,ESPNOW_WIFI_CHANNEL,WIFI_IF_STA,NULL,false);
-
-  }
+ 
+  SerialWireless_() : Stream() {}
   ~SerialWireless_() {}
   
   void begin();
@@ -218,57 +167,18 @@ class SerialWireless_ : public Stream       //, public Packet
   //inserito per gestire Packet
   volatile uint16_t numAvailablePacket = 0;
   int availablePacket();
-
         
   // ======== generiche ============
   void SendData();  // utilizziamo anche flush
-  void SendPacket(); // non penso lo utilizzeremo
+  void SendPacket(const uint8_t *data, const uint8_t &len,const uint8_t &packetID); // non penso lo utilizzeremo
 
-  // ======== specifiche ===========
-  void SendPacketKeyboard();
-  void SendPacketMouse();
-  void SendPacketGamepad();
-  void SendPacketSerial();
-
-  void ReadPacketKeyboard();
-  void ReadPacketMouse();
-  void ReadPacketGamepad();
-  void ReadPacketSerial();
-  // ===============================
-
-  bool checkForTxData(); // non implementato
-  bool checkForRxPacket(); // andrà nel ciclo principale
-  size_t tryToSend(); // non impelementato
+  bool checkForRxPacket(); // andrà nel ciclo principale .. messo nella callback
 
   // ===============================
-  /*
-  enum PACKET_TX {
-    SERIAL_TX = 1,
-    KEYBOARD_TX,
-    MOUSE_TX,
-    GAMEPADE_TX
-  };
-  */
   
 private:
 
-  //static void _esp_now_tx_cb(const uint8_t *mac_addr, esp_now_send_status_t status);
-  //static void _esp_now_rx_cb(const esp_now_recv_info_t *info, const uint8_t *data, int len);
-  // per utilità
-  uint16_t sendSize = 0;
-  /*
-  // per buffer lettura
-  volatile uint16_t _readLen = 0;
-  volatile uint16_t _writer = 0;
-  volatile uint16_t _reader = 0;
-  #define FIFO_SIZE_READ 256
-  uint8_t _queue[FIFO_SIZE_READ];
-  // fine per buffer lettura
-  */
-  
-  //bool _overflow = false; 
-
-  };
+};
 extern SerialWireless_ SerialWireless;
 
 #endif // _SERIAL_STREAM_H_

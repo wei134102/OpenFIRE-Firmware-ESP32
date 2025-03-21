@@ -47,7 +47,7 @@ COLLEG 43 A USB SERIAL JTAG U0TXD TX |-)            (-| 3V3 VDD33
 ```
 
                                         (_____)
-                     A Button     0  |-) *USB* (-| VBUS (USB voltage)
+                     A Button     0  |-) *USB* (-| VBUS 5v (USB voltage)
                      B Button     1  |-)       (-| VSYS (Input from Battery/Output to NeoPixels)
                                  GND |x)       (x| GND
                      C Button     2  |-)       (x| 3V3 En
