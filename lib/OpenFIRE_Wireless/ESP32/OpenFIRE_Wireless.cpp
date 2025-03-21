@@ -108,9 +108,7 @@ int SerialWireless_::availableForWriteBin() {
 }
 
 void SerialWireless_::flush() {
-  //uint8_t sendSize = 0;
   if (availableForWriteBin() > (lenBufferSerialWrite + PREAMBLE_SIZE + POSTAMBLE_SIZE)) {
-    //sendSize = packet.txObj(bufferSerialWrite, sendSize, lenBufferSerialWrite);
     memcpy(&packet.txBuff[PREAMBLE_SIZE], bufferSerialWrite, lenBufferSerialWrite);
     packet.constructPacket(lenBufferSerialWrite, PACKET_TX::SERIAL_TX);
     writeBin(packet.txBuff, lenBufferSerialWrite + PREAMBLE_SIZE+POSTAMBLE_SIZE);
@@ -270,7 +268,7 @@ void SerialWireless_::begin() {
   }
 
   myConfig.port         = &Serial; // questo andrà tolta - rimasta solo per contabilità =========================================
-  myConfig.debug        = true; //false; //true;
+  myConfig.debug        = false; //true; //false; //true;
   myConfig.debugPort    = &Serial;
   myConfig.timeout      = DEFAULT_TIMEOUT; // 50ms
   myConfig.callbacks    = callbackArr;

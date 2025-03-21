@@ -127,9 +127,11 @@ void OffscreenToggle();
 void AutofireSpeedToggle();
 void SelectCalProfileFromBtnMask(const uint32_t &mask);
 void ExecRunMode();
+
 #ifdef ARDUINO_ARCH_RP2040
   void rp2040EnablePWMTimer(const unsigned int &slice_num, const unsigned int &frequency);
 #endif
+
 // ==========================================================
 
 #endif // _SAMCOENHANCED_H_

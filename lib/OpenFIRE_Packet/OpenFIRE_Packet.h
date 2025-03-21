@@ -70,76 +70,17 @@ class Packet
 	uint8_t currentPacketID();
 	void    reset();
 
-	// aggiunti da me
-	//uint8_t sendData(const uint16_t& messageLen, const uint8_t packetID = 0);
-	//uint8_t available();
-	//bool    tick();
-	//void    reset_fifo();
-
-
-	/*
-	 uint16_t Packet::txObj(const T &val, const uint16_t &index=0, const uint16_t &len=sizeof(T))
-	 Description:
-	 ------------
-	  * Stuffs "len" number of bytes of an arbitrary object (byte, int,
-	  float, double, struct, etc...) into the transmit buffer (txBuff)
-	  starting at the index as specified by the argument "index"
-
-	 Inputs:
-	 -------
-	  * const T &val - Pointer to the object to be copied to the
-	  transmit buffer (txBuff)
-	  * const uint16_t &index - Starting index of the object within the
-	  transmit buffer (txBuff)
-	  * const uint16_t &len - Number of bytes of the object "val" to transmit
-
-	 Return:
-	 -------
-	  * uint16_t maxIndex - uint16_t maxIndex - Index of the transmit buffer (txBuff) that directly follows the bytes processed
-	  by the calling of this member function
-	*/
-	
-	
 	template <typename T>
 	uint8_t txObj(const T* val, const uint8_t& index = 0, const uint8_t& len = sizeof(T))
-	//uint8_t txObj(uint8_t* val, uint8_t index, uint8_t len)
 	{
-		
 		memcpy(&txBuff[PREAMBLE_SIZE + index], val, len);
-		
 		return len + index;
 	}
 
-
-	/*
-	 uint16_t Packet::rxObj(const T &val, const uint16_t &index=0, const uint16_t &len=sizeof(T))
-	 Description:
-	 ------------
-	  * Reads "len" number of bytes from the receive buffer (rxBuff)
-	  starting at the index as specified by the argument "index"
-	  into an arbitrary object (byte, int, float, double, struct, etc...)
-
-	 Inputs:
-	 -------
-	  * const T &val - Pointer to the object to be copied into from the
-	  receive buffer (rxBuff)
-	  * const uint16_t &index - Starting index of the object within the
-	  receive buffer (rxBuff)
-	  * const uint16_t &len - Number of bytes in the object "val" received
-
-	 Return:
-	 -------
-	  * uint16_t maxIndex - Index of the receive buffer (rxBuff) that directly follows the bytes processed
-	  by the calling of this member function
-	*/
-	
-	//uint8_t rxObj(void* val, uint8_t index, uint8_t len)
 	template <typename T>
 	uint16_t rxObj(const T* val, uint8_t& index = 0, const uint8_t& len = sizeof(T))
 	{
-		
 		memcpy(val, &txBuff[PREAMBLE_SIZE + index], len);
-		
 		return len + index;
 	}
 
@@ -174,11 +115,9 @@ class Packet
 	uint32_t timeout = DEFAULT_TIMEOUT;
 
 	uint8_t csTable_crc[256]; 
-	//const uint8_t poly = 0x9B;
 	void generateTable_crc();
 	uint8_t calculate_crc(const uint8_t& val);
 	uint8_t calculate_crc(uint8_t arr[], uint8_t len);
-
 
 	void    calcOverhead(uint8_t arr[], const uint8_t& len);
 	int16_t findLast(uint8_t arr[], const uint8_t& len);

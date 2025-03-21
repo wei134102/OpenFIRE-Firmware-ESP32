@@ -1066,18 +1066,18 @@ void ExecGunModeDocked()
                     if((analogValueX < ANALOG_STICK_DEADZONE_X_MIN || analogValueX > ANALOG_STICK_DEADZONE_X_MAX) ||   // 696969 per calibrazione
                       (analogValueY < ANALOG_STICK_DEADZONE_Y_MIN || analogValueY > ANALOG_STICK_DEADZONE_Y_MAX)) {    // 696969 per calibrazione
                         if(analogValueX > ANALOG_STICK_DEADZONE_X_MAX) {  // 696969 per calibrazione
-                            bitSet(aStickDir, 0), bitClear(aStickDir, 1);
+                            bitSet(aStickDir, 0); bitClear(aStickDir, 1);
                         } else if(analogValueX < ANALOG_STICK_DEADZONE_X_MIN) {  // 696969 per calibrazione
-                            bitSet(aStickDir, 1), bitClear(aStickDir, 0);
+                            bitSet(aStickDir, 1); bitClear(aStickDir, 0);
                         } else {
-                            bitClear(aStickDir, 0), bitClear(aStickDir, 1);
+                            bitClear(aStickDir, 0); bitClear(aStickDir, 1);
                         }
                         if(analogValueY > ANALOG_STICK_DEADZONE_Y_MAX) {   // 696969 per calibrazione
-                            bitSet(aStickDir, 2), bitClear(aStickDir, 3);
+                            bitSet(aStickDir, 2); bitClear(aStickDir, 3);
                         } else if(analogValueY < ANALOG_STICK_DEADZONE_Y_MIN) {   // 696969 per calibrazione
-                            bitSet(aStickDir, 3), bitClear(aStickDir, 2);
+                            bitSet(aStickDir, 3); bitClear(aStickDir, 2);
                         } else {
-                            bitClear(aStickDir, 2), bitClear(aStickDir, 3);
+                            bitClear(aStickDir, 2); bitClear(aStickDir, 3);
                         }
                     }
 
