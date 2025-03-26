@@ -94,6 +94,8 @@ void setup() {
         }
     }
  
+
+
     // We're setting our custom USB identifiers, as defined in the configuration area!
     #ifdef USE_TINYUSB
         // Initializes TinyUSB identifier
@@ -132,7 +134,84 @@ void setup() {
     #ifdef LED_ENABLE
         OF_RGB::LedInit();
     #endif // LED_ENABLE
+
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // 696969 == CODICE PER CALIBRARE LEVETTA STICK IN POSIZIONE CENTRALE =============
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    #if defined(ARDUINO_ARCH_ESP32) && defined(USES_ANALOG)   // la facciamo solo per ESP32 e lasciamo RP2040 come gestione originale
+    uint16_t analogValueX;
+    uint16_t analogValueY;
+    //unsigned long startTime = 0;
+    unsigned long startTime = millis();
+    while ((millis()-startTime) < 2000)
+    {
+        analogValueX = analogRead(SamcoPreferences::pins[OF_Const::analogX]);
+        analogValueY = analogRead(SamcoPreferences::pins[OF_Const::analogY]);
+        if (analogValueX > ANALOG_STICK_DEADZONE_X_MAX) ANALOG_STICK_DEADZONE_X_MAX = analogValueX;
+        if (analogValueX < ANALOG_STICK_DEADZONE_X_MIN) ANALOG_STICK_DEADZONE_X_MIN = analogValueX;
+        if (analogValueY > ANALOG_STICK_DEADZONE_Y_MAX) ANALOG_STICK_DEADZONE_Y_MAX = analogValueY;
+        if (analogValueY < ANALOG_STICK_DEADZONE_Y_MIN) ANALOG_STICK_DEADZONE_Y_MIN = analogValueY;
+    }
+    ANALOG_STICK_DEADZONE_X_MIN -= 400;
+    ANALOG_STICK_DEADZONE_X_MAX += 400;
+    ANALOG_STICK_DEADZONE_Y_MIN -= 400;
+    ANALOG_STICK_DEADZONE_Y_MAX += 400;
+    #endif
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // 696969 == FINE CODICE CALIBRAZIONE STICK ========================================
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     
+#ifndef COMMENTO    
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // === 696969 === NUOVA GESTIONE INIZIALIZZAIZONE USB O CONNESSIONE WIRELESS =============================
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    TinyUSBDevices.begin(1);
+    #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)// SE WIRELESS
+        #define MILLIS_TIMEOUT  1000 //1 secondi
+        unsigned long lastMillis = millis ();
+        while ((millis () - lastMillis <= MILLIS_TIMEOUT) && (!TinyUSBDevice.mounted())) { yield(); }
+        if (!TinyUSBDevice.mounted()) {
+            SerialWireless.begin();
+            //TinyUSBDevices.onBattery = false; // lo imposta a true solo dopo che è stata stabilita e riconosciuta connessione tra dongle e gun
+            //uint8_t stato_wireless = 0;
+            SerialWireless.connection_gun();
+        }
+    #endif // OPENFIRE_WIRELESS_ENABLE
+
+    while(!TinyUSBDevice.mounted() && !TinyUSBDevices.onBattery) { yield();}
+
+    // arriva qui solo se e' stato connesso l'usb o e' stata negoziata e stabilita una connessione wireless
+
+    if (TinyUSBDevice.mounted()) {
+        Serial.begin(9600);
+        Serial.setTimeout(0);
+        #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
+            if (TinyUSBDevices.onBattery) {  // nel caso incredibile che l'USB sia montato nel momnto esatto in cui è stata stabilita connessione wireless
+                TinyUSBDevices.onBattery = false;
+                SerialWireless.end();
+            }
+        #endif 
+        Serial_OpenFIRE_Stream = & Serial;
+    }  
+    #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
+    else {     
+        // CHIUDI TUTTO CIO' CHE E' USB SE E' DA CHIUDERE
+        TinyUSBDevice.clearConfiguration();
+        TinyUSBDevice.detach();
+        Serial_OpenFIRE_Stream = &SerialWireless;
+    }
+    #endif
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // === 696969 === FINE NUOVA GESTIONE INIZIALIZZAIZONE USB O CONNESSIONE WIRELESS ========================
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#endif // COMMENTO
+
+#ifdef COMMENTO
 #ifdef USE_TINYUSB
     // TUSBDeviceSetup; // 696969 a cosa serve ? cosa fa ? che senso ha ? - tolto non ancora fatta transizione
     #if defined(ARDUINO_RASPBERRY_PI_PICO_W) && defined(ENABLE_CLASSIC)
@@ -182,8 +261,11 @@ void setup() {
     // was getting weird hangups... maybe nothing, or maybe related to dragons, so wait a bit
     delay(100);
 #endif
-    
+#endif // COMMENTO
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////// 696969 ////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //#define Serial (*Serial_OpenFIRE_Stream)
     //#undef Serial
     /*
@@ -210,6 +292,11 @@ void setup() {
     #endif // OPENFIRE_WIRELESS_ENABLE
     // ============ 696969 ===== fine ripristino di Serial dopo definizione per connessione seriali ==============
     */
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////// 696969 ////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    
     #ifdef OPENFIRE_WIRELESS_ENABLE
         //extern Stream* Serial_OpenFIRE_Stream;
         #ifdef Serial
@@ -219,8 +306,12 @@ void setup() {
         #define Serial (*Serial_OpenFIRE_Stream)
     #endif // OPENFIRE_WIRELESS_ENABLE
     
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////// 696969 ////////////////////////////////////////////////
-    
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
 
     /////////////////// AbsMouse5.init(true); // 696969 rimosso per il mio nuovo OpenFire_TinyDevice
 
@@ -231,28 +322,6 @@ void setup() {
                                   FW_Common::profileData[FW_Common::profiles.selectedProfile].adjY);
     FW_Common::OpenFIREper.deinit(0);
 
-    // 696969 == CODICE PER CALIBRARE LEVETTA STICK IN POSIZIONE CENTRALE =============
-    #if defined(ARDUINO_ARCH_ESP32) && defined(USES_ANALOG)   // la facciamo solo per ESP32 e lasciamo RP2040 come gestione originale
-    uint16_t analogValueX;
-    uint16_t analogValueY;
-    //unsigned long startTime = 0;
-    unsigned long startTime = millis();
-    while ((millis()-startTime) < 2000)
-    {
-        analogValueX = analogRead(SamcoPreferences::pins[OF_Const::analogX]);
-        analogValueY = analogRead(SamcoPreferences::pins[OF_Const::analogY]);
-        if (analogValueX > ANALOG_STICK_DEADZONE_X_MAX) ANALOG_STICK_DEADZONE_X_MAX = analogValueX;
-        if (analogValueX < ANALOG_STICK_DEADZONE_X_MIN) ANALOG_STICK_DEADZONE_X_MIN = analogValueX;
-        if (analogValueY > ANALOG_STICK_DEADZONE_Y_MAX) ANALOG_STICK_DEADZONE_Y_MAX = analogValueY;
-        if (analogValueY < ANALOG_STICK_DEADZONE_Y_MIN) ANALOG_STICK_DEADZONE_Y_MIN = analogValueY;
-    }
-    ANALOG_STICK_DEADZONE_X_MIN -= 400;
-    ANALOG_STICK_DEADZONE_X_MAX += 400;
-    ANALOG_STICK_DEADZONE_Y_MIN -= 400;
-    ANALOG_STICK_DEADZONE_Y_MAX += 400;
-    #endif
-    // 696969 == FINE CODICE CALIBRAZIONE STICK ========================================
-    
     // First boot sanity checks.
     // Check if loading has failde
     if((FW_Common::nvPrefsError != SamcoPreferences::Error_Success) ||

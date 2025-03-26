@@ -81,7 +81,11 @@ enum PACKET_TX {
   SERIAL_TX = 1,
   KEYBOARD_TX,
   MOUSE_TX,
-  GAMEPADE_TX
+  GAMEPADE_TX,
+  CONNECTION,
+  CONN_REQ_TO_GUN,      // RICHIESTA INVIATA DA DONGLE VERSO GUN (INVIA MAC ADDRESS DEL DONGLE ed il MAC ADDRES A CUI E' STATA INVIATA LA RICHIESTA (PUO' ESSERE BROADCAST))
+  CONN_REQ_TO_DONGLE,   // RICHIESTA INVIATA DA GUN A DONGLE, PER ACCETTARE RICHIESTA DI CONNESSIONE (INVIA MAC ADDRESS DEL GUN E MAC ADDRES A CUI E' STATA INVIATA RICHIESTA)
+  CONN_ACCEPT,          // IL DONGLE HA ACCETTATO CONNESSIONE (INVIA ANCHE MAC ADDRES DEL DONGLE E DELLA GUN A CUI E' STATA ACCETTATA LA RICHIESTA)
 };
 
 /*****************************
@@ -96,6 +100,10 @@ class SerialWireless_ : public Stream
     
   public:
   
+  uint8_t mac_esp_inteface[6];
+  uint8_t mac_esp_another_card[6];
+  uint8_t stato_connessione_wireless = 0;
+
   // ======= per FIFO SERIAL ===============
   // ===== per write === buffer lineare ====
   #define FIFO_SIZE_WRITE_SERIAL 200
@@ -137,6 +145,7 @@ class SerialWireless_ : public Stream
   ~SerialWireless_() {}
   
   void begin();
+  bool end();
   
   // overrade da ::Stream
   int peek() override;
@@ -173,6 +182,9 @@ class SerialWireless_ : public Stream
   void SendPacket(const uint8_t *data, const uint8_t &len,const uint8_t &packetID); // non penso lo utilizzeremo
 
   bool checkForRxPacket(); // andrà nel ciclo principale .. messo nella callback
+
+  bool connection_dongle();
+  bool connection_gun();
 
   // ===============================
   
