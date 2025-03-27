@@ -162,8 +162,35 @@ void setup() {
     // 696969 == FINE CODICE CALIBRAZIONE STICK ========================================
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+#ifdef USE_TINYUSB
+    // TUSBDeviceSetup; // 696969 a cosa serve ? cosa fa ? che senso ha ? - tolto non ancora fatta transizione
+    #if defined(ARDUINO_RASPBERRY_PI_PICO_W) && defined(ENABLE_CLASSIC)
+        // is VBUS (USB voltage) detected?
+        if(digitalRead(34)) {
+            // If so, we're connected via USB, so initializing the USB devices chunk.
+            TinyUSBDevices.begin(1); // 696969 inserito questo al posto di quello sotto
+            // TUSBDeviceSetup.begin(1); // 696969 tolto ancora non fatta completa transizione
+            // wait until device mounted
+            while(!USBDevice.mounted()) { yield(); }
+            Serial.begin(9600);
+            Serial.setTimeout(0);
+            Serial_OpenFIRE_Stream = &Serial; // 696969 inserito da me
+        } else {
+            // Else, we're on batt, so init the Bluetooth chunks.
+            if(SamcoPreferences::usb.deviceName[0] == '\0')
+                TinyUSBDevices.beginBT(DEVICE_NAME, DEVICE_NAME);
+            else TinyUSBDevices.beginBT(SamcoPreferences::usb.deviceName, SamcoPreferences::usb.deviceName);
+        }   
+    #elif defined(ARDUINO_ARCH_RP2040) // 696969 messo per mantenere vecchio codice
+        // Initializing the USB devices chunk.
+        TinyUSBDevices.begin(1);
+        // wait until device mounted
+        while(!USBDevice.mounted()) { yield(); }
+        Serial.begin(9600);   // 9600 = 1ms data transfer rates, default for MAMEHOOKER COM devices.
+        Serial.setTimeout(0);
+        Serial_OpenFIRE_Stream = &Serial; // 696969 inserito da me
+    #else // 696969 inserito da me // ARDUINO_ARCH_ESP32
     
-#ifndef COMMENTO    
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     // === 696969 === NUOVA GESTIONE INIZIALIZZAIZONE USB O CONNESSIONE WIRELESS =============================
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -191,8 +218,9 @@ void setup() {
         #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
             if (TinyUSBDevices.onBattery) {  // nel caso incredibile che l'USB sia montato nel momnto esatto in cui è stata stabilita connessione wireless
                 TinyUSBDevices.onBattery = false;
-                SerialWireless.end();
+                //SerialWireless.end();
             }
+            if (TinyUSBDevices.wireless_mode != WIRELESS_MODE::NONE) SerialWireless.end();
         #endif 
         Serial_OpenFIRE_Stream = & Serial;
     }  
@@ -207,61 +235,13 @@ void setup() {
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     // === 696969 === FINE NUOVA GESTIONE INIZIALIZZAIZONE USB O CONNESSIONE WIRELESS ========================
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-#endif // COMMENTO
-
-#ifdef COMMENTO
-#ifdef USE_TINYUSB
-    // TUSBDeviceSetup; // 696969 a cosa serve ? cosa fa ? che senso ha ? - tolto non ancora fatta transizione
-    #if defined(ARDUINO_RASPBERRY_PI_PICO_W) && defined(ENABLE_CLASSIC)
-        // is VBUS (USB voltage) detected?
-        if(digitalRead(34)) {
-            // If so, we're connected via USB, so initializing the USB devices chunk.
-            TinyUSBDevices.begin(1); // 696969 inserito questo al posto di quello sotto
-            // TUSBDeviceSetup.begin(1); // 696969 tolto ancora non fatta completa transizione
-            // wait until device mounted
-            while(!USBDevice.mounted()) { yield(); }
-            Serial.begin(9600);
-            Serial.setTimeout(0);
-        } else {
-            // Else, we're on batt, so init the Bluetooth chunks.
-            if(SamcoPreferences::usb.deviceName[0] == '\0')
-                TinyUSBDevices.beginBT(DEVICE_NAME, DEVICE_NAME);
-            else TinyUSBDevices.beginBT(SamcoPreferences::usb.deviceName, SamcoPreferences::usb.deviceName);
-        }
-    #elif defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE) // 696969 inserito da me
-        TinyUSBDevices.begin(1);
-        // wait until device mounted
-        #define MILLIS_TIMEOUT  5000 //5 secondi
-        unsigned long lastMillis = millis ();
-        while ((millis () - lastMillis <= MILLIS_TIMEOUT) && (!TinyUSBDevice.mounted())) { yield(); }
-        if (TinyUSBDevice.mounted())
-        {
-            Serial.begin(9600);
-            Serial.setTimeout(0);
-            Serial_OpenFIRE_Stream = & Serial;
-        }  
-        else
-        {     
-            SerialWireless.begin();
-            while (!TinyUSBDevices.onBattery) { yield(); }
-            Serial_OpenFIRE_Stream = &SerialWireless;
-        }    
-    #else
-        // Initializing the USB devices chunk.
-        TinyUSBDevices.begin(1);
-        // wait until device mounted
-        while(!USBDevice.mounted()) { yield(); }
-        Serial.begin(9600);   // 9600 = 1ms data transfer rates, default for MAMEHOOKER COM devices.
-        Serial.setTimeout(0);
-        Serial_OpenFIRE_Stream = &Serial; // 696969 inserito da me
-    #endif // ARDUINO_RASPBERRY_PI_PICO_W
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////// 
+    #endif
 #else
     // was getting weird hangups... maybe nothing, or maybe related to dragons, so wait a bit
     delay(100);
 #endif
-#endif // COMMENTO
+
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////// 696969 ////////////////////////////////////////////////
