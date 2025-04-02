@@ -2,11 +2,21 @@
 
 #include "OpenFIRE_Wireless.h"
 
-#define ESPNOW_WIFI_CHANNEL 4
+//#define ESPNOW_WIFI_CHANNEL 4
 
 // la potenza di trasmissione può andare da 8 a 84, dove 84 è il valore massimo che corrisponde a 20 db
 #define ESPNOW_WIFI_POWER 69 
-  
+
+USB_Data_GUN_Wireless usb_data_wireless = {
+  "OpenFIRE_DONGLE",
+  "FIRECon",
+  0xF143,
+  0x1998, // 0x0001
+  1,
+  ESPNOW_WIFI_CHANNEL
+  //,""
+};
+
 SerialWireless_ SerialWireless;
 extern Adafruit_USBD_HID usbHid;
 SemaphoreHandle_t tx_sem = NULL;
@@ -20,7 +30,14 @@ void packet_callback_read_dongle(); // callback packet
 void packet_callback_read_gun(); // callback packet
 
 ///////////////////////////////////////////////////////////////////
-uint8_t aux_buffer[13];
+//#define SIZE_BASE_AUX 13
+uint8_t aux_buffer[13 + sizeof(usb_data_wireless)];
+// 1 BYTE INDICATA L'AVANZAMENTO DELLO STABILIMENTO DELLA CONNESSIONE,A CHE PUNTO SIAMO
+// 6 BYTE IL MAC ADDRESS DEL DISPOSITIVO CHE TRASMETTE
+// 6 BYTE IL MAC ADDRESS DEL DISPOSITIVO A CUI E' INDIRIZZATO IL PACCHETTO
+// ALL'ULTIMO INVIO LA GUN INVIA ANCHE I DATI DELLA STRUTTURA USB_DATA_WIRELESS CHE CONTIENE VID, PID, ECC. DELLA GUN IN MODO CHE IL DONGLE INZIALIZZI LA CONSSESIONE USB CON QUEI DATI
+
+
 //uint8_t mac_esp_another_card[6];
 //uint8_t stato_conneddione_wireless = 0;
 uint8_t tipo_connessione = 0;
@@ -332,7 +349,7 @@ void SerialWireless_::begin() {
   
   packet.begin(myConfig);
   //TinyUSBDevices.onBattery = true;
-  stato_connessione_wireless = 0;
+  stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION; //0;
   TinyUSBDevices.wireless_mode = WIRELESS_MODE::ENABLE_ESP_NOW_TO_DONGLE;
 }
 
@@ -365,13 +382,13 @@ bool SerialWireless_::connection_dongle() {
   
   
   
-  aux_buffer_tx[0] = 1;
+  aux_buffer_tx[0] = CONNECTION_STATE::TX_DONGLE_SEARCH_GUN_BROADCAST; //1; // CONNECTION_STATE::TX_DONGLE_SEARCH_GUN_BROADCAST
   memcpy(&aux_buffer_tx[1], SerialWireless.mac_esp_inteface, 6);
   memcpy(&aux_buffer_tx[7], peerAddress, 6);
   //stato_connessione_wireless = 0;
 
-  while (stato_connessione_wireless != 5) {
-    if (stato_connessione_wireless == 0) {
+  while (stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED /*5*/) {
+    if (stato_connessione_wireless == CONNECTION_STATE::NONE_CONNECTION /*0*/) {
       if ((millis() - lastMillis_change_channel) > TIMEOUT_CHANGE_CHANNEL) { 
         channel++;
         if (channel >13) channel = 1;
@@ -386,7 +403,7 @@ bool SerialWireless_::connection_dongle() {
         lastMillis_change_channel = millis ();
       }
       if ((millis() - lastMillis_tx_packet) > TIMEOUT_TX_PACKET) {
-        SerialWireless.SendPacket((const uint8_t *)&aux_buffer_tx, sizeof(aux_buffer_tx), PACKET_TX::CONNECTION);
+        SerialWireless.SendPacket((const uint8_t *)aux_buffer_tx, 13, PACKET_TX::CONNECTION);
         Serial.print("DONGLE - inviato pacchetto broadcast sul canale: ");
         Serial.println(channel);
         lastMillis_tx_packet = millis (); 
@@ -394,8 +411,8 @@ bool SerialWireless_::connection_dongle() {
       lastMillis_start_dialogue = millis();
     }
     else {
-      if (((millis() - lastMillis_start_dialogue) > TIMEOUT_DIALOGUE) && stato_connessione_wireless != 5) {
-        stato_connessione_wireless = 0;
+      if (((millis() - lastMillis_start_dialogue) > TIMEOUT_DIALOGUE) && stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED /*5*/) {
+        stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION; //0; // CONNECTION_STATE::NONE;
         //lastMillis_tx_packet = millis ();
         Serial.println("DONGLE - Non si è conclusa la negoziazione tra DONGLE/GUN e si riparte da capo");
         lastMillis_change_channel = millis ();
@@ -434,16 +451,16 @@ bool SerialWireless_::connection_gun() {
   
   lastMillis_start_dialogue = millis ();
 
-  while(!TinyUSBDevice.mounted() && stato_connessione_wireless != 4) { 
-    if (stato_connessione_wireless == 0) {
+  while(!TinyUSBDevice.mounted() && stato_connessione_wireless != CONNECTION_STATE::TX_GUN_TO_DONGLE_CONFERM /*4*/) { 
+    if (stato_connessione_wireless == CONNECTION_STATE::NONE_CONNECTION /*0*/) {
       lastMillis_start_dialogue = millis ();
     }
-    if (((millis() - lastMillis_start_dialogue) > TIMEOUT_GUN_DIALOGUE) && stato_connessione_wireless != 4) {
-      stato_connessione_wireless = 0;
+    if (((millis() - lastMillis_start_dialogue) > TIMEOUT_GUN_DIALOGUE) && stato_connessione_wireless != CONNECTION_STATE::TX_GUN_TO_DONGLE_CONFERM /*4*/) {
+      stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION; //0; // CONNECTION_STATE::NONE;
     }
   }
 
-  if (stato_connessione_wireless == 4) {
+  if (stato_connessione_wireless == CONNECTION_STATE::TX_GUN_TO_DONGLE_CONFERM /*4*/) {
     if (esp_now_del_peer(peerAddress) != ESP_OK) {  // cancella il broadcast dai peer
       Serial.println("Errore nella cancellazione del peer");
     }
@@ -478,43 +495,35 @@ void packet_callback_read_dongle() {
     case PACKET_TX::CONNECTION:
       // code
       //tipo_connessione = (uint8_t)SerialWireless.packet.rxBuff[PREAMBLE_SIZE];
-      memcpy(aux_buffer, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], 13);
+      memcpy(aux_buffer, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead); //sizeof(aux_buffer));
       Serial.println("DONGLE - arrivato richiesta di connessione");
       switch (aux_buffer[0]) {
-        case 2:
+        case CONNECTION_STATE::TX_GUN_TO_DONGLE_PRESENCE: //2: // CONNECTION_STATE::TX_GUN_TO_DONGLE_PRESENCE
           // code
-          if ((memcmp(&aux_buffer[7],SerialWireless.mac_esp_inteface,6) == 0) && SerialWireless.stato_connessione_wireless == 0) {
+          if ((memcmp(&aux_buffer[7],SerialWireless.mac_esp_inteface,6) == 0) && SerialWireless.stato_connessione_wireless == CONNECTION_STATE::NONE_CONNECTION /*0*/) {
             memcpy(SerialWireless.mac_esp_another_card, &aux_buffer[1], 6);
-            aux_buffer[0] = 3;
+            aux_buffer[0] = CONNECTION_STATE::TX_DONGLE_TO_GUN_ACCEPT; //3; // CONNECTION_STATE::TX_DONGLE_TO_GUN_ACCEPT
             memcpy(&aux_buffer[1], SerialWireless.mac_esp_inteface, 6);
             memcpy(&aux_buffer[7], SerialWireless.mac_esp_another_card, 6);
-            SerialWireless.SendPacket((const uint8_t *)&aux_buffer, sizeof(aux_buffer), PACKET_TX::CONNECTION);
+            SerialWireless.SendPacket((const uint8_t *)aux_buffer, 13, PACKET_TX::CONNECTION);
             Serial.println("DONGLE - inviato pacchetto di conferma di connessione");
 
             // assicurati che i dati siano stati spediti
  
-            SerialWireless.stato_connessione_wireless = 3;
+            SerialWireless.stato_connessione_wireless = CONNECTION_STATE::TX_DONGLE_TO_GUN_ACCEPT; //3; // CONNECTION_STATE::TX_DONGLE_TO_GUN_ACCEPT
           }
           break;
-        case 4:  
+        case CONNECTION_STATE::TX_GUN_TO_DONGLE_CONFERM: //4:  // CONNECTION_STATE::TX_GUN_TO_DONGLE_CONFERM
           // code
           if ((memcmp(&aux_buffer[1],SerialWireless.mac_esp_another_card,6) == 0) && 
              (memcmp(&aux_buffer[7],SerialWireless.mac_esp_inteface,6) == 0) &&
-             SerialWireless.stato_connessione_wireless == 3) {           
-            #ifdef COMMENTO
-            if (esp_now_del_peer(peerAddress) != ESP_OK) {  // cancella il broadcast dai peer
-              Serial.println("Errore nella cancellazione del peer");
-            }
-            memcpy(peerAddress, SerialWireless.mac_esp_another_card, 6);
-            memcpy(peerInfo.peer_addr, peerAddress, 6);
-            //peerInfo.channel = ESPNOW_WIFI_CHANNEL;
-            //peerInfo.encrypt = false;              
-            if (esp_now_add_peer(&peerInfo) != ESP_OK) {  // inserisce il dongle nei peer
-              Serial.println("Errore nell'aggiunta del nuovo peer");
-            }
-            #endif // COMMENTO
-            SerialWireless.stato_connessione_wireless = 5;
-            Serial.println("DONGLE - ricevuto pacchetto di avvenuta connessione");
+             SerialWireless.stato_connessione_wireless == CONNECTION_STATE::TX_DONGLE_TO_GUN_ACCEPT /*3*/) {           
+            // SALVA I DATI RELATIVI ALLA GUN VID, PID, PLAYER , ECC.ECC.
+            memcpy(&usb_data_wireless, &aux_buffer[13], sizeof(usb_data_wireless));
+            // ===================================
+            
+            SerialWireless.stato_connessione_wireless = CONNECTION_STATE::DEVICES_CONNECTED; //5; //  CONNECTION_STATE::DEVICES_CONNECTED
+            Serial.println("DONGLE - ricevuto pacchetto di avvenuta connessione con dati della GUN");
             //TinyUSBDevices.onBattery = true;
         }
           break;
@@ -544,20 +553,20 @@ void packet_callback_read_gun() {
     case PACKET_TX::CONNECTION:
       // code
       //tipo_connessione = (uint8_t)SerialWireless.packet.rxBuff[PREAMBLE_SIZE];
-      memcpy(aux_buffer, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], 13);
+      memcpy(aux_buffer, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead); //13); //sizeof(aux_buffer)); // qui va bene anche 13 come dati da copiare
       switch (aux_buffer[0]) {
-        case 1:
-          if (SerialWireless.stato_connessione_wireless == 0) { // prende la prima dongle disposnibile
+        case CONNECTION_STATE::TX_DONGLE_SEARCH_GUN_BROADCAST: //1: // CONNECTION_STATE::TX_DONGLE_SEARCH_GUN_BROADCAST
+          if (SerialWireless.stato_connessione_wireless == CONNECTION_STATE::NONE_CONNECTION /*0*/) { // prende la prima dongle disposnibile
             /* code */
             
             memcpy(SerialWireless.mac_esp_another_card, &aux_buffer[1], 6);
             // memcpy(peerAddress, &aux_buffer[1], 6);
             // invia richiesta connessione
-            aux_buffer[0] = 2;
+            aux_buffer[0] = CONNECTION_STATE::TX_GUN_TO_DONGLE_PRESENCE; //2; // CONNECTION_STATE::TX_GUN_TO_DONGLE_PRESENCE
             memcpy(&aux_buffer[1], SerialWireless.mac_esp_inteface, 6);
             memcpy(&aux_buffer[7], SerialWireless.mac_esp_another_card, 6);
-            SerialWireless.SendPacket((const uint8_t *)&aux_buffer, sizeof(aux_buffer), PACKET_TX::CONNECTION);
-            SerialWireless.stato_connessione_wireless = 2;
+            SerialWireless.SendPacket((const uint8_t *)aux_buffer, 13, PACKET_TX::CONNECTION);
+            SerialWireless.stato_connessione_wireless = CONNECTION_STATE::TX_GUN_TO_DONGLE_PRESENCE; //2; // CONNECTION_STATE::TX_GUN_TO_DONGLE_PRESENCE
             // assicurati che i dati siano stati spediti
 
           }
@@ -565,35 +574,30 @@ void packet_callback_read_gun() {
         case 2:
           /* code */
           break;
-        case 3:
+        case CONNECTION_STATE::TX_DONGLE_TO_GUN_ACCEPT: //3:  // CONNECTION_STATE::TX_DONGLE_TO_GUN_ACCEPT
           /* code */
           if ((memcmp(&aux_buffer[1],SerialWireless.mac_esp_another_card,6) == 0) && 
              (memcmp(&aux_buffer[7],SerialWireless.mac_esp_inteface,6) == 0) &&
-              SerialWireless.stato_connessione_wireless == 2) {
+              SerialWireless.stato_connessione_wireless == CONNECTION_STATE::TX_GUN_TO_DONGLE_PRESENCE/*2*/) {
               
-              aux_buffer[0] = 4;
+              aux_buffer[0] = CONNECTION_STATE::TX_GUN_TO_DONGLE_CONFERM; //4;  // CONNECTION_STATE::TX_GUN_TO_DONGLE_CONFERM
               memcpy(&aux_buffer[1], SerialWireless.mac_esp_inteface, 6);
               memcpy(&aux_buffer[7], SerialWireless.mac_esp_another_card, 6);
-              SerialWireless.SendPacket((const uint8_t *)&aux_buffer, sizeof(aux_buffer), PACKET_TX::CONNECTION);
+              
+              // INVIA ANCHE DATI RELATIVI A VID, PID, ECC,ECC, DELLA GUN
+              memcpy(&aux_buffer[13], &usb_data_wireless, sizeof(usb_data_wireless));
+
+              // =========================================================
+
+
+              SerialWireless.SendPacket((const uint8_t *)aux_buffer, sizeof(aux_buffer), PACKET_TX::CONNECTION);
               
               // assicurati che i dati siano stati spediti
 
               // aspetta fino a quando ha spedito il pacchetto
-              #ifdef COMMENTO
-              if (esp_now_del_peer(peerAddress) != ESP_OK) {  // cancella il broadcast dai peer
-                  Serial.println("Errore nella cancellazione del peer");
-                }
-                memcpy(peerAddress, SerialWireless.mac_esp_another_card, 6);
-                memcpy(peerInfo.peer_addr, peerAddress, 6);
-                //peerInfo.channel = ESPNOW_WIFI_CHANNEL;
-                //peerInfo.encrypt = false;              
-                if (esp_now_add_peer(&peerInfo) != ESP_OK) {  // inserisce il dongle nei peer
-                  Serial.println("Errore nell'aggiunta del nuovo peer");
-                }            
-               #endif // COMMENTO               
                 //TinyUSBDevices.onBattery = true;
 
-                SerialWireless.stato_connessione_wireless = 4;
+                SerialWireless.stato_connessione_wireless = CONNECTION_STATE::TX_GUN_TO_DONGLE_CONFERM; //4; // CONNECTION_STATE::TX_GUN_TO_DONGLE_CONFERM
           }
           break;        
         default:

@@ -1,5 +1,5 @@
 /*!
- * @file SamcoDisplay.cpp
+ * @file OpenFIREdisplay.cpp
  * @brief Macros for lightgun HUD display (primarily for SSD1306 OLED modules).
  *
  * @copyright That One Seong, 2024
@@ -12,9 +12,10 @@
 #include <Arduino.h>
 #include <Adafruit_GFX.h>
 #include <Wire.h>
-#include "SamcoDisplay.h"
-#include "SamcoPreferences.h"
 #include <TinyUSB_Devices.h>
+
+#include "OpenFIREdisplay.h"
+#include "OpenFIREprefs.h"
 
 bool ExtDisplay::Begin()
 {
@@ -25,30 +26,30 @@ bool ExtDisplay::Begin()
 
     // TODO: for some reason, doing this AFTER saving updated pins settings (even when doing it from defaults and there's no default mappings for peripheral pins)
     // causes the board to hang. Even though this is all correct (and any display objects should get deleted from the above, so don't think it can be a new object thing)...
-    if(SamcoPreferences::pins[OF_Const::periphSCL] >= 0 && SamcoPreferences::pins[OF_Const::periphSDA] >= 0) {
-        if(bitRead(SamcoPreferences::pins[OF_Const::periphSCL], 1) && bitRead(SamcoPreferences::pins[OF_Const::periphSDA], 1)) {
+    if(OF_Prefs::pins[OF_Const::periphSCL] >= 0 && OF_Prefs::pins[OF_Const::periphSDA] >= 0) {
+        if(bitRead(OF_Prefs::pins[OF_Const::periphSCL], 1) && bitRead(OF_Prefs::pins[OF_Const::periphSDA], 1)) {
             // I2C1
-            if(bitRead(SamcoPreferences::pins[OF_Const::periphSCL], 0) && !bitRead(SamcoPreferences::pins[OF_Const::periphSDA], 0)) {
-                Wire1.end(); // anche per esp32 ??? 696969
+            if(bitRead(OF_Prefs::pins[OF_Const::periphSCL], 0) && !bitRead(OF_Prefs::pins[OF_Const::periphSDA], 0)) {
+                Wire1.end(); // 696969 ??? anche per esp32 ????
                 // SDA/SCL are indeed on verified correct pins
                 #ifdef ARDUINO_ARCH_ESP32  
-                  Wire1.setPins(SamcoPreferences::pins[OF_Const::periphSDA], SamcoPreferences::pins[OF_Const::periphSCL]); // 696969 per esp32
+                  Wire1.setPins(OF_Prefs::pins[OF_Const::periphSDA], OF_Prefs::pins[OF_Const::periphSCL]); // 696969 per esp32
                 #else //rp2040
-                  Wire1.setSDA(SamcoPreferences::pins[OF_Const::periphSDA]);
-                  Wire1.setSCL(SamcoPreferences::pins[OF_Const::periphSCL]);
+                  Wire1.setSDA(OF_Prefs::pins[OF_Const::periphSDA]);
+                  Wire1.setSCL(OF_Prefs::pins[OF_Const::periphSCL]);
                 #endif
                 display = new Adafruit_SSD1306(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire1, -1);
             } else return false;
-        } else if(!bitRead(SamcoPreferences::pins[OF_Const::periphSCL], 1) && !bitRead(SamcoPreferences::pins[OF_Const::periphSDA], 1)) {
+        } else if(!bitRead(OF_Prefs::pins[OF_Const::periphSCL], 1) && !bitRead(OF_Prefs::pins[OF_Const::periphSDA], 1)) {
             // I2C0
-            if(bitRead(SamcoPreferences::pins[OF_Const::periphSCL], 0) && !bitRead(SamcoPreferences::pins[OF_Const::periphSDA], 0)) {
-                Wire.end(); // anche per esp32 ?? 696969
+            if(bitRead(OF_Prefs::pins[OF_Const::periphSCL], 0) && !bitRead(OF_Prefs::pins[OF_Const::periphSDA], 0)) {
+                Wire.end();  // 696969 ??? anche per esp32 ????
                 // SDA/SCL are indeed on verified correct pins
                 #ifdef ARDUINO_ARCH_ESP32
-                  Wire.setPins(SamcoPreferences::pins[OF_Const::periphSDA], SamcoPreferences::pins[OF_Const::periphSCL]);  // 696969 per esp32
+                  Wire.setPins(OF_Prefs::pins[OF_Const::periphSDA], OF_Prefs::pins[OF_Const::periphSCL]);  // 696969 per esp32
                 #else //rp2040
-                  Wire.setSDA(SamcoPreferences::pins[OF_Const::periphSDA]);
-                  Wire.setSCL(SamcoPreferences::pins[OF_Const::periphSCL]);
+                  Wire.setSDA(OF_Prefs::pins[OF_Const::periphSDA]);
+                  Wire.setSCL(OF_Prefs::pins[OF_Const::periphSCL]);
                 #endif
 
                 display = new Adafruit_SSD1306(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
@@ -56,7 +57,7 @@ bool ExtDisplay::Begin()
         } else return false;
     } else return false;
 
-    if(display->begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    if(display->begin(SSD1306_SWITCHCAPVCC, OF_Prefs::oledPrefs[OF_Const::oledAltAddr] ? 0x3D : 0x3C)) {
         display->clearDisplay();
         ScreenModeChange(Screen_None);
         return true;
@@ -65,8 +66,10 @@ bool ExtDisplay::Begin()
 
 void ExtDisplay::Stop()
 {
-    if(display != nullptr)
+    if(display != nullptr) {
         delete display;
+        display = nullptr;
+    }
 }
 
 void ExtDisplay::TopPanelUpdate(const char *textPrefix, const char *profText)
@@ -277,9 +280,9 @@ void ExtDisplay::PauseListUpdate(uint8_t selection)
             display->println(" Save Gun Settings ");
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 47);
-            if(SamcoPreferences::pins[OF_Const::rumblePin] >= 0 && SamcoPreferences::pins[OF_Const::rumbleSwitch] == -1) {
+            if(OF_Prefs::pins[OF_Const::rumblePin] >= 0 && OF_Prefs::pins[OF_Const::rumbleSwitch] == -1) {
               display->println(" Rumble Toggle ");
-            } else if(SamcoPreferences::pins[OF_Const::solenoidPin] >= 0 && SamcoPreferences::pins[OF_Const::solenoidSwitch] == -1) {
+            } else if(OF_Prefs::pins[OF_Const::solenoidPin] >= 0 && OF_Prefs::pins[OF_Const::solenoidSwitch] == -1) {
               display->println(" Solenoid Toggle ");
             } else {
               display->println(" Send Escape Keypress");
@@ -291,16 +294,16 @@ void ExtDisplay::PauseListUpdate(uint8_t selection)
             display->println(" Save Gun Settings ");
             display->setTextColor(BLACK, WHITE);
             display->setCursor(0, 36);
-            if(SamcoPreferences::pins[OF_Const::rumblePin] >= 0 && SamcoPreferences::pins[OF_Const::rumbleSwitch] == -1) {
+            if(OF_Prefs::pins[OF_Const::rumblePin] >= 0 && OF_Prefs::pins[OF_Const::rumbleSwitch] == -1) {
               display->println(" Rumble Toggle ");
               display->setTextColor(WHITE, BLACK);
               display->setCursor(0, 47);
-              if(SamcoPreferences::pins[OF_Const::solenoidPin] >= 0 && SamcoPreferences::pins[OF_Const::solenoidSwitch] == -1) {
+              if(OF_Prefs::pins[OF_Const::solenoidPin] >= 0 && OF_Prefs::pins[OF_Const::solenoidSwitch] == -1) {
                 display->println(" Solenoid Toggle ");
               } else {
                 display->println(" Send Escape Keypress");
               }
-            } else if(SamcoPreferences::pins[OF_Const::solenoidPin] >= 0 && SamcoPreferences::pins[OF_Const::solenoidSwitch] == -1) {
+            } else if(OF_Prefs::pins[OF_Const::solenoidPin] >= 0 && OF_Prefs::pins[OF_Const::solenoidSwitch] == -1) {
               display->println(" Solenoid Toggle ");
               display->setTextColor(WHITE, BLACK);
               display->setCursor(0, 47);
@@ -315,11 +318,11 @@ void ExtDisplay::PauseListUpdate(uint8_t selection)
           case ScreenPause_Solenoid:
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 25);
-            if(SamcoPreferences::pins[OF_Const::rumblePin] >= 0 && SamcoPreferences::pins[OF_Const::rumbleSwitch] == -1) {
+            if(OF_Prefs::pins[OF_Const::rumblePin] >= 0 && OF_Prefs::pins[OF_Const::rumbleSwitch] == -1) {
               display->println(" Rumble Toggle ");
               display->setTextColor(BLACK, WHITE);
               display->setCursor(0, 36);
-              if(SamcoPreferences::pins[OF_Const::solenoidPin] >= 0 && SamcoPreferences::pins[OF_Const::solenoidSwitch] == -1) {
+              if(OF_Prefs::pins[OF_Const::solenoidPin] >= 0 && OF_Prefs::pins[OF_Const::solenoidSwitch] == -1) {
                 display->println(" Solenoid Toggle ");
                 display->setTextColor(WHITE, BLACK);
                 display->setCursor(0, 47);
@@ -330,7 +333,7 @@ void ExtDisplay::PauseListUpdate(uint8_t selection)
                 display->setCursor(0, 47);
                 display->println("Calibrate");
               }
-            } else if(SamcoPreferences::pins[OF_Const::solenoidPin] >= 0 && SamcoPreferences::pins[OF_Const::solenoidSwitch] == -1) {
+            } else if(OF_Prefs::pins[OF_Const::solenoidPin] >= 0 && OF_Prefs::pins[OF_Const::solenoidSwitch] == -1) {
               display->println(" Save Gun Settings");
               display->setTextColor(BLACK, WHITE);
               display->setCursor(0, 36);
@@ -351,7 +354,7 @@ void ExtDisplay::PauseListUpdate(uint8_t selection)
           case ScreenPause_EscapeKey:
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 25);
-            if(SamcoPreferences::pins[OF_Const::solenoidPin] >= 0 && SamcoPreferences::pins[OF_Const::solenoidSwitch] == -1) {
+            if(OF_Prefs::pins[OF_Const::solenoidPin] >= 0 && OF_Prefs::pins[OF_Const::solenoidSwitch] == -1) {
               display->println(" Solenoid Toggle ");
               display->setTextColor(BLACK, WHITE);
               display->setCursor(0, 36);
@@ -359,7 +362,7 @@ void ExtDisplay::PauseListUpdate(uint8_t selection)
               display->setTextColor(WHITE, BLACK);
               display->setCursor(0, 47);
               display->println(" Calibrate ");
-            } else if(SamcoPreferences::pins[OF_Const::rumblePin] >= 0 && SamcoPreferences::pins[OF_Const::rumbleSwitch] == -1) {
+            } else if(OF_Prefs::pins[OF_Const::rumblePin] >= 0 && OF_Prefs::pins[OF_Const::rumbleSwitch] == -1) {
               display->println(" Rumble Toggle ");
               display->setTextColor(BLACK, WHITE);
               display->setCursor(0, 36);

@@ -339,14 +339,12 @@ void LightgunButtons::PadMaskConvert()
         case 10: // 0x00001010
             padMaskConv = GAMEPAD_HAT_DOWN_RIGHT;
             break;
-        /*  // 696969 condizioni che non si verificano mai e nel caso meglio posizione centrale
         case 3: // 0x00000011
             padMaskConv = GAMEPAD_HAT_UP;
             break;
         case 12: // 0x00001100
             padMaskConv = GAMEPAD_HAT_LEFT;
             break;
-        */
         default: // 0x00000000
             padMaskConv = GAMEPAD_HAT_CENTERED;
             break;

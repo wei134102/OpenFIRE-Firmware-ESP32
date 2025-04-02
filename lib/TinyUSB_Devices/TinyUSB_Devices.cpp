@@ -13,8 +13,8 @@
 
 #include "TinyUSB_Devices.h"
 #if defined(ARDUINO_RASPBERRY_PI_PICO_W) && defined(ENABLE_CLASSIC)
-#include <HID_Bluetooth.h>
-#include <PicoBluetoothHID.h>
+  #include <HID_Bluetooth.h>
+  #include <PicoBluetoothHID.h>
 #endif // ARDUINO_RASPBERRY_PI_PICO_W
 
 /*****************************

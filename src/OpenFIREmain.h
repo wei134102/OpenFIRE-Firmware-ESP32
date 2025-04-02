@@ -1,5 +1,5 @@
 /*!
- * @file SamcoEnhanced.h
+ * @file OpenFIREmain.h
  * @brief OpenFIRE main control program.
  *
  * @copyright Samco, https://github.com/samuelballantyne, June 2020
@@ -13,35 +13,21 @@
  * @date 2025
  */
 
-#ifndef _SAMCOENHANCED_H_
-#define _SAMCOENHANCED_H_
-
+#ifndef _OPENFIREMAIN_H_
+#define _OPENFIREMAIN_H_
 
 #include <Arduino.h>
-
-#ifdef ARDUINO_ARCH_RP2040
-    //#include <RP2040.h> // tolto da me 696969 non va usato con platformio
-#endif
-#include <OpenFIREBoard.h>
-
+#include <Wire.h>
 // include TinyUSB or HID depending on USB stack option
 #if defined(USE_TINYUSB)
     #include <Adafruit_TinyUSB.h>
 #elif defined(CFG_TUSB_MCU)
     #error Incompatible USB stack. Use Adafruit TinyUSB.
-#else
-    // Arduino USB stack (currently not supported, will not build)
-    #include <HID.h>
 #endif
 
-#include <Wire.h>
-#ifdef SAMCO_FLASH_ENABLE
-    #include <Adafruit_SPIFlashBase.h>
-#elif SAMCO_EEPROM_ENABLE
-    #include <EEPROM.h>
-#endif // SAMCO_FLASH_ENABLE/EEPROM_ENABLE
-
 #include <DFRobotIRPositionEx.h>
+
+#include <OpenFIREBoard.h>
 #include "OpenFIREDefines.h"
 #include "OpenFIREcommon.h"
 
@@ -74,7 +60,7 @@ enum PauseModeSelection_e {
 // TinyUSBDevices_ TUSBDeviceSetup; // 696969 tolto non serve
 
 // Selector for which profile in the profile selector of the simple pause menu you're picking.
-uint8_t profileModeSelection;
+uint8_t profileModeSelection = 0;
 // Flag to tell if we're in the profile selector submenu of the simple pause menu.
 bool pauseModeSelectingProfile = false;
 

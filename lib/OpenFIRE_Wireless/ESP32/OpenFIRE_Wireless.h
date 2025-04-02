@@ -68,8 +68,10 @@
  *   ESP_NOW
  *****************************/
 
+ #define ESPNOW_WIFI_CHANNEL 4
+ 
 enum WIRELESS_MODE {
-  NONE =  0,
+  NONE_WIRELESS =  0,                
   ENABLE_BLUETOOTH_TO_PC,         //1
   ENABLE_BLUETOOTH_TO_DONGLE,     //2
   ENABLE_ESP_NOW_TO_DONGLE,       //3
@@ -78,22 +80,48 @@ enum WIRELESS_MODE {
 };
 
 enum PACKET_TX {
-  SERIAL_TX = 1,
+  SERIAL_TX = 1, // DATI SERIALI
   KEYBOARD_TX,
   MOUSE_TX,
   GAMEPADE_TX,
-  CONNECTION,
+  CONNECTION,  // CONNESSIONE E ASSOCIAZIONE DONGLE CON GUN
+  REBOOT,      // REBOOT DEL DONGLE
+  TX_DATA_USB, // TRASMISSIONE DATI DELL'USB DA GUN A DONGLE
+  CHANGE_DATA_USB, // CAMBIO DEI DATI DELL'USB, QUINDI ?????
   CONN_REQ_TO_GUN,      // RICHIESTA INVIATA DA DONGLE VERSO GUN (INVIA MAC ADDRESS DEL DONGLE ed il MAC ADDRES A CUI E' STATA INVIATA LA RICHIESTA (PUO' ESSERE BROADCAST))
   CONN_REQ_TO_DONGLE,   // RICHIESTA INVIATA DA GUN A DONGLE, PER ACCETTARE RICHIESTA DI CONNESSIONE (INVIA MAC ADDRESS DEL GUN E MAC ADDRES A CUI E' STATA INVIATA RICHIESTA)
   CONN_ACCEPT,          // IL DONGLE HA ACCETTATO CONNESSIONE (INVIA ANCHE MAC ADDRES DEL DONGLE E DELLA GUN A CUI E' STATA ACCETTATA LA RICHIESTA)
 };
+
+enum CONNECTION_STATE {
+  NONE_CONNECTION = 0,
+  TX_DONGLE_SEARCH_GUN_BROADCAST,  //1
+  TX_GUN_TO_DONGLE_PRESENCE,  //2
+  TX_DONGLE_TO_GUN_ACCEPT,  //3
+  TX_GUN_TO_DONGLE_CONFERM,  //4
+  DEVICES_CONNECTED,  //5
+
+};
+
+typedef struct __attribute__ ((packed)) {
+  char deviceManufacturer[21];
+  char deviceName[16];
+  uint16_t deviceVID;
+  uint16_t devicePID;
+  uint8_t devicePlayer;
+  uint8_t channel; // da 0 a 13
+  //char deviceSerial[11];
+} USB_Data_GUN_Wireless;
+
+
+extern USB_Data_GUN_Wireless usb_data_wireless;
+
 
 /*****************************
  *   SERIAL WIRELESS SECTION
  *****************************/
 #ifndef _SERIAL_STREAM_H_
 #define _SERIAL_STREAM_H_
-
 
 class SerialWireless_ : public Stream       
   {
@@ -102,7 +130,7 @@ class SerialWireless_ : public Stream
   
   uint8_t mac_esp_inteface[6];
   uint8_t mac_esp_another_card[6];
-  uint8_t stato_connessione_wireless = 0;
+  uint8_t stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION; //0;
 
   // ======= per FIFO SERIAL ===============
   // ===== per write === buffer lineare ====
