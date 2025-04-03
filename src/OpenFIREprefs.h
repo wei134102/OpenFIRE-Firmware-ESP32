@@ -83,16 +83,16 @@ public:
     static inline uint8_t currentProfile = 0;
 
     static inline bool toggles[OF_Const::boolTypesCount] = {
-        false,
-        true,
-        true,
-        false,
-        false,
-        false,
-        true,
-        false,
-        false,
-        false
+        false,      // customPins
+        true,       // rumble
+        true,       // solenoid
+        false,      // autofire
+        false,      // simplePause
+        false,      // holdToPause
+        true,       // commonAnode
+        false,      // lowButtonsMode
+        false,      // rumbleFF
+        false       // invertStaticPixels
     };
 
     static inline int8_t pins[OF_Const::boardInputsCount] = { -1 };

@@ -70,9 +70,12 @@ void setup() {
 
     OF_Prefs::LoadPresets();
     
-    if(OF_Prefs::InitFS() == OF_Prefs::Error_Success) {
-        OF_Prefs::LoadProfiles();
+#ifndef COMMENTO
     
+    if(OF_Prefs::InitFS() == OF_Prefs::Error_Success) {
+        //OF_Prefs::ResetPreferences();
+        OF_Prefs::LoadProfiles();
+        
         // Profile sanity checks
         // resets offsets that are wayyyyy too unreasonably high
         for(unsigned int i = 0; i < PROFILE_COUNT; ++i) {
@@ -105,6 +108,7 @@ void setup() {
             OF_Prefs::Load();
         }
 
+#endif //COMMENTO
 
     // ===== 696969 per trasmettere i dati wireless al dongle ========
     #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
@@ -502,11 +506,15 @@ void loop1()
                 if(t - pauseHoldStartstamp > OF_Prefs::settings[OF_Const::holdToPauseLength]) {
                     // MAKE SURE EVERYTHING IS DISENGAGED:
                     OF_FFB::FFBShutdown();
+                    //Keyboard.releaseAll();  // 696969   ?????
+                    //AbsMouse5.releaseAll(); // 696969   ?????
                     FW_Common::offscreenBShot = false;
                     FW_Common::buttonPressed = false;
                     FW_Common::pauseModeSelection = PauseMode_Calibrate;
+                    FW_Common::SetMode(FW_Const::GunMode_Pause);  // 696969
                     FW_Common::buttons.ReportDisable();
-                    FW_Common::SetMode(FW_Const::GunMode_Pause);
+                    //FW_Common::SetMode(FW_Const::GunMode_Pause); //696969
+                    //return; //696969
                 }
             }
         } else {
@@ -514,10 +522,14 @@ void loop1()
                FW_Common::buttons.pressedReleased == FW_Const::BtnMask_Home) {
                 // MAKE SURE EVERYTHING IS DISENGAGED:
                 OF_FFB::FFBShutdown();
+                //Keyboard.releaseAll();  //696969   ?????
+                //AbsMouse5.releaseAll(); //696969   ?????
                 FW_Common::offscreenBShot = false;
                 FW_Common::buttonPressed = false;
+                FW_Common::SetMode(FW_Const::GunMode_Pause);  //696969
                 FW_Common::buttons.ReportDisable();
-                FW_Common::SetMode(FW_Const::GunMode_Pause);
+                //FW_Common::SetMode(FW_Const::GunMode_Pause);  //696969
+                //return;  // 696969
                 // at this point, the other core should be stopping us now.
             }
         }
