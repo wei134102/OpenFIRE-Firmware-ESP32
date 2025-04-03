@@ -70,8 +70,6 @@ void setup() {
 
     OF_Prefs::LoadPresets();
     
-#ifndef COMMENTO
-
     if(OF_Prefs::InitFS() == OF_Prefs::Error_Success) {
         OF_Prefs::LoadProfiles();
     
@@ -107,7 +105,6 @@ void setup() {
             OF_Prefs::Load();
         }
 
-#endif // COMMENTO    
 
     // ===== 696969 per trasmettere i dati wireless al dongle ========
     #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
@@ -147,6 +144,7 @@ void setup() {
             TinyUSBDevice.setID(DEVICE_VID, PLAYER_NUMBER);
         }
 #endif //USE_TINYUSB
+
 
 // ===================================================================================================================
 // ===================================================================================================================
@@ -275,86 +273,6 @@ if(OF_Prefs::usb.devicePID > 0 && OF_Prefs::usb.devicePID < 5) {
     #endif
 #endif //USE_TINYUSB
 
-
-// 696969 spostato sopra ===================
-#ifdef COMMENTO
-
-if(OF_Prefs::usb.devicePID > 0 && OF_Prefs::usb.devicePID < 5) {
-    playerStartBtn = OF_Prefs::usb.devicePID + '0';
-    playerSelectBtn = OF_Prefs::usb.devicePID + '4';
-}
-
-    // this is needed for both customs and builtins, as defaults are all uninitialized
-    FW_Common::UpdateBindings(OF_Prefs::toggles[OF_Const::lowButtonsMode]);
-
-    // Initialize DFRobot Camera Wires & Object
-    FW_Common::CameraSet();
-
-    // initialize buttons & feedback devices
-    FW_Common::buttons.Begin();
-    FW_Common::FeedbackSet();
-
-    #ifdef LED_ENABLE
-        OF_RGB::LedInit();
-    #endif // LED_ENABLE
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // 696969 == CODICE PER CALIBRARE LEVETTA STICK IN POSIZIONE CENTRALE =============
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    #if defined(ARDUINO_ARCH_ESP32) && defined(USES_ANALOG)   // la facciamo solo per ESP32 e lasciamo RP2040 come gestione originale
-    uint16_t analogValueX;
-    uint16_t analogValueY;
-    //unsigned long startTime = 0;
-    unsigned long startTime = millis();
-    while ((millis()-startTime) < 2000)
-    {
-        analogValueX = analogRead(OF_Prefs::pins[OF_Const::analogX]);
-        analogValueY = analogRead(OF_Prefs::pins[OF_Const::analogY]);
-        if (analogValueX > ANALOG_STICK_DEADZONE_X_MAX) ANALOG_STICK_DEADZONE_X_MAX = analogValueX;
-        if (analogValueX < ANALOG_STICK_DEADZONE_X_MIN) ANALOG_STICK_DEADZONE_X_MIN = analogValueX;
-        if (analogValueY > ANALOG_STICK_DEADZONE_Y_MAX) ANALOG_STICK_DEADZONE_Y_MAX = analogValueY;
-        if (analogValueY < ANALOG_STICK_DEADZONE_Y_MIN) ANALOG_STICK_DEADZONE_Y_MIN = analogValueY;
-    }
-    ANALOG_STICK_DEADZONE_X_MIN -= 400;
-    ANALOG_STICK_DEADZONE_X_MAX += 400;
-    ANALOG_STICK_DEADZONE_Y_MIN -= 400;
-    ANALOG_STICK_DEADZONE_Y_MAX += 400;
-    #endif
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // 696969 == FINE CODICE CALIBRAZIONE STICK ========================================
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    #endif // COMMENTO
-
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////// 696969 ////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //#define Serial (*Serial_OpenFIRE_Stream)
-    //#undef Serial
-    /*
-    // ============ 696969 ========== redifinizione di Serial per gestire le connessione wireless seriali ========
-    #ifdef OPENFIRE_WIRELESS_ENABLE
-        extern Stream* Serial_OpenFIRE_Stream;
-        #ifdef Serial
-            #define AUX_SERIAL Serial
-            #undef Serial
-        #endif
-        #define Serial (*Serial_OpenFIRE_Stream)
-    #endif // OPENFIRE_WIRELESS_ENABLE
-    // ============ 696969 ===== fine redifinizione di Serial per gestire le connessione wireless seriali ========
-    */
-    //... codice ...
-    /*
-    // ============ 696969 ========== ripristino di Serial dopo definizione per connessione seriali ==============
-    #ifdef OPENFIRE_WIRELESS_ENABLE
-        #undef Serial
-        #ifdef AUX_SERIAL
-            #define Serial AUX_SERIAL
-            #undef AuxSerial
-        #endif
-    #endif // OPENFIRE_WIRELESS_ENABLE
-    // ============ 696969 ===== fine ripristino di Serial dopo definizione per connessione seriali ==============
-    */
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////// 696969 ////////////////////////////////////////////////
