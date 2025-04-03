@@ -12,7 +12,8 @@
 #endif
 
 #include "TinyUSB_Devices.h"
-#if defined(ARDUINO_RASPBERRY_PI_PICO_W) && defined(ENABLE_CLASSIC)  
+
+#if defined(PIO_FRAMEWORK_ARDUINO_ENABLE_BLUETOOTH) && defined(ARDUINO_RASPBERRY_PI_PICO_W) && defined(ENABLE_CLASSIC)  
   #include <HID_Bluetooth.h>
   #include <PicoBluetoothHID.h>
 #endif // ARDUINO_RASPBERRY_PI_PICO_W
@@ -22,6 +23,7 @@
  *****************************/
 Adafruit_USBD_HID usbHid;
 
+#ifdef COMMENTO
 /* // 696969 spostato in TinyUSB_Devices
 enum HID_RID_e{
   HID_RID_KEYBOARD = 1,
@@ -35,8 +37,9 @@ uint8_t const desc_hid_report[] = {
   TUD_HID_REPORT_DESC_GAMEPAD16(HID_REPORT_ID(HID_RID_e::HID_RID_GAMEPAD))
 };
 */
+#endif // COMMENTO
 
-#if defined(ARDUINO_RASPBERRY_PI_PICO_W) && defined(ENABLE_CLASSIC)
+#if defined(PIO_FRAMEWORK_ARDUINO_ENABLE_BLUETOOTH) && defined(ARDUINO_RASPBERRY_PI_PICO_W) && defined(ENABLE_CLASSIC)
 enum HID_BT_e {
     HID_BT_KEYBOARD = 1,
     HID_BT_MOUSE,  // 2
@@ -66,7 +69,7 @@ void TinyUSBDevices_::begin(byte polRate) {
     onBattery = false;
 }
 
-#if defined(ARDUINO_RASPBERRY_PI_PICO_W) && defined(ENABLE_CLASSIC)
+#if defined(PIO_FRAMEWORK_ARDUINO_ENABLE_BLUETOOTH) && defined(ARDUINO_RASPBERRY_PI_PICO_W) && defined(ENABLE_CLASSIC)
 void TinyUSBDevices_::beginBT(const char *localName, const char *hidName) {
     // third arg is the type of device that this is exposed as, i.e. the icon displayed on the PC.
     // for BLE: 0x03C2 is mouse, 0x03C1 is keyboard, 0x03C4 is gamepad, 0x03C0 is "generic" bluetooth icon
