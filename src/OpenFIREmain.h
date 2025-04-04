@@ -37,7 +37,6 @@
   // declare PWM ISR
   void rp2040pwmIrq(void);
 #elif defined(ARDUINO_ARCH_ESP32)  // 696969 per ESP32
-  #define TIMER_DIVIDER 80
   hw_timer_t *My_timer = NULL;
   void ARDUINO_ISR_ATTR esp32s3pwmIrq(void);
 #endif

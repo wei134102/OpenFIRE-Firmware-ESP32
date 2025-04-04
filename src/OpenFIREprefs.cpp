@@ -22,7 +22,7 @@ int OF_Prefs::InitFS()
     #else
       if(LittleFS.begin())
     #endif
-        return Error_Success;
+      return Error_Success;
     else return Error_NoData;
 }
 
@@ -181,7 +181,7 @@ int OF_Prefs::LoadToggles()
 {
     File togglesFile = LittleFS.open("/toggles.conf", "r");
     if(togglesFile) {
-        while(togglesFile.available()) {
+      while(togglesFile.available()) {
             int type = togglesFile.read();
             if(type > -1 && type < OF_Const::boolTypesCount)
                 toggles[type] = togglesFile.read();
@@ -209,7 +209,7 @@ int OF_Prefs::LoadPins()
 {
     File pinsFile = LittleFS.open("/pins.conf", "r");
     if(pinsFile) {
-        while(pinsFile.available()) {
+      while(pinsFile.available()) {
             int type = pinsFile.read();
             if(type > -1 && type < OF_Const::boardInputsCount)
                 pins[type] = pinsFile.read();
@@ -255,7 +255,7 @@ int OF_Prefs::SaveSettings()
 {
     File settingsFile = LittleFS.open("/settings.conf", "w");
     if(settingsFile) {
-        for(uint8_t i = 0; i < OF_Const::settingsTypesCount; ++i)
+      for(uint8_t i = 0; i < OF_Const::settingsTypesCount; ++i)
             settingsFile.write(i), settingsFile.write((uint8_t*)&settings[i], sizeof(uint32_t));
         
         settingsFile.close();

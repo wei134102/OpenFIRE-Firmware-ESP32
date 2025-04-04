@@ -150,6 +150,49 @@ void setup() {
 #endif //USE_TINYUSB
 
 
+#ifdef COMMENTO
+delay(10000);
+    if(OF_Prefs::InitFS() == OF_Prefs::Error_Success) {
+        //OF_Prefs::ResetPreferences();
+        OF_Prefs::LoadProfiles();
+        
+        // Profile sanity checks
+        // resets offsets that are wayyyyy too unreasonably high
+        for(uint i = 0; i < PROFILE_COUNT; ++i) {
+            if(OF_Prefs::profiles[i].rightOffset >= 32768 || OF_Prefs::profiles[i].bottomOffset >= 32768 ||
+               OF_Prefs::profiles[i].topOffset >= 32768   || OF_Prefs::profiles[i].leftOffset >= 32768) {
+                OF_Prefs::profiles[i].topOffset = 0;
+                OF_Prefs::profiles[i].bottomOffset = 0;
+                OF_Prefs::profiles[i].leftOffset = 0;
+                OF_Prefs::profiles[i].rightOffset = 0;
+            }
+        
+            if(OF_Prefs::profiles[i].irSens > DFRobotIRPositionEx::Sensitivity_Max)
+                OF_Prefs::profiles[i].irSens = DFRobotIRPositionEx::Sensitivity_Default;
+
+            if(OF_Prefs::profiles[i].runMode >= FW_Const::RunMode_Count)
+                OF_Prefs::profiles[i].runMode = FW_Const::RunMode_Normal;
+        }
+
+        // if selected profile is out of range, fallback to a default instead.
+        if(OF_Prefs::currentProfile >= PROFILE_COUNT)
+            OF_Prefs::currentProfile = 0;
+
+                // set the current IR camera sensitivity
+        if(OF_Prefs::profiles[OF_Prefs::currentProfile].irSens <= DFRobotIRPositionEx::Sensitivity_Max)
+            FW_Common::irSensitivity = (DFRobotIRPositionEx::Sensitivity_e)OF_Prefs::profiles[OF_Prefs::currentProfile].irSens;
+                // set the run mode
+                if(OF_Prefs::profiles[OF_Prefs::currentProfile].runMode < FW_Const::RunMode_Count)
+                FW_Common::runMode = (FW_Const::RunMode_e)OF_Prefs::profiles[OF_Prefs::currentProfile].runMode;
+    
+            OF_Prefs::Load();
+        }
+
+#endif //COMMENTO
+
+
+
+
 // ===================================================================================================================
 // ===================================================================================================================
 // ====== 696969 ============ spostato sopra prima della connessione =================================================
@@ -468,7 +511,7 @@ void loop1()
                 } else {   // Or if we haven't pressed the trigger,
                     TriggerNotFireSimple();                             // Release button inputs.
                 }
-                OF_Serial::SerialHandling();                                       // Process the force feedback.
+                OF_Serial::SerialHandling();                            // Process the force feedback.
             }
         #else
             if(bitRead(FW_Common::buttons.debounced, 0)) {   // Check if we pressed the Trigger this run.
@@ -484,6 +527,11 @@ void loop1()
                 lastAnalogPoll = millis();
             }
         #endif // USES_ANALOG
+
+        #ifdef USES_TEMP
+            if(OF_Prefs::pins[OF_Const::tempPin] > -1)
+                OF_FFB::TemperatureUpdate();
+        #endif // USES_TEMP
         
         if(FW_Common::buttons.pressedReleased == FW_Const::EscapeKeyBtnMask)
             SendEscapeKey();
@@ -920,9 +968,10 @@ void ExecRunMode()
             FW_Common::irPosUpdateTick = 0;
             FW_Common::GetPosition();
         }
-
+        #ifdef USES_DISPLAY
+            else {
+                FW_Common::OLED.IdleOps();
         #ifdef MAMEHOOKER
-            #ifdef USES_DISPLAY
                 // For some reason, solenoid feedback is hella wonky when ammo updates are performed on the second core,
                 // so just do it here using the signal sent by it.
                 if(OF_Serial::serialDisplayChange) {
@@ -941,9 +990,10 @@ void ExecRunMode()
                     }
 
                     OF_Serial::serialDisplayChange = false;
+                    }
+                #endif // MAMEHOOKER
                 }
             #endif // USES_DISPLAY
-        #endif // MAMEHOOKER
 
         // If using RP2040, we offload the button processing to the second core.
         #if /*!defined(ARDUINO_ARCH_RP2040) ||*/ !defined(DUAL_CORE)  // 696969 per ESP32
@@ -954,6 +1004,11 @@ void ExecRunMode()
                 lastAnalogPoll = millis();
             }
         #endif // USES_ANALOG
+
+        #ifdef USES_TEMP
+            if(OF_Prefs::pins[OF_Const::tempPin] > -1)
+                OF_FFB::TemperatureUpdate();
+        #endif // USES_TEMP
 
         if(FW_Common::buttons.pressedReleased == FW_Const::EscapeKeyBtnMask)
             SendEscapeKey();
@@ -1116,7 +1171,10 @@ void ExecGunModeDocked()
                     }
             }
 
+            #ifdef USES_TEMP
+                if(OF_Prefs::pins[OF_Const::tempPin] > -1)
             OF_FFB::TemperatureUpdate();
+
             unsigned long currentMillis = millis();
             if(currentMillis - tempChecked >= 1000) {
                 if(OF_Prefs::pins[OF_Const::tempPin] >= 0) {
@@ -1126,7 +1184,9 @@ void ExecGunModeDocked()
 
                 tempChecked = currentMillis;
             }
+            #endif // USES_TEMP
             
+            #ifdef USES_ANALOG
             if(FW_Common::analogIsValid) {
                 if(currentMillis - aStickChecked >= 100) {
                     aStickChecked = currentMillis;
@@ -1141,6 +1201,7 @@ void ExecGunModeDocked()
                     Serial.write(buf, sizeof(buf));
                 }
             }
+            #endif // USES_ANALOG
         }
 
         if(FW_Common::gunMode != FW_Const::GunMode_Docked)
