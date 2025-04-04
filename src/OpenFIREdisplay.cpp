@@ -205,7 +205,7 @@ void ExtDisplay::DrawVisibleIR(int pointX[4], int pointY[4])
 {
     if(display != nullptr) {
         display->fillRect(0, 16, 128, 48, BLACK);
-        for(uint8_t i = 0; i < 4; i++) {
+        for(uint i = 0; i < 4; ++i) {
           pointX[i] = map(pointX[i], 0, 1920, 0, 128);
           pointY[i] = map(pointY[i], 0, 1080, 16, 64);
           pointY[i] = constrain(pointY[i], 16, 64);
@@ -460,8 +460,8 @@ void ExtDisplay::PrintAmmo(uint8_t ammo)
         currentAmmo = ammo;
 
         // use the rounding error to get the left & right digits
-        uint8_t ammoLeft = ammo / 10;
-        uint8_t ammoRight = ammo - ammoLeft * 10;
+        uint ammoLeft = ammo / 10;
+        uint ammoRight = ammo - ammoLeft * 10;
 
         if(!ammo) { ammoEmpty = true; } else { ammoEmpty = false; }
 
