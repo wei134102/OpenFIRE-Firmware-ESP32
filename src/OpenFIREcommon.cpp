@@ -841,9 +841,9 @@ void FW_Common::PrintIrError()
 
     if(dockedSaving) {
         char buf[2] = { OF_Const::sError, OF_Const::sErrCam };
-        Serial.write(buf, 2);
+        Serial.write(buf, 2), Serial.flush();
     } else if(millis() - camWarningTimestamp > CAM_WARNING_INTERVAL) {
-            Serial.println("CAMERROR: Not available");
+            Serial.println("CAMERROR: Not available"), Serial.flush();
             camWarningTimestamp = millis();
     }
 }
@@ -1009,7 +1009,8 @@ int FW_Common::SavePreferences()
             OLED.ScreenModeChange(ExtDisplay::Screen_SaveSuccess);
         #endif // USES_DISPLAY
 
-        Serial.println("Settings saved to Flash"), Serial.flush();
+        if(gunMode != FW_Const::GunMode_Docked) Serial.println("Settings saved to Flash"), Serial.flush();
+        else Serial.printf("%c%c (Successfully saved to LittleFS Storage)", OF_Const::sSave, true), Serial.flush();
         OF_Prefs::SaveToggles();
 
         if(OF_Prefs::toggles[OF_Const::customPins])
@@ -1039,7 +1040,8 @@ int FW_Common::SavePreferences()
         #endif // USES_DISPLAY
 
         // TODO: reimpl a detailed error string
-        Serial.println("Error saving Preferences to Flash.");
+        if(gunMode != FW_Const::GunMode_Docked) Serial.println("Error saving Preferences to Flash.");
+        else Serial.printf("%c%c (Failed to save to LittleFS Storage)", OF_Const::sSave, false), Serial.flush();
 
         /*
         if(nvPrefsError != OF_Prefs::Error_Success) {

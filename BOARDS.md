@@ -1,4 +1,5 @@
 # Supported Boards Layouts:
+ - [Waveshare esp32-s3-pico](#waveshare-esp32-s3-pico)
  - [ESP32_S3_WROOM1_DevKitC_1_N16R8](#esp32_s3_wroom1_devkitc_1_n16r8)
  - [Raspberry Pi Pico (Non/W)](#raspberry-pi-pico-nonw)
  - [Adafruit ItsyBitsy RP2040](#adafruit-itsybitsy-rp2040)
@@ -13,6 +14,34 @@
 ```
 
 ### NOTE: Any button/function GPIO pin assignments written here are the *defaults*, and can be changed for any other function from the OpenFIRE App.
+
+## waveshare esp32-s3-pico
+```
+                                        (_____)
+                      A Button   11  |-) *USB* (-| VBUS  5v (USB voltage)
+                      B Button   12  |-)       (-| VSYS  (Input from Battery/Output to NeoPixels)
+                                 GND |x)       (x| GND
+                      C Button   13  |-)       (x| 3V3   En
+                         Start   14  |-)       (p| 3V3   Out (to Display/Cam/Analog Inputs)
+                        Select   15  |-)       (x|  10   
+                   Home Button   16  |-)       (-|  09   Temp Sensor
+                                 GND |x)       (x| GND 
+                      D-Pad Up   17  |-)       (-|  08   *Unmapped* Analop X
+                    D-Pad Down   18  |-)       (-|  07   *Unmapped* Analog Y
+                    D-Pad Left   33  |-)       (x| RUN
+                   D-Pad Right   34  |-)       (-|  06   *Unmapped*
+                                 GND |x)       (x| GND
+                       RGB Red   35  |-)       (-|  05   Camera SCL
+                     RGB Green   36  |-)       (-|  04   Camera SDA
+                      RGB Blue   37  |-)       (-|  02   *Unmapped* Peripherals SCL (OLED)
+                   Pump Action   38  |-)       (-|  01   *Unmapped* Peripherals SDA (OLED)
+                                 GND |x)       (x| GND
+                         Pedal   39  |-)       (-|  41   Rumble Signal
+                       Trigger   40  |-) _|_|_ (-|  42   Solenoid Signal
+
+* GPIO 21 at RGB LED 
+
+```
 
 ## ESP32_S3_WROOM1_DevKitC_1_N16R8
 ```

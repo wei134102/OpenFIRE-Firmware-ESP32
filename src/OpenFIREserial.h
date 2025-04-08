@@ -23,6 +23,9 @@ public:
     // Main routine that prints information to connected serial monitor when the gun enters Pause Mode.
     static void PrintResults();
 
+    // utility function to wait for n bytes with timeout
+    static bool Serial_available(uint8_t min = 1);
+
     #ifdef DEBUG_SERIAL
     static void PrintDebugSerial();
     #endif // DEBUG_SERIAL

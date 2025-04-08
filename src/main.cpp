@@ -16,6 +16,11 @@
  */
 
 #include "OpenFIREmain.h"
+
+//#ifdef ARDUINO_ARCH_RP2040
+//    #define delay delay_nb
+//#endif //ARDUINO_ARCH_RP2040
+
 #include "boards/OpenFIREshared.h"
 #include "OpenFIREcolors.h"
 #include "OpenFIRElights.h"
@@ -70,10 +75,7 @@ void setup() {
 
     OF_Prefs::LoadPresets();
     
-#ifndef COMMENTO
-    
     if(OF_Prefs::InitFS() == OF_Prefs::Error_Success) {
-        //OF_Prefs::ResetPreferences();
         OF_Prefs::LoadProfiles();
         
         // Profile sanity checks
@@ -106,9 +108,10 @@ void setup() {
                 FW_Common::runMode = (FW_Const::RunMode_e)OF_Prefs::profiles[OF_Prefs::currentProfile].runMode;
     
             OF_Prefs::Load();
+        } else {
+            Serial.printf("%c%c (No Storage Available)", OF_Const::sError, (char)OF_Prefs::Error_NoStorage);
         }
-
-#endif //COMMENTO
+    
 
     // ===== 696969 per trasmettere i dati wireless al dongle ========
     #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
@@ -148,7 +151,6 @@ void setup() {
             TinyUSBDevice.setID(DEVICE_VID, PLAYER_NUMBER);
         }
 #endif //USE_TINYUSB
-
 
 #ifdef COMMENTO
 delay(10000);
@@ -294,8 +296,10 @@ if(OF_Prefs::usb.devicePID > 0 && OF_Prefs::usb.devicePID < 5) {
     // arriva qui solo se e' stato connesso l'usb o e' stata negoziata e stabilita una connessione wireless
 
     if (TinyUSBDevice.mounted()) {
-        Serial.begin(9600);
         Serial.setTimeout(0);
+        //Serial.setTxTimeoutMs(0); // default è 250ms
+        //Serial.setRxBufferSize(64); // impostato con per arduino pico .. se non si imposta è 256 di default
+        Serial.begin(9600);
         #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
             if (TinyUSBDevices.onBattery) {  // nel caso incredibile che l'USB sia montato nel momnto esatto in cui è stata stabilita connessione wireless
                 TinyUSBDevices.onBattery = false;
@@ -1826,3 +1830,8 @@ void SolenoidToggle()
     #endif // USES_DISPLAY
 }
 #endif // USES_SOLENOID
+
+void delay_nb(uint32_t duration) {
+    unsigned long startMillis = millis();
+    while (millis() - startMillis < duration) yield();
+}

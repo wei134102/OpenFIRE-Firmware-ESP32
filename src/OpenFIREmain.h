@@ -112,6 +112,7 @@ void OffscreenToggle();
 void AutofireSpeedToggle();
 void SelectCalProfileFromBtnMask(const uint32_t &mask);
 void ExecRunMode();
+void delay_nb(uint32_t duration);
 
 #ifdef ARDUINO_ARCH_RP2040
   void rp2040EnablePWMTimer(const unsigned int &slice_num, const unsigned int &frequency);
