@@ -801,7 +801,7 @@ void FW_Common::GetPosition()
                             memcpy(&buf[37], &mouseYscaled, sizeof(int));
                             memcpy(&buf[41], &testMedianX,  sizeof(int));
                             memcpy(&buf[45], &testMedianY,  sizeof(int));
-                            Serial.write(buf, sizeof(buf));
+                            Serial.write(buf, sizeof(buf)), Serial.flush();
                     } else {
                             int testMedianX = map(OpenFIREsquare.testMedianX(), 0, 1023 << 2, 0, 1920);
                             int testMedianY = map(OpenFIREsquare.testMedianY(), 0, 768 << 2, 0, 1080);
@@ -819,7 +819,7 @@ void FW_Common::GetPosition()
                             memcpy(&buf[37], &mouseYscaled, sizeof(int));
                             memcpy(&buf[41], &testMedianX,  sizeof(int));
                             memcpy(&buf[45], &testMedianY,  sizeof(int));
-                            Serial.write(buf, sizeof(buf));
+                            Serial.write(buf, sizeof(buf)), Serial.flush();
                     }
                 }
 
