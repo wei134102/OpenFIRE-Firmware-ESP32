@@ -336,13 +336,7 @@ void OF_Serial::SerialProcessing()
           switch(serialInput) {
               // Set Autofire Interval Length
               case 'I':
-                serialInput = Serial.read();
-                if(serialInput >= '2' && serialInput <= '4') {
-                    uint8_t afSetting = serialInput - '0';
-                    OF_Prefs::settings[OF_Const::autofireWaitFactor] = afSetting;
-                    Serial.print("Autofire speed level ");
-                    Serial.println(afSetting);
-                } else Serial.println("SERIALREAD: No valid interval set! (Expected 2 to 4)");
+                OF_FFB::autofireDoubleLengthWait = Serial.read();
                 break;
               // Remap player numbers
               case 'R':
@@ -725,7 +719,7 @@ void OF_Serial::SerialHandling()
                               else serialSolPulsesLast++, serialSolPulsesLastUpdate = millis();  // Timestamp our last pulse event.
                           }
                       // current settings hold length
-                      } else if(millis() - serialSolPulsesLastUpdate >= OF_Prefs::settings[OF_Const::solenoidNormalInterval]) {
+                      } else if(millis() - serialSolPulsesLastUpdate >= OF_Prefs::settings[OF_Const::solenoidOnLength]) {
                           digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], LOW);  // Start pulsing it off.
                           if(serialSolPulsesLast >= serialSolPulses)
                               serialQueue[SerialQueue_SolPulse] = false;
@@ -740,7 +734,7 @@ void OF_Serial::SerialHandling()
                           }
                       // current settings pause length
                       } else if(millis() - serialSolPulsesLastUpdate >=
-                                OF_Prefs::settings[OF_Const::solenoidFastInterval] * OF_Prefs::settings[OF_Const::autofireWaitFactor]) {
+                                OF_Prefs::settings[OF_Const::solenoidOffLength] << OF_FFB::autofireDoubleLengthWait ? 1 : 0) {
                           digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], HIGH); // Start pulsing it on.
                           serialSolPulsesLastUpdate = millis();          // Timestamp our last pulse event.
                       }
@@ -967,7 +961,7 @@ void OF_Serial::SerialProcessingDocked()
             pos += OF_Const::boardInputsCount;
             buf[pos++] = OF_Const::serialTerminator;
             Serial.write(buf, pos), Serial.flush();
-                } else {
+        } else {
             for(uint i = 0; i < OF_Const::boolTypesCount; i++) {
                 if(pos >= 63) {
                     Serial.write(buf, pos);
@@ -982,10 +976,10 @@ void OF_Serial::SerialProcessingDocked()
                 }
             }
         }
-                      break;
-                }
+        break;
+    }
     case OF_Const::sGetSettings:
-              {
+    {
         char buf[64];
         for(uint i = 0, pos = 0; i < OF_Const::settingsTypesCount; i++) {
             if(pos >= 60) {
@@ -1000,10 +994,10 @@ void OF_Serial::SerialProcessingDocked()
                 buf[pos++] = OF_Const::serialTerminator;
                 Serial.write(buf, pos);
                 Serial.flush();
-                    }
-                }
-                break;
-              }
+            }
+        }
+        break;
+    }
     case OF_Const::sGetPeriphs:
     {
         char buf[64];
@@ -1114,7 +1108,7 @@ void OF_Serial::SerialProcessingDocked()
     #ifdef USES_SOLENOID
     case OF_Const::sTestSolenoid:
         digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], HIGH);
-        delay(OF_Prefs::settings[OF_Const::solenoidNormalInterval]);
+        delay(OF_Prefs::settings[OF_Const::solenoidOnLength]);
         digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], LOW);
                                     break;
     #endif // USES_SOLENOID
@@ -1145,6 +1139,7 @@ void OF_Serial::SerialProcessingDocked()
     {
         FW_Common::buttons.Unset();
         bool exit = false;
+        Serial.write(OF_Const::sCommitStart), Serial.flush();
         while(!exit) {
             if(Serial.available()) {
                 switch(Serial.read()) {
@@ -1191,7 +1186,6 @@ void OF_Serial::SerialProcessingDocked()
                         while(Serial.available()) Serial.read();
                         Serial.write(OF_Const::serialTerminator), Serial.flush();
                     }
-                
                             break;
                 case OF_Const::sCommitProfile:
                     //if(Serial.available() >= 6) {
@@ -1341,8 +1335,12 @@ void OF_Serial::SerialProcessingDocked()
 
     case OF_Const::sClearFlash:
         OF_Prefs::ResetPreferences();
-        Serial.println("Cleared! Please reset the board."), Serial.flush();
-          break;
+        #ifdef ARDUINO_ARCH_ESP32
+            ESP.restart();
+        #else
+            rp2040.reboot();
+        #endif
+        break;
     }
 }
 

@@ -35,7 +35,7 @@
   // For multiplayer, different guns need different IDs!
   // If unsure, just leave these at their defaults, as Product ID is determined by what's saved in local storage, or Player Number as a fallback.
 #define MANUFACTURER_NAME "OpenFIRE"
-#define DEVICE_NAME "FIRECon"
+#define DEVICE_NAME "FIRECon"  // MAX 15 char
 #define DEVICE_VID 0xF143
 
   // Set what player this board is mapped to by default (1-4). This will change keyboard mappings appropriate for the respective player.
