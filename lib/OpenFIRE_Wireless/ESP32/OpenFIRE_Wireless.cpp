@@ -2,19 +2,25 @@
 
 #include "OpenFIRE_Wireless.h"
 
-//#define ESPNOW_WIFI_CHANNEL 4
+#if defined(DEVICE_LILYGO_T_DONGLE_S3)
+  #include <Adafruit_ST7735.h>
+  extern Adafruit_ST7735 tft;
+#endif // DEVICE_LILYGO_T_DONGLE_S3
+
+
+#define ESPNOW_WIFI_CHANNEL 4
 
 // la potenza di trasmissione può andare da 8 a 84, dove 84 è il valore massimo che corrisponde a 20 db
 #define ESPNOW_WIFI_POWER 69 
 
 USB_Data_GUN_Wireless usb_data_wireless = {
-  "OpenFIRE_DONGLE",
-  "FIRECon",
-  0xF143,
-  0x1998, // 0x0001
-  1,
-  ESPNOW_WIFI_CHANNEL
-  //,""
+  "OpenFIRE_DONGLE",  // MANIFACTURES
+  "FIRECon",          // NAME
+  0xF143,             // VID
+  0x1998, // 0x0001   // PID
+  1,                  // PLAYER
+  ESPNOW_WIFI_CHANNEL // CHANNEL
+  //,""               // ????
 };
 
 SerialWireless_ SerialWireless;
@@ -368,10 +374,10 @@ bool SerialWireless_::end() {
 
 bool SerialWireless_::connection_dongle() {
 
-  uint8_t channel = ESPNOW_WIFI_CHANNEL;   // tra e 1 e 13 (il 14 dovrebbe ssere riservato)
+  uint8_t channel = ESPNOW_WIFI_CHANNEL;   // tra e 1 e 13 (il 14 dovrebbe essere riservato)
   #define TIMEOUT_TX_PACKET 500 // in millisecondi
-  #define TIMEOUT_CHANGE_CHANNEL 3000 // in millisecondi
-  #define TIMEOUT_DIALOGUE 6000 // in millisecondi
+  #define TIMEOUT_CHANGE_CHANNEL 2000 // in millisecondi - cambia canale ogni
+  #define TIMEOUT_DIALOGUE 6000 // in millisecondi - tempo massimo per completare operazione accoppiamento
   unsigned long lastMillis_tx_packet = millis ();
   unsigned long lastMillis_change_channel = millis ();
   unsigned long lastMillis_start_dialogue = millis ();
@@ -387,11 +393,25 @@ bool SerialWireless_::connection_dongle() {
   memcpy(&aux_buffer_tx[7], peerAddress, 6);
   //stato_connessione_wireless = 0;
 
+  #if defined(DEVICE_LILYGO_T_DONGLE_S3)
+    tft.fillRect(95,60,50,20,0/*BLACK*/);
+    tft.setCursor(95, 60);  
+    tft.printf("%2d", channel);   
+  #endif // DEVICE_LILYGO_T_DONGLE_S3
+  
   while (stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED /*5*/) {
     if (stato_connessione_wireless == CONNECTION_STATE::NONE_CONNECTION /*0*/) {
-      if ((millis() - lastMillis_change_channel) > TIMEOUT_CHANGE_CHANNEL) { 
+      if (((millis() - lastMillis_change_channel) > TIMEOUT_CHANGE_CHANNEL) && 
+         ((millis() - (lastMillis_tx_packet-50))) > TIMEOUT_TX_PACKET) {  // aggiunta impostato 50 ms come margine, per evitare che quando invia pacchetto cambi subito casnale senza dare possibilità risposta
         channel++;
         if (channel >13) channel = 1;
+        
+        #if defined(DEVICE_LILYGO_T_DONGLE_S3)
+          tft.fillRect(95,60,50,20,0/*BLACK*/);  
+          tft.setCursor(95, 60);
+          tft.printf("%2d", channel);   
+        #endif // DEVICE_LILYGO_T_DONGLE_S3        
+        
         if (esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE) != ESP_OK) {
           Serial.printf("DONGLE - esp_wifi_set_channel failed!");
         }
@@ -401,6 +421,7 @@ bool SerialWireless_::connection_dongle() {
         }             
         //lastMillis_tx_packet = millis (); 
         lastMillis_change_channel = millis ();
+        lastMillis_tx_packet = 0; // per fare inviare subito un pacchetto sul nuovo canale
       }
       if ((millis() - lastMillis_tx_packet) > TIMEOUT_TX_PACKET) {
         SerialWireless.SendPacket((const uint8_t *)aux_buffer_tx, 13, PACKET_TX::CONNECTION);
