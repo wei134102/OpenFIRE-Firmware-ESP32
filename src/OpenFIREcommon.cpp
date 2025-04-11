@@ -1073,6 +1073,7 @@ int FW_Common::SavePreferences()
 
 void FW_Common::UpdateBindings(const bool &lowButtons)
 {
+    if(gunMode != FW_Const::GunMode_Run) {
     // Updates pins
     LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Trigger].pin = OF_Prefs::pins[OF_Const::btnTrigger];
     LightgunButtons::ButtonDesc[FW_Const::BtnIdx_A].pin       = OF_Prefs::pins[OF_Const::btnGunA];
@@ -1088,6 +1089,7 @@ void FW_Common::UpdateBindings(const bool &lowButtons)
     LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Pedal2].pin  = OF_Prefs::pins[OF_Const::btnPedal2];
     LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Pump].pin    = OF_Prefs::pins[OF_Const::btnPump];
     LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Home].pin    = OF_Prefs::pins[OF_Const::btnHome];
+    }
 
     // Updates button functions for low-button mode
     if(lowButtons) {
@@ -1095,7 +1097,7 @@ void FW_Common::UpdateBindings(const bool &lowButtons)
         LightgunButtons::ButtonDesc[FW_Const::BtnIdx_A].reportCode2 = playerStartBtn;
         LightgunButtons::ButtonDesc[FW_Const::BtnIdx_B].reportType2 = LightgunButtons::ReportType_Keyboard;
         LightgunButtons::ButtonDesc[FW_Const::BtnIdx_B].reportCode2 = playerSelectBtn;
-    } else {
+    } else { // TODO: we should just reload btn config table from flash instead
         LightgunButtons::ButtonDesc[FW_Const::BtnIdx_A].reportType2 = LightgunButtons::ReportType_Mouse;
         LightgunButtons::ButtonDesc[FW_Const::BtnIdx_A].reportCode2 = MOUSE_RIGHT;
         LightgunButtons::ButtonDesc[FW_Const::BtnIdx_B].reportType2 = LightgunButtons::ReportType_Mouse;
@@ -1107,6 +1109,9 @@ void FW_Common::UpdateBindings(const bool &lowButtons)
     LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Start].reportCode2  = playerStartBtn;
     LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Select].reportCode  = playerSelectBtn;
     LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Select].reportCode2 = playerSelectBtn;
+
+    LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Trigger].reportType2 = LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Trigger].reportType;
+    LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Trigger].reportCode2 = LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Trigger].reportCode;
 }
 
 // ============ 696969 ========== ripristino di Serial dopo definizione per connessione seriali ==============
