@@ -138,6 +138,7 @@ void setup() {
             TinyUSBDevice.setID(DEVICE_VID, OF_Prefs::usb.devicePID);
             #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
                 usb_data_wireless.devicePID = OF_Prefs::usb.devicePID;
+                usb_data_wireless.devicePlayer = OF_Prefs::usb.devicePID;
             #endif // defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)    
             if(OF_Prefs::usb.deviceName[0] == '\0')
                  TinyUSBDevice.setProductDescriptor(DEVICE_NAME);
@@ -152,49 +153,6 @@ void setup() {
             TinyUSBDevice.setID(DEVICE_VID, PLAYER_NUMBER);
         }
 #endif //USE_TINYUSB
-
-#ifdef COMMENTO
-delay(10000);
-    if(OF_Prefs::InitFS() == OF_Prefs::Error_Success) {
-        //OF_Prefs::ResetPreferences();
-        OF_Prefs::LoadProfiles();
-        
-        // Profile sanity checks
-        // resets offsets that are wayyyyy too unreasonably high
-        for(uint i = 0; i < PROFILE_COUNT; ++i) {
-            if(OF_Prefs::profiles[i].rightOffset >= 32768 || OF_Prefs::profiles[i].bottomOffset >= 32768 ||
-               OF_Prefs::profiles[i].topOffset >= 32768   || OF_Prefs::profiles[i].leftOffset >= 32768) {
-                OF_Prefs::profiles[i].topOffset = 0;
-                OF_Prefs::profiles[i].bottomOffset = 0;
-                OF_Prefs::profiles[i].leftOffset = 0;
-                OF_Prefs::profiles[i].rightOffset = 0;
-            }
-        
-            if(OF_Prefs::profiles[i].irSens > DFRobotIRPositionEx::Sensitivity_Max)
-                OF_Prefs::profiles[i].irSens = DFRobotIRPositionEx::Sensitivity_Default;
-
-            if(OF_Prefs::profiles[i].runMode >= FW_Const::RunMode_Count)
-                OF_Prefs::profiles[i].runMode = FW_Const::RunMode_Normal;
-        }
-
-        // if selected profile is out of range, fallback to a default instead.
-        if(OF_Prefs::currentProfile >= PROFILE_COUNT)
-            OF_Prefs::currentProfile = 0;
-
-                // set the current IR camera sensitivity
-        if(OF_Prefs::profiles[OF_Prefs::currentProfile].irSens <= DFRobotIRPositionEx::Sensitivity_Max)
-            FW_Common::irSensitivity = (DFRobotIRPositionEx::Sensitivity_e)OF_Prefs::profiles[OF_Prefs::currentProfile].irSens;
-                // set the run mode
-                if(OF_Prefs::profiles[OF_Prefs::currentProfile].runMode < FW_Const::RunMode_Count)
-                FW_Common::runMode = (FW_Const::RunMode_e)OF_Prefs::profiles[OF_Prefs::currentProfile].runMode;
-    
-            OF_Prefs::Load();
-        }
-
-#endif //COMMENTO
-
-
-
 
 // ===================================================================================================================
 // ===================================================================================================================
