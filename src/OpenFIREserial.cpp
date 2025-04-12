@@ -30,10 +30,8 @@
 void OF_Serial::SerialProcessing()
 {
     // For more info about Serial commands, see the OpenFIRE repo wiki.
-    // TODO: needs cleanup
-    char serialInput = Serial.read();                              // Read the serial input one byte at a time (we'll read more later)
 
-    switch(serialInput) {
+    switch(Serial.read()) {
         // Start Signal
         case 'S':
           if(serialMode)
@@ -67,13 +65,11 @@ void OF_Serial::SerialProcessing()
           break;
         // Modesetting Signal
         case 'M':
-          serialInput = Serial.read();                               // Read the second bit.
-          switch(serialInput) {
+          switch(Serial.read()) {
               // input mode
               case '0':
-                Serial.read();
-                serialInput = Serial.read();
-                switch(serialInput) {
+                Serial.read(); // nomf
+                switch(Serial.read()) {
                     case '2': // "hybrid" - just use the default m&kb mode
                     case '0': // mouse & kb 
                       FW_Common::buttons.analogOutput = false;
@@ -121,9 +117,8 @@ void OF_Serial::SerialProcessing()
                 break;
               // offscreen button mode
               case '1':
-                Serial.read();                                         // nomf
-                serialInput = Serial.read();
-                switch(serialInput) {
+                Serial.read(); // nomf
+                switch(Serial.read()) {
                     // cursor in bottom left - just use disabled
                     case '1':
                     // "true offscreen shot" mode - just use disabled for now
@@ -147,8 +142,7 @@ void OF_Serial::SerialProcessing()
               // pedal functionality
               case '2':
                 Serial.read();                                         // nomf
-                serialInput = Serial.read();
-                switch(serialInput) {
+                switch(Serial.read()) {
                     // separate button (default to original binds)
                     case '0':
                       FW_Common::UpdateBindings(OF_Prefs::toggles[OF_Const::lowButtonsMode]);
@@ -171,7 +165,7 @@ void OF_Serial::SerialProcessing()
                 break;
               // aspect ratio correction
               case '3':
-                Serial.read();                                         // nomf
+                Serial.read(); // nomf
                 serialARcorrection = Serial.read() - '0';
                 if(!serialMode) {
                     if(serialARcorrection) { Serial.println("Setting 4:3 correction on!"); }
@@ -181,26 +175,25 @@ void OF_Serial::SerialProcessing()
               #ifdef USES_TEMP
               // temp sensor disabling (why?)
               case '4':
-                Serial.read();                                         // nomf
-                serialInput = Serial.read();
-                // TODO: implement
+                Serial.read(); // nomf
+                Serial.read();
                 break;
               #endif // USES_TEMP
               // autoreload (TODO: maybe?)
               case '5':
-                Serial.read();                                         // nomf
-                serialInput = Serial.read();
-                // TODO: implement?
+                Serial.read(); // nomf
+                Serial.read();
                 break;
               // rumble only mode (enable Rumble FF)
               case '6':
-                Serial.read();                                         // nomf
-                serialInput = Serial.read();
-                switch(serialInput) {
+                Serial.read(); // nomf
+                switch(Serial.read()) {
                     // disable
                     case '0':
-                      if(OF_Prefs::pins[OF_Const::solenoidSwitch] == -1 && OF_Prefs::pins[OF_Const::solenoidPin] >= 0) { OF_Prefs::toggles[OF_Const::solenoid] = true; }
-                      if(OF_Prefs::pins[OF_Const::rumblePin] >= 0) { OF_Prefs::toggles[OF_Const::rumbleFF] = false; }
+                      if(OF_Prefs::pins[OF_Const::solenoidSwitch] == -1 && OF_Prefs::pins[OF_Const::solenoidPin] >= 0)
+                          OF_Prefs::toggles[OF_Const::solenoid] = true;
+                      if(OF_Prefs::pins[OF_Const::rumblePin] >= 0) 
+                          OF_Prefs::toggles[OF_Const::rumbleFF] = false;
                       break;
                     // enable
                     case '1':
@@ -214,25 +207,30 @@ void OF_Serial::SerialProcessing()
               #ifdef USES_SOLENOID
               // solenoid automatic mode
               case '8':
-                Serial.read();                                         // Nomf the padding bit.
-                serialInput = Serial.read();                           // Read the next.
-                if(serialInput == '1') {
+                Serial.read(); // Nomf the padding bit.
+                switch(Serial.read()) {
+                // "auto"
+                case '1':
                     OF_FFB::burstFireActive = true;
                     OF_Prefs::toggles[OF_Const::autofire] = false;
-                } else if(serialInput == '2') {
+                    break;
+                // "always on"
+                case '2':
                     OF_Prefs::toggles[OF_Const::autofire] = true;
                     OF_FFB::burstFireActive = false;
-                } else if(serialInput == '0') {
+                    break;
+                // disabled
+                case '0':
                     OF_Prefs::toggles[OF_Const::autofire] = false;
                     OF_FFB::burstFireActive = false;
+                    break;
                 }
                 break;
               #endif // USES_SOLENOID
               #ifdef USES_DISPLAY
               case 'D':
-                Serial.read();                                         // Nomf padding byte
-                serialInput = Serial.read();
-                switch(serialInput) {
+                Serial.read(); // Nomf padding byte
+                switch(Serial.read()) {
                     case '0':
                       FW_Common::OLED.serialDisplayType = ExtDisplay::ScreenSerial_None;
                       break;
@@ -273,23 +271,25 @@ void OF_Serial::SerialProcessing()
           if(Serial.peek() == -1) {
               if(!serialMode) Serial.println("SERIALREAD: Detected Serial End command while Serial Handoff mode is already off!");
               else {
-                  serialMode = false;                                    // Turn off serial mode then.
-                  serialQueue[SerialQueueBitsCount] = {false};
+                  serialMode = false;
+                  memset(serialQueue, false, sizeof(serialQueue));
                   serialARcorrection = false;
                   #ifdef USES_DISPLAY
                       FW_Common::OLED.serialDisplayType = ExtDisplay::ScreenSerial_None;
                       if(FW_Common::gunMode == FW_Const::GunMode_Run) FW_Common::OLED.ScreenModeChange(ExtDisplay::Screen_Normal, FW_Common::buttons.analogOutput);
                   #endif // USES_DISPLAY
                   #ifdef LED_ENABLE
-                      serialLEDPulseColorMap = 0b00000000;               // Clear any stale serial LED pulses
+                      // Clear any stale serial LED pulses
+                      serialLEDPulseColorMap = 0b00000000;
                       serialLEDPulses = 0;
                       serialLEDPulsesLast = 0;
                       serialLEDPulseRising = true;
-                      serialLEDR = 0;                                    // Clear stale serial LED values.
+                      serialLEDR = 0;
                       serialLEDG = 0;
                       serialLEDB = 0;
                       serialLEDChange = false;
-                      if(FW_Common::gunMode == FW_Const::GunMode_Run) OF_RGB::LedOff();           // Turn it off, and let lastSeen handle it from here.
+                      if(FW_Common::gunMode == FW_Const::GunMode_Run)
+                        OF_RGB::LedOff(); // Turn it off, and let lastSeen handle it from here.
                   #endif // LED_ENABLE
                   #ifdef USES_RUMBLE
                       #ifdef ARDUINO_ARCH_ESP32
@@ -312,7 +312,7 @@ void OF_Serial::SerialProcessing()
                   #endif // USES_SOLENOID
                   AbsMouse5.releaseAll();
                   Keyboard.releaseAll();
-                  // remap
+                  // remap back to defaults, in case they were changed
                   FW_Common::UpdateBindings(OF_Prefs::toggles[OF_Const::lowButtonsMode]);
                   Serial.println("Received end serial pulse, releasing FF override.");
               }
@@ -321,23 +321,22 @@ void OF_Serial::SerialProcessing()
           break;
         // owo SPECIAL SETUP EH?
         case 'X':
-          serialInput = Serial.read();
-          switch(serialInput) {
+          switch(Serial.read()) {
               // Set Autofire Interval Length
               case 'I':
-                OF_FFB::autofireDoubleLengthWait = Serial.read();
+                OF_FFB::autofireDoubleLengthWait = Serial.read() - '0';
                 break;
               // Remap player numbers
               case 'R':
-                serialInput = Serial.read();
+              {
+                char serialInput = Serial.read();
                 if(serialInput >= '1' && serialInput <= '4') {
                     playerStartBtn = serialInput;
                     playerSelectBtn = serialInput + 4;
                     FW_Common::UpdateBindings(OF_Prefs::toggles[OF_Const::lowButtonsMode]);
-                } else {
-                    Serial.println("SERIALREAD: Player remap command called, but an invalid or no slot number was declared!");
-                }
+                } else Serial.println("SERIALREAD: Player remap command called, but an invalid or no slot number was declared!");
                 break;
+                }
               default:
                 Serial.println("SERIALREAD: Internal setting cmd detected, but not valid!");
                 Serial.println("Internally recognized commands are:");
@@ -352,25 +351,25 @@ void OF_Serial::SerialProcessing()
           break;
         // Force Feedback
         case 'F':
-          serialInput = Serial.read();
-          switch(serialInput) {
+          switch(Serial.read()) {
               #ifdef USES_SOLENOID
               // Solenoid bits
               case '0':
-                Serial.read();                                         // nomf the padding
-                serialInput = Serial.read();
+                Serial.read(); // nomf the padding
+                switch(Serial.read()) {
                 // Solenoid "on" command
-                if(serialInput == '1') {         
+                case '1':
                     serialQueue[SerialQueue_Solenoid] = true;
-                // Solenoud "pulse" command (only if not already pulsing)
-                } else if(serialInput == '2' &&
-                !serialQueue[SerialQueue_SolPulse]) {
-                    Serial.read();                                     // nomf the padding bit.
+                    break;
+                // Solenoid "pulse" command (only if not already pulsing)
+                case '2':
+                    if(!serialQueue[SerialQueue_SolPulse]) {
+                        Serial.read(); // nomf the padding bit.
                     if(Serial.peek() >= '0' & Serial.peek() <= '9') {
                         serialQueue[SerialQueue_SolPulse] = true;
-                        char serialInputS[4];
-                        for(uint n = 0; n < 3; ++n) {                      // For three runs,
-                            serialInputS[n] = Serial.read();               // Read the value and fill it into the char array...
+                            char serialInputS[4] = {0,0,0,0};
+                            for(uint n = 0; n < 3; ++n) {
+                                serialInputS[n] = Serial.read();
                             if(Serial.peek() < '0' || Serial.peek() > '9')
                                 break;
                         }
@@ -378,27 +377,33 @@ void OF_Serial::SerialProcessing()
                         if(!serialSolPulses) serialSolPulses++;
                         serialSolPulsesLast = 0;
                     }
+                    }
+                    break;
                 // Solenoid "off" command
-                } else if(serialInput == '0') serialQueue[SerialQueue_Solenoid] = false, serialQueue[SerialQueue_SolPulse] = false;
+                case '0':
+                    serialQueue[SerialQueue_Solenoid] = false, serialQueue[SerialQueue_SolPulse] = false;
+                    break;
+                }
                 break;
               #endif // USES_SOLENOID
               #ifdef USES_RUMBLE
               // Rumble bits
               case '1':
-                Serial.read();                                         // nomf the padding
-                serialInput = Serial.read();
+                Serial.read(); // nomf the padding
+                switch(Serial.read()) {
                 // Rumble "on" command
-                if(serialInput == '1') {
+                case '1':
                     serialQueue[SerialQueue_Rumble] = true;
+                    break;
                 // Rumble "pulse" command (only if not already pulsing)
-                } else if(serialInput == '2' &&
-                !serialQueue[SerialQueue_RumbPulse]) {
-                    Serial.read();                                     // nomf the padding
+                case '2':
+                    if(!serialQueue[SerialQueue_RumbPulse]) {
+                        Serial.read(); // nomf the padding
                     if(Serial.peek() >= '0' && Serial.peek() <= '9') {
                         serialQueue[SerialQueue_RumbPulse] = true;
-                        char serialInputS[4];
-                        for(uint n = 0; n < 3; ++n) {                      // For three runs,
-                            serialInputS[n] = Serial.read();               // Read the value and fill it into the char array...
+                            char serialInputS[4] = {0,0,0,0};
+                            for(uint n = 0; n < 3; ++n) {
+                                serialInputS[n] = Serial.read();
                             if(Serial.peek() < '0' || Serial.peek() > '9')
                                 break;
                         }
@@ -406,107 +411,120 @@ void OF_Serial::SerialProcessing()
                         if(!serialRumbPulses) serialRumbPulses++;
                         serialRumbPulsesLast = 0;
                     }
+                    }
+                    break;
                 // Rumble "off" command
-                } else if(serialInput == '0') serialQueue[SerialQueue_Rumble] = false, serialQueue[SerialQueue_RumbPulse] = false;
+                case '0':
+                    serialQueue[SerialQueue_Rumble] = false, serialQueue[SerialQueue_RumbPulse] = false;
+                    break;
+                }
                 break;
               #endif // USES_RUMBLE
               #ifdef LED_ENABLE
               // LED Red bits
               case '2':
-                Serial.read();                                         // nomf the padding
-                serialInput = Serial.read();
-                // LED Red "on" command
-                if(serialInput == '1') {
-                    Serial.read();                                     // nomf the padding
-                    if(Serial.peek() >= '0' & Serial.peek() <= '9') {
+                Serial.read(); // nomf the padding
+                switch(Serial.read()) {
+                // LED Red "static on" command
+                case '1':
+                    Serial.read(); // nomf
+                    if(Serial.peek() >= '0' && Serial.peek() <= '9') {
                         serialLEDChange = true;
                         serialQueue[SerialQueue_Red] = true;
-                        char serialInputS[4];
-                        for(uint n = 0; n < 3; ++n) {                      // For three runs,
-                            serialInputS[n] = Serial.read();               // Read the value and fill it into the char array...
+                        char serialInputS[4] = {0,0,0,0};
+                        for(uint n = 0; n < 3; ++n) {
+                            serialInputS[n] = Serial.read();
                             if(Serial.peek() < '0' || Serial.peek() > '9')
                                 break;
                         }
-                        serialLEDR = atoi(serialInputS);                   // Set array as the strength of the red value that's requested!
-                        serialQueue[SerialQueue_LEDPulse] = false;         // Static emitting overrides pulse bits
+                        // Static emitting overrides pulse bits
+                        serialLEDR = atoi(serialInputS);
+                        serialQueue[SerialQueue_LEDPulse] = false;
                         serialLEDPulseColorMap = 0;
                     }
+                    break;
                 // LED Red "pulse" command (only if not already pulsing)
-                } else if(serialInput == '2' &&
-                !serialQueue[SerialQueue_LEDPulse]) {
-                    Serial.read();                                     // nomf the padding
-                    if(Serial.peek() >= '0' & Serial.peek() <= '9') {
+                case '2':
+                    if(!serialQueue[SerialQueue_LEDPulse]) {
+                        Serial.read(); // nomf
+                        if(Serial.peek() >= '0' && Serial.peek() <= '9') {
                         serialLEDChange = true, serialQueue[SerialQueue_LEDPulse] = true,
-                        serialLEDPulseColorMap = 0b00000001;               // Set the R LED as the one pulsing only (overwrites the others).
-                        char serialInputS[4];
-                        for(uint n = 0; n < 3; ++n) {                      // For three runs,
-                            serialInputS[n] = Serial.read();               // Read the value and fill it into the char array...
+                            serialLEDPulseColorMap = 0b00000001; // Set the R LED as the one pulsing only (overwrites the others).
+                            char serialInputS[4] = {0,0,0,0};
+                            for(uint n = 0; n < 3; ++n) {
+                                serialInputS[n] = Serial.read();
                             if(Serial.peek() < '0' || Serial.peek() > '9')
                                 break;
                         }
                         serialLEDPulses = atoi(serialInputS);
                         serialLEDPulsesLast = 0;
                     }
+                    }
+                    break;
                 // LED Red "off" command
-                } else if(serialInput == '0') {
-                    serialLEDChange = true,
-                    serialQueue[SerialQueue_Red] = false, serialQueue[SerialQueue_LEDPulse] = false,
+                case '0':
+                    serialLEDChange = true, serialQueue[SerialQueue_Red] = false, serialQueue[SerialQueue_LEDPulse] = false,
                     serialLEDR = 0, serialLEDPulseColorMap = 0;
+                    break;
                 }
                 break;
               // LED Green bits
               case '3':
-                Serial.read();                                         // nomf the padding
-                serialInput = Serial.read();
-                // LED Green "on" command
-                if(serialInput == '1') {
-                    Serial.read();                                     // nomf the padding
-                    if(Serial.peek() >= '0' & Serial.peek() <= '9') {
+                Serial.read(); // nomf the padding
+                switch(Serial.read()) {
+                // LED Green "static on" command
+                case '1':
+                    Serial.read(); // nomf
+                    if(Serial.peek() >= '0' && Serial.peek() <= '9') {
                         serialLEDChange = true, serialQueue[SerialQueue_Green] = true;
-                        char serialInputS[4];
-                        for(uint n = 0; n < 3; ++n) {                      // For three runs,
-                            serialInputS[n] = Serial.read();               // Read the value and fill it into the char array...
+                        char serialInputS[4] = {0,0,0,0};
+                        for(uint n = 0; n < 3; ++n) {
+                            serialInputS[n] = Serial.read();
                             if(Serial.peek() < '0' || Serial.peek() > '9')
                                 break;
                         }
                         serialLEDG = atoi(serialInputS);
                         serialQueue[SerialQueue_LEDPulse] = false, serialLEDPulseColorMap = 0;
                     }
-                // LED Green "pulse" command
-                } else if(serialInput == '2' &&
-                !serialQueue[SerialQueue_LEDPulse]) {  // (and we haven't already sent a pulse command?)
-                    Serial.read();                                     // nomf the padding
-                    if(Serial.peek() >= '0' & Serial.peek() <= '9') {
+                    break;
+                // LED Green "pulse" command (only if not already pulsing)
+                case '2':
+                    if(!serialQueue[SerialQueue_LEDPulse]) {
+                        Serial.read(); // nomf
+                        if(Serial.peek() >= '0' && Serial.peek() <= '9') {
                         serialLEDChange = true, serialQueue[SerialQueue_LEDPulse] = true,
-                        serialLEDPulseColorMap = 0b00000010;               // Set the G LED as the one pulsing only (overwrites the others).
-                        char serialInputS[4];
-                        for(uint n = 0; n < 3; ++n) {                      // For three runs,
-                            serialInputS[n] = Serial.read();               // Read the value and fill it into the char array...
+                            serialLEDPulseColorMap = 0b00000010; // Set the G LED as the one pulsing only (overwrites the others).
+                            char serialInputS[4] = {0,0,0,0};
+                            for(uint n = 0; n < 3; ++n) {
+                                serialInputS[n] = Serial.read();
                             if(Serial.peek() < '0' || Serial.peek() > '9')
                                 break;
                         }
                         serialLEDPulses = atoi(serialInputS);
                         serialLEDPulsesLast = 0;
                     }
+                    }
+                    break;
                 // LED Green "off" command
-                } else if(serialInput == '0') {
+                case '0':
                     serialLEDChange = true,
                     serialQueue[SerialQueue_Green] = false, serialQueue[SerialQueue_LEDPulse] = false,
                     serialLEDG = 0, serialLEDPulseColorMap = 0;
+                    break;
                 }
                 break;
               // LED Blue bits
               case '4':
-                Serial.read();                                         // nomf the padding
-                serialInput = Serial.read();
-                // LED Blue "on" command
-                if(serialInput == '1') {
-                    Serial.read();                                     // nomf the padding
-                    if(Serial.peek() >= '0' & Serial.peek() <= '9') {
+                Serial.read(); // nomf the padding
+                switch(Serial.read()) {
+                // LED Blue "static on" command
+                case '1':
+                    Serial.read(); // nomf
+                    if(Serial.peek() >= '0' && Serial.peek() <= '9') {
                         serialLEDChange = true, serialQueue[SerialQueue_Blue] = true;
-                        char serialInputS[4];
-                        for(uint n = 0; n < 3; ++n) {                      // For three runs,
-                            serialInputS[n] = Serial.read();               // Read the value and fill it into the char array...
+                        char serialInputS[4] = {0,0,0,0};
+                        for(uint n = 0; n < 3; ++n) {
+                            serialInputS[n] = Serial.read();
                             if(Serial.peek() < '0' || Serial.peek() > '9')
                                 break;
                         }
@@ -514,41 +532,43 @@ void OF_Serial::SerialProcessing()
                         serialQueue[SerialQueue_LEDPulse] = false;
                         serialLEDPulseColorMap = 0;
                     }
-                // LED Blue "pulse" command
-                } else if(serialInput == '2' &&
-                !serialQueue[SerialQueue_LEDPulse]) {
-                    Serial.read();                                     // nomf the padding
-                    if(Serial.peek() >= '0' & Serial.peek() <= '9') {
+                    break;
+                // LED Blue "pulse" command (only if not already pulsing)
+                case '2':
+                    if(!serialQueue[SerialQueue_LEDPulse]) {
+                        Serial.read(); // nomf
+                        if(Serial.peek() >= '0' && Serial.peek() <= '9') {
                         serialLEDChange = true, serialQueue[SerialQueue_LEDPulse] = true,
-                        serialLEDPulseColorMap = 0b00000100;               // Set the B LED as the one pulsing only (overwrites the others).
-                        char serialInputS[4];
-                        for(uint n = 0; n < 3; ++n) {                      // For three runs,
-                            serialInputS[n] = Serial.read();               // Read the value and fill it into the char array...
+                            serialLEDPulseColorMap = 0b00000100; // Set the B LED as the one pulsing only (overwrites the others).
+                            char serialInputS[4] = {0,0,0,0};
+                            for(uint n = 0; n < 3; ++n) {
+                                serialInputS[n] = Serial.read();
                             if(Serial.peek() < '0' || Serial.peek() > '9')
                                 break;
                         }
                         serialLEDPulses = atoi(serialInputS);
                         serialLEDPulsesLast = 0;
                     }
+                    }
+                    break;
                 // LED Blue "off" command
-                } else if(serialInput == '0') {
+                case '0':
                     serialLEDChange = true,
                     serialQueue[SerialQueue_Blue] = false, serialQueue[SerialQueue_LEDPulse] = false,
                     serialLEDB = 0, serialLEDPulseColorMap = 0;
+                    break;
                 }
                 break;
               #endif // LED_ENABLE
               #ifdef USES_DISPLAY
               case 'D':
-                serialInput = Serial.read();
-                switch(serialInput) {
+                switch(Serial.read()) {
                   case 'A':
-                  {
-                    Serial.read();                                     // nomf the padding
+                    Serial.read(); // nomf the padding
                     if(Serial.peek() >= '0' && Serial.peek() <= '9') {
-                        char serialInputS[4];
-                        for(uint n = 0; n < 3; ++n) {                      // For three runs,
-                            serialInputS[n] = Serial.read();               // Read the value and fill it into the char array...
+                        char serialInputS[4] = {0,0,0,0};
+                        for(uint n = 0; n < 3; ++n) {
+                            serialInputS[n] = Serial.read();
                             if(Serial.peek() < '0' || Serial.peek() > '9')
                                 break;
                         }
@@ -557,20 +577,18 @@ void OF_Serial::SerialProcessing()
                         serialDisplayChange = true;
                     }
                     break;
-                  }
                   case 'L':
-                  {
-                    Serial.read();                                     // nomf the padding
+                    Serial.read(); // nomf the padding
                     if(Serial.peek() >= '0' && Serial.peek() <= '9') {
-                        char serialInputS[4];
-                        for(uint n = 0; n < 3; ++n) {                      // For three runs,
-                            serialInputS[n] = Serial.read();               // Read the value and fill it into the char array...
+                        char serialInputS[4] = {0,0,0,0};
+                        for(uint n = 0; n < 3; ++n) {
+                            serialInputS[n] = Serial.read();
                             if(Serial.peek() < '0' || Serial.peek() > '9')
                                 break;
                         }
 
                         serialLifeCount = atoi(serialInputS);
-                        if (FW_Common::OLED.lifeBar) {
+                        if(FW_Common::OLED.lifeBar) {
                             if(serialLifeCount > FW_Common::dispMaxLife)
                                 FW_Common::dispMaxLife = serialLifeCount;
                             FW_Common::dispLifePercentage = (100 * serialLifeCount) / FW_Common::dispMaxLife; // Calculate the Life % to show 
@@ -578,29 +596,28 @@ void OF_Serial::SerialProcessing()
                         serialDisplayChange = true;
                     }
                     break;
-                  }
                 }
                 break;
               #endif // USES_DISPLAY
               #if !defined(USES_SOLENOID) && !defined(USES_RUMBLE) && !defined(LED_ENABLE)
               default:
                 //Serial.println("SERIALREAD: Feedback command detected, but no feedback devices are built into this firmware!");
+                break;
               #endif
           }
           // End of 'F'
           break;
         // Custom Pulse Overrides
         case 'R':
-          serialInput = Serial.read();
-          switch(serialInput) {
+          switch(Serial.read()) {
               // Solenoid
               case '0':
                 Serial.read(); // nomf
                 if(Serial.peek() >= '0' && Serial.peek() <= '2') {
-                    serialInput = Serial.read();
+                    char serialInput = Serial.read();
                     Serial.read(); // nomf
                     if(Serial.peek() >= '0' && Serial.peek() <='9') {
-                        char serialInputS[4];
+                        char serialInputS[4] = {0,0,0,0};
                         for(uint n = 0; n < 3; ++n) {
                             serialInputS[n] = Serial.read();
                             if(Serial.peek() < '0' || Serial.peek() > '9')
@@ -627,11 +644,11 @@ void OF_Serial::SerialProcessing()
               // Rumble
               case '1':
                 Serial.read(); // nomf
-                if(Serial.peek() >= '0' & Serial.peek() <= '2') {
-                    serialInput = Serial.read();
-                    Serial.read();
-                    if(Serial.peek() >= '0' & Serial.peek() <= '9') {
-                        char serialInputS[4];
+                if(Serial.peek() >= '0' && Serial.peek() <= '2') {
+                    char serialInput = Serial.read();
+                    Serial.read(); // nomf
+                    if(Serial.peek() >= '0' && Serial.peek() <= '9') {
+                        char serialInputS[4] = {0,0,0,0};
                         for(uint n = 0; n < 3; ++n) {
                             serialInputS[n] = Serial.read();
                             if(Serial.peek() < '0' || Serial.peek() > '9')
@@ -923,7 +940,7 @@ void OF_Serial::SerialProcessingDocked()
             memcpy(&buf[pos], (uint8_t*)&OF_Prefs::toggles, OF_Const::boolTypesCount);
             pos += OF_Const::boolTypesCount;
             buf[pos++] = OF_Const::serialTerminator;
-            Serial.write(buf, pos), Serial.flush();
+            Serial.write(buf, pos);
         } else {
             for(uint i = 0; i < OF_Const::boolTypesCount; i++) {
                 if(pos >= 63) {
@@ -949,7 +966,7 @@ void OF_Serial::SerialProcessingDocked()
             memcpy(&buf[pos], (uint8_t*)&OF_Prefs::pins, OF_Const::boardInputsCount);
             pos += OF_Const::boardInputsCount;
             buf[pos++] = OF_Const::serialTerminator;
-            Serial.write(buf, pos), Serial.flush();
+            Serial.write(buf, pos);
         } else {
             for(uint i = 0; i < OF_Const::boolTypesCount; i++) {
                 if(pos >= 63) {
@@ -1026,7 +1043,7 @@ void OF_Serial::SerialProcessingDocked()
     case OF_Const::sGetProfile:
     {
         Serial_available(1);
-        int i = Serial.read();
+        uint8_t i = Serial.read();
         if(i > -1 && i < PROFILE_COUNT) {
             // appeasing the wireless folks by using a buffer instead of multiple sends:
             char buf[64];
@@ -1041,8 +1058,8 @@ void OF_Serial::SerialProcessingDocked()
             buf[34] = OF_Const::profIrLayout,     memcpy(&buf[35], &OF_Prefs::profiles[i].irLayout,     sizeof(uint8_t));
             buf[36] = OF_Const::profColor,        memcpy(&buf[37], &OF_Prefs::profiles[i].color,        sizeof(uint32_t));
             buf[41] = OF_Const::profName,         memcpy(&buf[42], &OF_Prefs::profiles[i].name,         sizeof(OF_Prefs::ProfileData_t::name));
-            Serial.write(buf, 58), Serial.flush();
-        } else Serial.write(OF_Const::serialTerminator), Serial.flush();
+            Serial.write(buf, 58);
+        } else Serial.write(OF_Const::serialTerminator);
                 break;
     }
 
@@ -1050,9 +1067,9 @@ void OF_Serial::SerialProcessingDocked()
     //
     case OF_Const::sIRTest:
         if(FW_Common::camNotAvailable) {
-            Serial.write(OF_Const::sError), Serial.flush();
+            Serial.write(OF_Const::sError);
         } else if(FW_Common::runMode == FW_Const::RunMode_Processing) {
-            Serial.println("Exiting processing mode..."), Serial.flush();
+            Serial.println("Exiting processing mode...");
             switch(OF_Prefs::profiles[OF_Prefs::currentProfile].runMode) {
             case FW_Const::RunMode_Normal:
                 FW_Common::SetRunMode(FW_Const::RunMode_Normal);
@@ -1065,7 +1082,7 @@ void OF_Serial::SerialProcessingDocked()
                               break;
                             }
         } else {
-            Serial.write(OF_Const::sIRTest), Serial.flush();
+            Serial.write(OF_Const::sIRTest);
             FW_Common::SetRunMode(FW_Const::RunMode_Processing);
         }
                                     break;
@@ -1075,10 +1092,10 @@ void OF_Serial::SerialProcessingDocked()
         if(Serial.peek() < PROFILE_COUNT) {
             FW_Common::SelectCalProfile(Serial.read());
             char buf[2] = {OF_Const::sCurrentProf, (uint8_t)OF_Prefs::currentProfile};
-            Serial.write(buf, 2), Serial.flush();
+            Serial.write(buf, 2);
             Serial_available(1);
             if(Serial.read() == OF_Const::sCaliStart) {
-                if(FW_Common::camNotAvailable) Serial.write(OF_Const::sError), Serial.flush();  // andrà anche letto il byte che altrimenti sarebbe stato letto sotto altrimenti rimane del buffer
+                if(FW_Common::camNotAvailable) Serial.write(OF_Const::sError);  // 696969 va letto anche il byte che sarebbe altrimenti arrivato ??????
                 else {
                   // sensitivity/layout preset
                   Serial_available(1); 
@@ -1521,9 +1538,12 @@ void OF_Serial::PrintDebugSerial()
 
 bool OF_Serial::Serial_available(uint8_t min) 
 {
-    unsigned long timer_out = millis();
-    while ((Serial.available() < min) && (millis() - timer_out < 1000)) yield();
-    return Serial.available() >= min ? true : false;
+    if ((Serial.available() >= min)) return true;
+    else {
+        unsigned long timer_out = millis();
+        while ((Serial.available() < min) && (millis() - timer_out < 1000)) yield();
+        return Serial.available() >= min ? true : false;
+    }
 }
 
 // ============ 696969 ========== ripristino di Serial dopo definizione per connessione seriali ==============
