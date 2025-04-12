@@ -945,14 +945,14 @@ void OF_Serial::SerialProcessingDocked()
             for(uint i = 0; i < OF_Const::boolTypesCount; i++) {
                 if(pos >= 63) {
                     Serial.write(buf, pos);
-                    Serial.flush();
+                    //Serial.flush();
                     pos = 0;
                 }
                 memcpy(&buf[pos++], (uint8_t*)&OF_Prefs::toggles[i], sizeof(bool));
                 if(i == OF_Const::settingsTypesCount-1) {
                     buf[pos++] = OF_Const::serialTerminator;
                     Serial.write(buf, pos);
-                    Serial.flush();
+                    //Serial.flush();
                 }
             }
         }
@@ -971,14 +971,14 @@ void OF_Serial::SerialProcessingDocked()
             for(uint i = 0; i < OF_Const::boolTypesCount; i++) {
                 if(pos >= 63) {
                     Serial.write(buf, pos);
-                    Serial.flush();
+                    //Serial.flush();
                     pos = 0;
                 }
                 memcpy(&buf[pos++], (uint8_t*)&OF_Prefs::pins[i], sizeof(int8_t));
                 if(i == OF_Const::settingsTypesCount-1) {
                     buf[pos++] = OF_Const::serialTerminator;
                     Serial.write(buf, pos);
-                    Serial.flush();
+                    //Serial.flush();
                 }
             }
         }
@@ -990,7 +990,7 @@ void OF_Serial::SerialProcessingDocked()
         for(uint i = 0, pos = 0; i < OF_Const::settingsTypesCount; i++) {
             if(pos >= 60) {
                 Serial.write(buf, pos);
-                Serial.flush();
+                //Serial.flush();
                 pos = 0;
             }
             buf[pos++] = i;
@@ -999,7 +999,7 @@ void OF_Serial::SerialProcessingDocked()
             if(i == OF_Const::settingsTypesCount-1) {
                 buf[pos++] = OF_Const::serialTerminator;
                 Serial.write(buf, pos);
-                Serial.flush();
+                //Serial.flush();
             }
         }
         break;
@@ -1016,7 +1016,7 @@ void OF_Serial::SerialProcessingDocked()
         for(uint i = 0; i < OF_Const::i2cDevicesCount; i++) {
             if(pos >= 32) {
                 Serial.write(buf, pos);
-                Serial.flush();
+                //Serial.flush();
                 pos = 0;
             }
 
@@ -1036,7 +1036,7 @@ void OF_Serial::SerialProcessingDocked()
             if(i == OF_Const::i2cDevicesCount-1) {
                 buf[pos++] = OF_Const::serialTerminator;
                 Serial.write(buf, pos);
-                Serial.flush();
+                //Serial.flush();
             }
         }
     }
@@ -1155,8 +1155,8 @@ void OF_Serial::SerialProcessingDocked()
                     if(Serial_available(2)) {    
                         int type = Serial.read();
                         if(type < OF_Const::boolTypesCount) {
-                            OF_Prefs::toggles[type] = Serial.read();
-                            Serial.write(OF_Prefs::toggles[type]);
+                            OF_Prefs::toggles[type] = (bool)Serial.read();
+                            Serial.write(OF_Prefs::toggles[type] ? 1 : 0);
                         } else Serial.write(Serial.read()), Serial.flush();
                     } else {
                         while(Serial.available()) Serial.read();

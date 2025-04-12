@@ -152,17 +152,22 @@ int SerialWireless_::availableForWriteBin() {
   return BUFFER_SIZE - _writeLen;
 }
 
-void SerialWireless_::flush() {
-  if (availableForWriteBin() > (lenBufferSerialWrite + PREAMBLE_SIZE + POSTAMBLE_SIZE)) {
-    memcpy(&packet.txBuff[PREAMBLE_SIZE], bufferSerialWrite, lenBufferSerialWrite);
-    packet.constructPacket(lenBufferSerialWrite, PACKET_TX::SERIAL_TX);
-    writeBin(packet.txBuff, lenBufferSerialWrite + PREAMBLE_SIZE+POSTAMBLE_SIZE);
-    lenBufferSerialWrite = 0;
+// decidere se controllare se è vuoto anche il buffer_bin
+void SerialWireless_::flush() { // è bloccante e non esce fino a quando il buffer di uscita è completamente vuoto
+  while (lenBufferSerialWrite || _writeLen) {
+    if (lenBufferSerialWrite) {
+    if (availableForWriteBin() > (lenBufferSerialWrite + PREAMBLE_SIZE + POSTAMBLE_SIZE)) {
+        memcpy(&packet.txBuff[PREAMBLE_SIZE], bufferSerialWrite, lenBufferSerialWrite);
+        packet.constructPacket(lenBufferSerialWrite, PACKET_TX::SERIAL_TX);
+        writeBin(packet.txBuff, lenBufferSerialWrite + PREAMBLE_SIZE+POSTAMBLE_SIZE);
+        lenBufferSerialWrite = 0;
+    }
+    }
+    SendData(); // try a send
   }
-  SendData(); // try a send
 }
 
-void SerialWireless_::flushBin() {
+void SerialWireless_::flushBin() { // mai usata
   SendData();
 }
 
@@ -206,10 +211,26 @@ size_t SerialWireless_::writeBin(uint8_t c) {
   return writeBin(&c, 1);
 }
 
-size_t SerialWireless_::write(const uint8_t *data, size_t len) { 
-  memcpy(&bufferSerialWrite[lenBufferSerialWrite], data, len);
-  lenBufferSerialWrite += len;
-  flush();
+size_t SerialWireless_::write(const uint8_t *data, size_t len) { // deve essere bloccante se nel buffer di uscita non c'è abbastanza spazio, finchè non ha inviato tutto
+  bool aux_tx = true;
+  do
+  {   
+    if (lenBufferSerialWrite + len <= FIFO_SIZE_WRITE_SERIAL) {
+      memcpy(&bufferSerialWrite[lenBufferSerialWrite], data, len);
+      lenBufferSerialWrite += len;
+      aux_tx = false;
+    }
+    //flush();
+    // =================
+    if (availableForWriteBin() > (lenBufferSerialWrite + PREAMBLE_SIZE + POSTAMBLE_SIZE)) {
+      memcpy(&packet.txBuff[PREAMBLE_SIZE], bufferSerialWrite, lenBufferSerialWrite);
+      packet.constructPacket(lenBufferSerialWrite, PACKET_TX::SERIAL_TX);
+      writeBin(packet.txBuff, lenBufferSerialWrite + PREAMBLE_SIZE+POSTAMBLE_SIZE);
+      lenBufferSerialWrite = 0;
+    }
+    SendData(); // try a send
+  } while (aux_tx);
+  // =================
   return len;
 }
 
@@ -502,7 +523,7 @@ bool SerialWireless_::connection_gun() {
 void packet_callback_read_dongle() {
   switch (SerialWireless.packet.currentPacketID()) {
     case PACKET_TX::SERIAL_TX:
-      Serial.write(&SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead), Serial.flush();
+      Serial.write(&SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead);
       break;
     case PACKET_TX::MOUSE_TX :
       usbHid.sendReport(HID_RID_e::HID_RID_MOUSE, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead);  

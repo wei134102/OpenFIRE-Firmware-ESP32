@@ -255,10 +255,12 @@ if(OF_Prefs::usb.devicePID > 0 && OF_Prefs::usb.devicePID < 5) {
     // arriva qui solo se e' stato connesso l'usb o e' stata negoziata e stabilita una connessione wireless
 
     if (TinyUSBDevice.mounted()) {
-        Serial.setTimeout(0);
-        //Serial.setTxTimeoutMs(0); // default è 250ms
-        //Serial.setRxBufferSize(64); // impostato con per arduino pico .. se non si imposta è 256 di default
         Serial.begin(9600);
+        Serial.setTimeout(0);
+        #if defined(ARDUINO_ARCH_ESP32)
+            Serial.setTxTimeoutMs(0); // default è 250ms // serve per fare come in arduino pico rp2040
+            //Serial.setRxBufferSize(64); // impostato con per arduino pico .. se non si imposta è 256 di default
+            #endif // ARDUINO_ARCH_ESP32
         #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
             if (TinyUSBDevices.onBattery) {  // nel caso incredibile che l'USB sia montato nel momnto esatto in cui è stata stabilita connessione wireless
                 TinyUSBDevices.onBattery = false;
@@ -267,6 +269,9 @@ if(OF_Prefs::usb.devicePID > 0 && OF_Prefs::usb.devicePID < 5) {
             if (TinyUSBDevices.wireless_mode != WIRELESS_MODE::NONE_WIRELESS) SerialWireless.end();
         #endif 
         Serial_OpenFIRE_Stream = & Serial;
+        //Serial_OpenFIRE_Stream->setTimeout(0);  
+        //(*Serial_OpenFIRE_Stream).setTimeout(0); 
+
     }  
     #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
     else {     
