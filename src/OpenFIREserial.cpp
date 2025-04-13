@@ -1340,12 +1340,14 @@ void OF_Serial::SerialProcessingDocked()
           }
 
     case OF_Const::sClearFlash:
-        OF_Prefs::ResetPreferences();
-        #ifdef ARDUINO_ARCH_ESP32
-            ESP.restart();
-        #else
-            rp2040.reboot();
-        #endif
+        if(Serial.available() == 1 && Serial.read() == OF_Const::sClearFlash) {
+            OF_Prefs::ResetPreferences();
+            #ifdef ARDUINO_ARCH_ESP32
+                ESP.restart();
+            #else
+                rp2040.reboot();
+            #endif
+        } else while(Serial.available()) Serial.read();
         break;
     }
 }
