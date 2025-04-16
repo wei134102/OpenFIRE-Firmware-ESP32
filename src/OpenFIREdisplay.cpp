@@ -29,7 +29,12 @@ bool ExtDisplay::Begin()
     // TODO: for some reason, doing this AFTER saving updated pins settings (even when doing it from defaults and there's no default mappings for peripheral pins)
     // causes the board to hang. Even though this is all correct (and any display objects should get deleted from the above, so don't think it can be a new object thing)...
     if(OF_Prefs::pins[OF_Const::periphSCL] >= 0 && OF_Prefs::pins[OF_Const::periphSDA] >= 0) {
-        if(bitRead(OF_Prefs::pins[OF_Const::periphSCL], 1) && bitRead(OF_Prefs::pins[OF_Const::periphSDA], 1)) {
+      #ifdef ARDUINO_ARCH_ESP32
+        //Wire1.end();  // 696969 ??? anche per esp32 ????
+        Wire1.setPins(OF_Prefs::pins[OF_Const::periphSDA], OF_Prefs::pins[OF_Const::periphSCL]);  // 696969 per esp32
+        display = new Adafruit_SSD1306(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire1, -1);
+      #elif // rp2040
+      if(bitRead(OF_Prefs::pins[OF_Const::periphSCL], 1) && bitRead(OF_Prefs::pins[OF_Const::periphSDA], 1)) {
             // I2C1
             if(bitRead(OF_Prefs::pins[OF_Const::periphSCL], 0) && !bitRead(OF_Prefs::pins[OF_Const::periphSDA], 0)) {
                 Wire1.end(); // 696969 ??? anche per esp32 ????
@@ -57,6 +62,7 @@ bool ExtDisplay::Begin()
                 display = new Adafruit_SSD1306(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
             } else return false;
         } else return false;
+      #endif
     } else return false;
 
     if(display->begin(SSD1306_SWITCHCAPVCC, OF_Prefs::oledPrefs[OF_Const::oledAltAddr] ? 0x3D : 0x3C)) {

@@ -76,7 +76,7 @@ void setup() {
     OF_Prefs::LoadPresets();
     
     if(OF_Prefs::InitFS() == OF_Prefs::Error_Success) {
-        //////OF_Prefs::ResetPreferences(); //FORMATTA IL FILE SYSTEM
+        //OF_Prefs::ResetPreferences(); //FORMATTA IL FILE SYSTEM
         OF_Prefs::LoadProfiles();
         
         // Profile sanity checks
@@ -1071,8 +1071,7 @@ void ExecGunModeDocked()
             buf[pos++] = OF_Const::serialTerminator;
             buf[pos++] = OF_Const::sError;
         }
-        //Serial.write(buf, pos+1); // per me non ci va pos+1 ma solo pos
-        Serial.write(buf, pos);
+        Serial.write(buf, pos+1);
         Serial.flush();
     }
 

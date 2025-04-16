@@ -31,8 +31,8 @@
                     D-Pad Left   33  |-)       (x| RUN
                    D-Pad Right   34  |-)       (-|  06   *Unmapped*
                                  GND |x)       (x| GND
-                       RGB Red   35  |-)       (-|  05   Camera SCL
-                     RGB Green   36  |-)       (-|  04   Camera SDA
+Peripherals SDA (OLED) RGB Red   35  |-)       (-|  05   Camera SCL
+Peripherals SCL OLED RGB Green   36  |-)       (-|  04   Camera SDA
                       RGB Blue   37  |-)       (-|  02   *Unmapped* Peripherals SCL (OLED)
                    Pump Action   38  |-)       (-|  01   *Unmapped* Peripherals SDA (OLED)
                                  GND |x)       (x| GND
@@ -89,8 +89,8 @@ COLLEG 43 A USB SERIAL JTAG U0TXD TX |-)            (-| 3V3 VDD33
                      D-Pad Left   8  |-)       (x| RUN
                      D-Pad Right  9  |-)       (-|  22 *Unmapped*
                                  GND |x)       (x| GND
-                     RGB Red     10  |-)       (-|  21 Camera SCL
-                     RGB Green   11  |-)       (-|  20 Camera SDA
+Peripherals SDA OLED RGB Red     10  |-)       (-|  21 Camera SCL
+Peripherals SCL OLED RGB Green   11  |-)       (-|  20 Camera SDA
                      RGB Blue    12  |-)       (-|  19 *Unmapped* Peripherals SCL (impostato da App)
                      Pump Action 13  |-)       (-|  18 *Unmapped* Peripherals SDA (impostato da App)
                                  GND |x)       (x| GND

@@ -158,7 +158,7 @@ public:
     
     //// General Runtime Flags
     static inline bool justBooted = true;                              // For ops we need to do on initial boot (custom pins, joystick centering)
-    static inline bool dockedSaving = false;                           // To block sending test output in docked mode.
+    static inline bool dockedSaving = true; // false;  // 696969                         // To block sending test output in docked mode.
 
     static LightgunButtons buttons;
 

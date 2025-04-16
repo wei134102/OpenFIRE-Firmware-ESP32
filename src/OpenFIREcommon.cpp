@@ -169,6 +169,10 @@ void FW_Common::PinsReset()
 
 void FW_Common::CameraSet()
 {
+    #ifdef ARDUINO_ARCH_ESP32
+        Wire.setPins(OF_Prefs::pins[OF_Const::camSDA], OF_Prefs::pins[OF_Const::camSCL]); // MODIFICATO 696969 per ESP32
+        dfrIRPos = new DFRobotIRPositionEx(Wire);
+    #elif // rp2040   
     // Sanity check: which channel do these pins correlate to?
     if(bitRead(OF_Prefs::pins[OF_Const::camSCL], 1) && bitRead(OF_Prefs::pins[OF_Const::camSDA], 1)) {
         // I2C1
@@ -196,6 +200,7 @@ void FW_Common::CameraSet()
             dfrIRPos = new DFRobotIRPositionEx(Wire);
         }
     }
+    #endif
 
     #ifdef ARDUINO_ARCH_RP2040
     if(OF_Prefs::pins[OF_Const::wiiClockGen] > -1) {

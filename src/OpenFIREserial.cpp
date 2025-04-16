@@ -934,92 +934,126 @@ void OF_Serial::SerialProcessingDocked()
     //
     case OF_Const::sGetToggles:
     {
-        char buf[64];
+        char buf[100];
         uint8_t pos = 0;
+        /*
         if(OF_Const::boolTypesCount <= 63) {
+        */  
             memcpy(&buf[pos], (uint8_t*)&OF_Prefs::toggles, OF_Const::boolTypesCount);
             pos += OF_Const::boolTypesCount;
             buf[pos++] = OF_Const::serialTerminator;
             Serial.write(buf, pos);
+        /*
         } else {
             for(uint i = 0; i < OF_Const::boolTypesCount; i++) {
                 if(pos >= 63) {
                     Serial.write(buf, pos);
-                    //Serial.flush();
+                    Serial.flush();
                     pos = 0;
                 }
                 memcpy(&buf[pos++], (uint8_t*)&OF_Prefs::toggles[i], sizeof(bool));
                 if(i == OF_Const::settingsTypesCount-1) {
                     buf[pos++] = OF_Const::serialTerminator;
                     Serial.write(buf, pos);
-                    //Serial.flush();
+                    Serial.flush();
                 }
             }
-        }
+        }*/
                           break;
                     }
     case OF_Const::sGetPins:
     {
-        char buf[64];
+        char buf[100];
         uint8_t pos = 0;
+        /*
         if(OF_Const::boardInputsCount <= 63) {
+*/
             memcpy(&buf[pos], (uint8_t*)&OF_Prefs::pins, OF_Const::boardInputsCount);
             pos += OF_Const::boardInputsCount;
             buf[pos++] = OF_Const::serialTerminator;
             Serial.write(buf, pos);
-        } else {
+  /*
+        } 
+  */
+        /*
+        else {
             for(uint i = 0; i < OF_Const::boolTypesCount; i++) {
                 if(pos >= 63) {
                     Serial.write(buf, pos);
-                    //Serial.flush();
+                    Serial.flush();
                     pos = 0;
                 }
                 memcpy(&buf[pos++], (uint8_t*)&OF_Prefs::pins[i], sizeof(int8_t));
                 if(i == OF_Const::settingsTypesCount-1) {
                     buf[pos++] = OF_Const::serialTerminator;
                     Serial.write(buf, pos);
-                    //Serial.flush();
+                    Serial.flush();
                 }
             }
+        
         }
+        */
         break;
     }
     case OF_Const::sGetSettings:
     {
-        char buf[64];
-        for(uint i = 0, pos = 0; i < OF_Const::settingsTypesCount; i++) {
+        char buf[100];
+        for(uint8_t i = 0, pos = 0; i < OF_Const::settingsTypesCount; i++) {
+            /*
+            Serial.print(1);
+            delay(200);
+            Serial.print(2);
+            delay(200);
+            Serial.print(3);
+            delay(200);
+            Serial.print(4);
+            delay(200);
+            Serial.print(5);
+            delay(200);
+            */
+            //Serial.print("1234");//write((char *)&OF_Prefs::settings[i], 4);
+        
+            /*
             if(pos >= 60) {
+                
                 Serial.write(buf, pos);
+                Serial.write(buf, 6);
                 //Serial.flush();
                 pos = 0;
             }
+            */
             buf[pos++] = i;
             memcpy(&buf[pos], &OF_Prefs::settings[i], sizeof(uint32_t));
             pos += sizeof(uint32_t);
-            if(i == OF_Const::settingsTypesCount-1) {
+            if(i == OF_Const::settingsTypesCount - 1) {
                 buf[pos++] = OF_Const::serialTerminator;
+                //while (!Serial.availableForWrite()) yield();
                 Serial.write(buf, pos);
                 //Serial.flush();
+                //Serial.print("1234567890");
+                
             }
+                
         }
         break;
     }
     case OF_Const::sGetPeriphs:
     {
-        char buf[64];
+        char buf[100];
         int pos = 0;
         buf[pos++] = OF_Const::i2cDevicesEnabled;
         memcpy(&buf[pos], &OF_Prefs::i2cPeriphs, OF_Const::i2cDevicesCount);
         pos += OF_Const::i2cDevicesCount;
         buf[pos++] = OF_Const::serialTerminator;
         // any settings for I2C devices goes here:
-        for(uint i = 0; i < OF_Const::i2cDevicesCount; i++) {
+        for(uint8_t i = 0; i < OF_Const::i2cDevicesCount; i++) {
+            /*
             if(pos >= 32) {
                 Serial.write(buf, pos);
-                //Serial.flush();
+                Serial.flush();
                 pos = 0;
             }
-
+            */
             switch(i) {
             case OF_Const::i2cOLED:
                 buf[pos++] = i;
@@ -1036,7 +1070,7 @@ void OF_Serial::SerialProcessingDocked()
             if(i == OF_Const::i2cDevicesCount-1) {
                 buf[pos++] = OF_Const::serialTerminator;
                 Serial.write(buf, pos);
-                //Serial.flush();
+                Serial.flush();
             }
         }
     }
@@ -1046,7 +1080,7 @@ void OF_Serial::SerialProcessingDocked()
         uint8_t i = Serial.read();
         if(i > -1 && i < PROFILE_COUNT) {
             // appeasing the wireless folks by using a buffer instead of multiple sends:
-            char buf[64];
+            char buf[100];
             buf[0]  = OF_Const::profTopOffset,    memcpy(&buf[1],  &OF_Prefs::profiles[i].topOffset,    sizeof(uint32_t));
             buf[5]  = OF_Const::profBottomOffset, memcpy(&buf[6],  &OF_Prefs::profiles[i].bottomOffset, sizeof(uint32_t));
             buf[10] = OF_Const::profLeftOffset,   memcpy(&buf[11], &OF_Prefs::profiles[i].leftOffset,   sizeof(uint32_t));
@@ -1088,7 +1122,6 @@ void OF_Serial::SerialProcessingDocked()
                                     break;
     case OF_Const::sCaliProfile:
     {
-        Serial_available(1);
         if(Serial.peek() < PROFILE_COUNT) {
             FW_Common::SelectCalProfile(Serial.read());
             char buf[2] = {OF_Const::sCurrentProf, (uint8_t)OF_Prefs::currentProfile};
@@ -1108,7 +1141,7 @@ void OF_Serial::SerialProcessingDocked()
                   FW_Common::ExecCalMode(true);
                 }
             }
-        } // else  =================  va gestisto e svuotato il buffer ????
+        }  // else  =================  va gestisto e svuotato il buffer ????
                             break;
                           }
     #ifdef USES_SOLENOID
@@ -1155,8 +1188,8 @@ void OF_Serial::SerialProcessingDocked()
                     if(Serial_available(2)) {    
                         int type = Serial.read();
                         if(type < OF_Const::boolTypesCount) {
-                            OF_Prefs::toggles[type] = (bool)Serial.read();
-                            Serial.write(OF_Prefs::toggles[type] ? 1 : 0);
+                            OF_Prefs::toggles[type] = Serial.read();
+                            Serial.write(OF_Prefs::toggles[type]);
                         } else Serial.write(Serial.read()), Serial.flush();
                     } else {
                         while(Serial.available()) Serial.read();
@@ -1164,8 +1197,7 @@ void OF_Serial::SerialProcessingDocked()
                     }
                             break;
                 case OF_Const::sCommitPins:
-                    //if(Serial.available() >= 2) {
-                    if(Serial_available(2)) {    
+                    if(Serial.available() >= 2) {
                         int type = Serial.read();
                         if(type < OF_Const::boardInputsCount) {
                             OF_Prefs::pins[type] = Serial.read();
@@ -1178,7 +1210,7 @@ void OF_Serial::SerialProcessingDocked()
                                     break;
                 case OF_Const::sCommitSettings:
                     //if(Serial.available() >= 5) {
-                    if(Serial_available(5)) {    
+                    if(Serial_available(5)) { 
                         int type = Serial.read();
                         if(type < OF_Const::settingsTypesCount) {
                             Serial.readBytes((uint8_t*)&OF_Prefs::settings[type], sizeof(uint32_t));
@@ -1195,14 +1227,14 @@ void OF_Serial::SerialProcessingDocked()
                             break;
                 case OF_Const::sCommitProfile:
                     //if(Serial.available() >= 6) {
-                    if(Serial_available(2)) {    
+                    if(Serial_available(2)) { 
                         int profNum = Serial.read();
                         if(profNum < PROFILE_COUNT) {
                             int type = Serial.read();
                             switch(type) {
                               case OF_Const::profName:
                                   //if(Serial.available() > 0 && Serial.available() <= 16) {
-                                  if(Serial_available(sizeof(OF_Prefs::ProfileData_t::name))) {  
+                                  if(Serial_available(sizeof(OF_Prefs::ProfileData_t::name))) {
                                       memset(OF_Prefs::profiles[profNum].name, '\0', sizeof(OF_Prefs::ProfileData_t::name));
                                       //Serial.readBytes((uint8_t*)&OF_Prefs::profiles[profNum].name, Serial.available());
                                       Serial.readBytes((uint8_t*)&OF_Prefs::profiles[profNum].name, sizeof(OF_Prefs::ProfileData_t::name));
@@ -1214,11 +1246,13 @@ void OF_Serial::SerialProcessingDocked()
                             break;
                               default:
                                   if(type > OF_Const::profTRled && type < OF_Const::profDataTypes) {
-                                      Serial_available(sizeof(uint32_t)), Serial.readBytes((uint8_t*)&OF_Prefs::profiles[profNum]+(type*sizeof(uint32_t)), sizeof(uint32_t));
+                                      Serial_available(sizeof(uint32_t));
+                                      Serial.readBytes((uint8_t*)&OF_Prefs::profiles[profNum]+(type*sizeof(uint32_t)), sizeof(uint32_t));
                                       Serial.write((uint8_t*)&OF_Prefs::profiles[profNum]+(type*sizeof(uint32_t)), sizeof(uint32_t)), Serial.flush();
                                   } else {
                                       char junkBuf[sizeof(uint32_t)];
-                                      Serial_available(sizeof(junkBuf)), Serial.readBytes(junkBuf, sizeof(junkBuf));
+                                      Serial_available(sizeof(junkBuf));
+                                      Serial.readBytes(junkBuf, sizeof(junkBuf));
                                       Serial.write(junkBuf, sizeof(junkBuf)), Serial.flush();
                                   }
                                   break;
@@ -1231,25 +1265,26 @@ void OF_Serial::SerialProcessingDocked()
                 break;
                 case OF_Const::sCommitID:
                     //if(Serial.available() >= 3) {
-                    if(Serial_available(1)) {    
+                    if(Serial_available(1)) { 
                         switch(Serial.read()) {
                           case OF_Const::usbPID:
-                              Serial_available(sizeof(OF_Prefs::USBMap_t::devicePID)), Serial.readBytes((uint8_t*)&OF_Prefs::usb.devicePID, sizeof(OF_Prefs::USBMap_t::devicePID));
+                              Serial_available(sizeof(OF_Prefs::USBMap_t::devicePID));
+                              Serial.readBytes((uint8_t*)&OF_Prefs::usb.devicePID, sizeof(OF_Prefs::USBMap_t::devicePID));
                               Serial.write((uint8_t*)&OF_Prefs::usb.devicePID, sizeof(OF_Prefs::USBMap_t::devicePID)), Serial.flush();
                               break;
                           case OF_Const::usbName:        
-                                //if(Serial.available() > 0 && Serial.available() >= 16) {
-                                if(Serial_available(sizeof(OF_Prefs::USBMap_t::deviceName))) {
-                                    memset(OF_Prefs::usb.deviceName, '\0', sizeof(OF_Prefs::USBMap_t::deviceName));
+                              //if(Serial.available() > 0 && Serial.available() <= 16) {
+                              if(Serial_available(sizeof(OF_Prefs::USBMap_t::deviceName))) {
+                                  memset(OF_Prefs::usb.deviceName, '\0', sizeof(OF_Prefs::USBMap_t::deviceName));
                                   //Serial.readBytes(OF_Prefs::usb.deviceName, Serial.available());
                                   Serial.readBytes(OF_Prefs::usb.deviceName, sizeof(OF_Prefs::USBMap_t::deviceName));
-                                  Serial.write(OF_Prefs::usb.deviceName, sizeof(OF_Prefs::USBMap_t::deviceName)), Serial.flush();
+                                  Serial.write(OF_Prefs::usb.deviceName), Serial.flush();
                               } else {
-                                  while(Serial.available()) Serial.read(); // svuota il buffer, ma dovrebbe esserci un modo migliore
+                                  while(Serial.available()) Serial.read();
                                   Serial.write(OF_Const::serialTerminator), Serial.flush();
                               }
                             break;
-                          default: // ???????????? da rivedere ============================
+                          default:  // ???????????? da rivedere ============================
                               char junkBuf[Serial.available()];
                               Serial.readBytes(junkBuf, sizeof(junkBuf));
                               Serial.write(junkBuf, sizeof(junkBuf)), Serial.flush();
@@ -1262,13 +1297,14 @@ void OF_Serial::SerialProcessingDocked()
                     break;
                 case OF_Const::sCommitPeriphs:
                     //if(Serial.available() >= 2) {
-                    if(Serial_available(2)) {    
+                    if(Serial_available(2)) { 
                         switch(Serial.read()) {
                         case OF_Const::i2cDevicesEnabled:
                         {
                             int type = Serial.read();
                             if(type > -1 && type < OF_Const::i2cDevicesCount) {
-                                Serial_available(1), OF_Prefs::i2cPeriphs[type] = Serial.read();
+                                Serial_available(1);
+                                OF_Prefs::i2cPeriphs[type] = Serial.read();
                                 Serial.write((uint8_t)OF_Prefs::i2cPeriphs[type]), Serial.flush();
                             } else Serial.write(Serial.read()), Serial.flush();  // ????????????????????????????????????
                         break;
@@ -1277,17 +1313,18 @@ void OF_Serial::SerialProcessingDocked()
                         {
                             int type = Serial.read();
                             if(type > -1 && type < OF_Const::oledSettingsTypes) {
-                                Serial_available(sizeof(uint32_t)), Serial.readBytes((uint8_t*)&OF_Prefs::oledPrefs[type], sizeof(uint32_t));
+                                Serial_available(sizeof(uint32_t));
+                                Serial.readBytes((uint8_t*)&OF_Prefs::oledPrefs[type], sizeof(uint32_t));
                                 Serial.write((uint8_t*)&OF_Prefs::oledPrefs[type], sizeof(uint32_t)), Serial.flush();
                             } else {
                                 char junkBuf[sizeof(uint32_t)];
-                                Serial_available(sizeof(junkBuf)), Serial.readBytes(junkBuf, sizeof(junkBuf));
+                                Serial.readBytes(junkBuf, sizeof(junkBuf));
                                 Serial.write(junkBuf, sizeof(junkBuf)), Serial.flush();
                             }
-                        break; // ?????????????????????????????????????????????
-                        }
-                        default: // tutto da rivedere ========================================
-                            int type = Serial.read(); // ??????????????????????????????????????????
+                        }  
+                        // ??????????? manca il break ?
+                        default:  // tutto da rivedere ========================================
+                            //int type = Serial.read(); // ?????????????????????????????????????????? 
                             char junkBuf[Serial.available()];
                             Serial.readBytes(junkBuf, sizeof(junkBuf));
                             Serial.write(junkBuf, sizeof(junkBuf)), Serial.flush();

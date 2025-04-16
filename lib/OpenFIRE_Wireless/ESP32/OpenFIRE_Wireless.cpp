@@ -11,7 +11,7 @@
 #define ESPNOW_WIFI_CHANNEL 4
 
 // la potenza di trasmissione può andare da 8 a 84, dove 84 è il valore massimo che corrisponde a 20 db
-#define ESPNOW_WIFI_POWER 69 
+#define ESPNOW_WIFI_POWER 84 
 
 USB_Data_GUN_Wireless usb_data_wireless = {
   "OpenFIRE_DONGLE",  // MANIFACTURES
