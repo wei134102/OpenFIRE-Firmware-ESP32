@@ -96,9 +96,14 @@ void FW_Common::FeedbackSet()
         OF_RGB::InitExternPixel(OF_Prefs::pins[OF_Const::neoPixel]);
     #endif // CUSTOM_NEOPIXEL
 
+    #ifdef ARDUINO_ARCH_ESP32
+    if (OF_Prefs::pins[OF_Const::periphSCL] >= 0 && OF_Prefs::pins[OF_Const::periphSDA] >= 0) {
+    #else //rp2040
     if(OF_Prefs::pins[OF_Const::periphSCL] >= 0 && OF_Prefs::pins[OF_Const::periphSDA] >= 0 &&
        bitRead(OF_Prefs::pins[OF_Const::camSCL], 1) != bitRead(OF_Prefs::pins[OF_Const::periphSCL], 1) &&
        bitRead(OF_Prefs::pins[OF_Const::camSDA], 1) != bitRead(OF_Prefs::pins[OF_Const::periphSDA], 1)) {
+    #endif
+    
     #ifdef USES_DISPLAY
     // wrapper will manage display validity
       // check it's not using the camera's I2C line
@@ -172,7 +177,7 @@ void FW_Common::CameraSet()
     #ifdef ARDUINO_ARCH_ESP32
         Wire.setPins(OF_Prefs::pins[OF_Const::camSDA], OF_Prefs::pins[OF_Const::camSCL]); // MODIFICATO 696969 per ESP32
         dfrIRPos = new DFRobotIRPositionEx(Wire);
-    #elif // rp2040   
+    #else // rp2040   
     // Sanity check: which channel do these pins correlate to?
     if(bitRead(OF_Prefs::pins[OF_Const::camSCL], 1) && bitRead(OF_Prefs::pins[OF_Const::camSDA], 1)) {
         // I2C1
