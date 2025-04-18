@@ -187,6 +187,22 @@ public:
 
     /// @brief Sets pre-set values according to the board
     static void LoadPresets();
+
+    #if defined(OPENFIRE_WIRELESS_ENABLE) && defined(ARDUINO_ARCH_ESP32)
+        /// @brief Carica le impostazione wireless // CANALE // POTENZA
+        static int LoadWireless(uint8_t *channel, uint8_t *power);
+        
+        /// @brief Salva le impostazioni wireless // CANALE // POTENZA
+        static int SaveWireless(uint8_t *channel, uint8_t *power);  
+
+        /// @brief Carica le impostazione dell'ultimo DONGLE a cui è stato connesso // canale e mac addres
+        static int LoadLastDongleWireless(uint8_t *address);
+        
+        /// @brief Salva le le impostazione dell'ultimo DONGLE a cui è stato connesso // canale e mac addres
+        static int SaveLastDongleWireless(uint8_t *address);  
+
+    #endif //ARDUINO_ARCH_ESP32
+
 };
 
 #endif // _OPENFIREPREFS_H_

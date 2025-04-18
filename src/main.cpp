@@ -109,9 +109,26 @@ void setup() {
                 FW_Common::runMode = (FW_Const::RunMode_e)OF_Prefs::profiles[OF_Prefs::currentProfile].runMode;
     
             OF_Prefs::Load();
-        } else {
-            Serial.printf("%c%c (No Storage Available)", OF_Const::sError, (char)OF_Prefs::Error_NoStorage);
-        }
+        
+        #if defined(OPENFIRE_WIRELESS_ENABLE) && defined(ARDUINO_ARCH_ESP32)
+            uint8_t aux_espnow_wifi_channel, aux_espnow_wifi_power;
+            if (OF_Prefs::LoadWireless(&aux_espnow_wifi_channel, &aux_espnow_wifi_power) == OF_Prefs::Error_Success) {
+                espnow_wifi_channel = aux_espnow_wifi_channel;
+                espnow_wifi_power = aux_espnow_wifi_power;
+            }
+            /*
+            else {
+                OF_Prefs::SaveWireless(&espnow_wifi_channel, &espnow_wifi_power)
+            }
+            */
+            if (OF_Prefs::LoadLastDongleWireless(lastDongleAddress) == OF_Prefs::Error_Success) lastDongleSave = true;
+                else lastDongleSave = false;
+
+        #endif // defined(OPENFIRE_WIRELESS_ENABLE) && defined(ARDUINO_ARCH_ESP32)
+        
+    } else {
+        Serial.printf("%c%c (No Storage Available)", OF_Const::sError, (char)OF_Prefs::Error_NoStorage);
+    }
     
 
     // ===== 696969 per trasmettere i dati wireless al dongle ========
@@ -121,7 +138,7 @@ void setup() {
         usb_data_wireless.deviceVID = DEVICE_VID;
         usb_data_wireless.devicePID = PLAYER_NUMBER; // cambia
         usb_data_wireless.devicePlayer = PLAYER_NUMBER;
-        usb_data_wireless.channel = ESPNOW_WIFI_CHANNEL;
+        usb_data_wireless.channel = espnow_wifi_channel;
     #endif // defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
     // ===============================================================
 
@@ -243,10 +260,18 @@ if(OF_Prefs::usb.devicePID > 0 && OF_Prefs::usb.devicePID < 5) {
         unsigned long lastMillis = millis ();
         while ((millis () - lastMillis <= MILLIS_TIMEOUT) && (!TinyUSBDevice.mounted())) { yield(); }
         if (!TinyUSBDevice.mounted()) {
-            SerialWireless.begin();
-            //TinyUSBDevices.onBattery = false; // lo imposta a true solo dopo che è stata stabilita e riconosciuta connessione tra dongle e gun
-            //uint8_t stato_wireless = 0;
-            SerialWireless.connection_gun();
+            SerialWireless.begin(); // fare una sorta di prebegin, senza impostare peer e altro
+            if (lastDongleSave) {
+                // PROVA A CONNETTERTI AL PRECEDENTE DONGLE INVIANDO IL PACCHETTO CHECK_CONNECTION
+                if (SerialWireless.connection_gun_at_last_dongle()) {
+                } else SerialWireless.connection_gun();
+
+            }
+            else {
+                //TinyUSBDevices.onBattery = false; // lo imposta a true solo dopo che è stata stabilita e riconosciuta connessione tra dongle e gun
+                //uint8_t stato_wireless = 0;
+                SerialWireless.connection_gun();
+            }
         }
     #endif // OPENFIRE_WIRELESS_ENABLE
 
@@ -275,6 +300,8 @@ if(OF_Prefs::usb.devicePID > 0 && OF_Prefs::usb.devicePID < 5) {
     }  
     #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
     else {     
+        if (!lastDongleSave || 
+            (lastDongleSave && !(memcmp(lastDongleAddress, peerAddress,6) == 0))) OF_Prefs::SaveLastDongleWireless(peerAddress);
         // CHIUDI TUTTO CIO' CHE E' USB SE E' DA CHIUDERE
         TinyUSBDevice.clearConfiguration();
         TinyUSBDevice.detach();

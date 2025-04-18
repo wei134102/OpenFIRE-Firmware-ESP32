@@ -68,8 +68,15 @@
  *   ESP_NOW
  *****************************/
 
- #define ESPNOW_WIFI_CHANNEL 4
  
+extern uint8_t espnow_wifi_channel;
+extern uint8_t espnow_wifi_power;
+extern uint8_t lastDongleAddress[6];
+extern uint8_t peerAddress[6];
+extern bool lastDongleSave;
+ 
+ 
+
 enum WIRELESS_MODE {
   NONE_WIRELESS =  0,                
   ENABLE_BLUETOOTH_TO_PC,         //1
@@ -85,6 +92,9 @@ enum PACKET_TX {
   MOUSE_TX,
   GAMEPADE_TX,
   CONNECTION,  // CONNESSIONE E ASSOCIAZIONE DONGLE CON GUN
+  CHECK_CONNECTION_LAST_DONGLE, //VERIFICA LA CONNESSIONE WIRELESS TRA GUN E DONGLE E VICEVERSA
+  // ========= VALUTARE
+  RESET_DATA_USB,
   REBOOT,      // REBOOT DEL DONGLE
   TX_DATA_USB, // TRASMISSIONE DATI DELL'USB DA GUN A DONGLE
   CHANGE_DATA_USB, // CAMBIO DEI DATI DELL'USB, QUINDI ?????
@@ -100,7 +110,12 @@ enum CONNECTION_STATE {
   TX_DONGLE_TO_GUN_ACCEPT,  //3
   TX_GUN_TO_DONGLE_CONFERM,  //4
   DEVICES_CONNECTED,  //5
-
+  // =============================
+  // === per controllo connessione
+  NONE_CONNECTION_DONGLE,
+  TX_CHECK_CONNECTION_LAST_DONGLE, //6  GUN -> DONGLE
+  TX_CONFERM_CONNECTION_LAST_DONGLE, //7 DONGLE -> GUN
+  DEVICES_CONNECTED_WITH_LAST_DONGLE, // 8
 };
 
 typedef struct __attribute__ ((packed)) {
@@ -213,9 +228,11 @@ class SerialWireless_ : public Stream
 
   bool connection_dongle();
   bool connection_gun();
+  bool connection_gun_at_last_dongle();
 
   // ===============================
   
+
 private:
 
 };
