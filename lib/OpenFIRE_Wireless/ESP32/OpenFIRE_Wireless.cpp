@@ -510,9 +510,9 @@ bool SerialWireless_::connection_dongle() {
 }
 
 bool SerialWireless_::connection_gun_at_last_dongle() {
-  //#define TIMEOUT_TX_PACKET_LAST_DONGLE 500 // in millisecondi
-  #define TIMEOUT_DIALOGUE_LAST_DONGLE 2000 // in millisecondi - tempo massimo per completare operazione accoppiamento
-  //unsigned long lastMillis_tx_packet_last_dongle = millis ();
+  #define TIMEOUT_TX_PACKET_LAST_DONGLE 300 // in millisecondi - tempo di invio pacchetti ogni millisecondi quindi 4-5 pacchetti
+  #define TIMEOUT_DIALOGUE_LAST_DONGLE 2000 // in millisecondi - tempo massimo per ricerca ultimo dongle
+  unsigned long lastMillis_tx_packet_last_dongle = 0;
   unsigned long lastMillis_start_dialogue_last_dongle = millis ();
 
   uint8_t aux_buffer_tx[13];
@@ -522,12 +522,17 @@ bool SerialWireless_::connection_gun_at_last_dongle() {
   memcpy(&aux_buffer_tx[1], SerialWireless.mac_esp_inteface, 6);
   memcpy(&aux_buffer_tx[7], peerAddress, 6);
   // INVIA PACCHETTO .. VALUTARE SE INVIARNE PIU' DI UNO  NELL'ARCO DI POCO TEMPO
-  SerialWireless.SendPacket((const uint8_t *)aux_buffer_tx, 13, PACKET_TX::CHECK_CONNECTION_LAST_DONGLE);
-   
+  //SerialWireless.SendPacket((const uint8_t *)aux_buffer_tx, 13, PACKET_TX::CHECK_CONNECTION_LAST_DONGLE);
+  lastMillis_tx_packet_last_dongle = 0;
   lastMillis_start_dialogue_last_dongle = millis();
   while (!TinyUSBDevice.mounted() && 
          (stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED_WITH_LAST_DONGLE) &&
          ((millis() - lastMillis_start_dialogue_last_dongle) < TIMEOUT_DIALOGUE_LAST_DONGLE)) { 
+      if ((millis() - lastMillis_tx_packet_last_dongle) > TIMEOUT_TX_PACKET_LAST_DONGLE)
+      {
+        SerialWireless.SendPacket((const uint8_t *)aux_buffer_tx, 13, PACKET_TX::CHECK_CONNECTION_LAST_DONGLE);
+        lastMillis_tx_packet_last_dongle = millis();
+      }
     yield();
   }
   if (stato_connessione_wireless == CONNECTION_STATE::DEVICES_CONNECTED_WITH_LAST_DONGLE) {    
