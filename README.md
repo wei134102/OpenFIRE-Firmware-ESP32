@@ -19,6 +19,10 @@ Whenever there are changes to the original 'OpenFIRE-firmware' project by TeamOp
 I sincerely thank TeamOpenFIRE for creating the 'OpenFIRE-firmware' project; all credit and gratitude go to them for their work.
 This is simply an adaptation to make it work on ESP32S3, with the addition of wireless connectivity via ESP-NOW.
 
+![Waveshare-esp32-s3-pico](https://github.com/user-attachments/assets/5f7bf9ae-6ab5-4240-b930-d8cf20cb1c75)
+
+![YD-esp32-s3-wroom1-DevKitC-1-N16R8](https://github.com/user-attachments/assets/6e865f2a-d90f-4dd0-9b57-c992bfd7377f)
+
 
 ## ... segue la pagina originale del progetto
 ## ... follows the original project page
