@@ -37,28 +37,19 @@ bool ExtDisplay::Begin()
       if(bitRead(OF_Prefs::pins[OF_Const::periphSCL], 1) && bitRead(OF_Prefs::pins[OF_Const::periphSDA], 1)) {
             // I2C1
             if(bitRead(OF_Prefs::pins[OF_Const::periphSCL], 0) && !bitRead(OF_Prefs::pins[OF_Const::periphSDA], 0)) {
-                Wire1.end(); // 696969 ??? anche per esp32 ????
+                Wire1.end();
                 // SDA/SCL are indeed on verified correct pins
-                #ifdef ARDUINO_ARCH_ESP32  
-                  Wire1.setPins(OF_Prefs::pins[OF_Const::periphSDA], OF_Prefs::pins[OF_Const::periphSCL]); // 696969 per esp32
-                #else //rp2040
                   Wire1.setSDA(OF_Prefs::pins[OF_Const::periphSDA]);
                   Wire1.setSCL(OF_Prefs::pins[OF_Const::periphSCL]);
-                #endif
                 display = new Adafruit_SSD1306(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire1, -1);
             } else return false;
         } else if(!bitRead(OF_Prefs::pins[OF_Const::periphSCL], 1) && !bitRead(OF_Prefs::pins[OF_Const::periphSDA], 1)) {
             // I2C0
             if(bitRead(OF_Prefs::pins[OF_Const::periphSCL], 0) && !bitRead(OF_Prefs::pins[OF_Const::periphSDA], 0)) {
-                Wire.end();  // 696969 ??? anche per esp32 ????
+                Wire.end();
                 // SDA/SCL are indeed on verified correct pins
-                #ifdef ARDUINO_ARCH_ESP32
-                  Wire.setPins(OF_Prefs::pins[OF_Const::periphSDA], OF_Prefs::pins[OF_Const::periphSCL]);  // 696969 per esp32
-                #else //rp2040
                   Wire.setSDA(OF_Prefs::pins[OF_Const::periphSDA]);
                   Wire.setSCL(OF_Prefs::pins[OF_Const::periphSCL]);
-                #endif
-
                 display = new Adafruit_SSD1306(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
             } else return false;
         } else return false;

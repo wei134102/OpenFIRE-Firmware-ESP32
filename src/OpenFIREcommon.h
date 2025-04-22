@@ -6,6 +6,8 @@
  * @copyright GNU Lesser General Public License
  */ 
 
+#pragma once
+ 
 #ifndef _OPENFIRECOMMON_H_
 #define _OPENFIRECOMMON_H_
 
@@ -229,5 +231,76 @@ inline LightgunButtons::Desc_t LightgunButtons::ButtonDesc[] = {
 
     // button runtime data arrays
     static inline LightgunButtonsStatic<ButtonCount> lgbData;
+
+#ifdef ARDUINO_ARCH_ESP32
+
+//#include <Arduino.h>
+//#include <freertos/FreeRTOS.h>
+//#include <freertos/queue.h>
+
+// funzione per esp32 per emulare il comportamento di rp2040.fifo per la comunicazione multicore
+
+class ESP32FIFO {
+    private:
+        QueueHandle_t core0_to_core1;
+        QueueHandle_t core1_to_core0;
+    
+    public:
+        ESP32FIFO(size_t size = 8) {
+            core0_to_core1 = xQueueCreate(size, sizeof(uint32_t)); // FIFO Core 0 → Core 1
+            core1_to_core0 = xQueueCreate(size, sizeof(uint32_t)); // FIFO Core 1 → Core 0
+        }
+
+        ~ESP32FIFO() {
+            vQueueDelete(core0_to_core1);
+            vQueueDelete(core1_to_core0);
+        }
+    
+        inline void push(uint32_t value) {
+            if (xPortGetCoreID() == 0) {
+                xQueueSend(core0_to_core1, &value, portMAX_DELAY); // Core 0 → Core 1
+            } else {
+                xQueueSend(core1_to_core0, &value, portMAX_DELAY); // Core 1 → Core 0
+            }
+        }
+    
+        inline bool push_nb(uint32_t value) {
+            if (xPortGetCoreID() == 0) {
+                return xQueueSend(core0_to_core1, &value, 0) == pdTRUE;
+            } else {
+                return xQueueSend(core1_to_core0, &value, 0) == pdTRUE;
+            }
+        }
+    
+        inline uint32_t pop() {
+            uint32_t value;
+            if (xPortGetCoreID() == 0) {
+                xQueueReceive(core1_to_core0, &value, portMAX_DELAY); // Core 0 legge da Core 1
+            } else {
+                xQueueReceive(core0_to_core1, &value, portMAX_DELAY); // Core 1 legge da Core 0
+            }
+            return value;
+        }
+    
+        inline bool pop_nb(uint32_t *value) {
+            if (xPortGetCoreID() == 0) {
+                return xQueueReceive(core1_to_core0, value, 0) == pdTRUE;
+            } else {
+                return xQueueReceive(core0_to_core1, value, 0) == pdTRUE;
+            }
+        }
+    
+        inline size_t available() {
+            if (xPortGetCoreID() == 0) {
+                return uxQueueMessagesWaiting(core1_to_core0); // Core 0 legge da Core 1
+            } else {
+                return uxQueueMessagesWaiting(core0_to_core1); // Core 1 legge da Core 0
+            }
+        }
+    };
+    
+extern ESP32FIFO esp32_fifo; // 8 elenti unit32_t come per rp2040.fifo  
+
+#endif  // ARDUINO_ARCH_ESP32
 
 #endif // _OPENFIRECOMMON_H_

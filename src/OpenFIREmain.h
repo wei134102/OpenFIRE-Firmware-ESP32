@@ -41,19 +41,7 @@
   void ARDUINO_ISR_ATTR esp32s3pwmIrq(void);
 #endif
 
-enum PauseModeSelection_e {
-    PauseMode_Calibrate = 0,
-    PauseMode_ProfileSelect,
-    PauseMode_Save,
-    #ifdef USES_RUMBLE
-        PauseMode_RumbleToggle,
-    #endif // USES_RUMBLE
-    #ifdef USES_SOLENOID
-        PauseMode_SolenoidToggle,
-        //PauseMode_BurstFireToggle,
-    #endif // USES_SOLENOID
-    PauseMode_EscapeSignal
-};
+#define POLL_RATE 1
 
 // TinyUSB devices interface object that's initialized in MainCoreSetup
 // TinyUSBDevices_ TUSBDeviceSetup; // 696969 tolto non serve
@@ -67,6 +55,11 @@ bool pauseModeSelectingProfile = false;
 unsigned long pauseHoldStartstamp;
 bool pauseHoldStarted = false;
 bool pauseExitHoldStarted = false;
+
+// Timestamp of last USB packet update.
+unsigned long lastUSBpoll = 0;
+
+uint32_t fifoData = 0;
 
 // ============ VARIABILI e COSTANTI AGGIUNTE DA ME ========= 696969
 

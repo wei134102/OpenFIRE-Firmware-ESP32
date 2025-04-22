@@ -30,6 +30,10 @@
 #endif // OPENFIRE_WIRELESS_ENABLE
 // ============ 696969 ===== fine redifinizione di Serial per gestire le connessione wireless seriali ========
 
+#ifdef ARDUINO_ARCH_ESP32
+    ESP32FIFO esp32_fifo(8);
+#endif // ARDUINO_ARCH_ESP32
+
 
 // button object instance (defined in OpenFIREcommon.h)
 LightgunButtons FW_Common::buttons(lgbData, ButtonCount);
@@ -183,12 +187,8 @@ void FW_Common::CameraSet()
         // I2C1
         if(bitRead(OF_Prefs::pins[OF_Const::camSCL], 0) && !bitRead(OF_Prefs::pins[OF_Const::camSDA], 0)) {
             // SDA/SCL are indeed on verified correct pins
-            #ifdef ARDUINO_ARCH_ESP32  
-                Wire1.setPins(OF_Prefs::pins[OF_Const::camSDA], OF_Prefs::pins[OF_Const::camSCL]); // MODIFICATO 696969 per ESP32
-            #else //rp2040
                 Wire1.setSDA(OF_Prefs::pins[OF_Const::camSDA]);
                 Wire1.setSCL(OF_Prefs::pins[OF_Const::camSCL]);
-            #endif
             dfrIRPos = new DFRobotIRPositionEx(Wire1);
         }
         
@@ -196,12 +196,8 @@ void FW_Common::CameraSet()
         // I2C0
         if(bitRead(OF_Prefs::pins[OF_Const::camSCL], 0) && !bitRead(OF_Prefs::pins[OF_Const::camSDA], 0)) {
             // SDA/SCL are indeed on verified correct pins
-            #ifdef ARDUINO_ARCH_ESP32  
-                Wire.setPins(OF_Prefs::pins[OF_Const::camSDA], OF_Prefs::pins[OF_Const::camSCL]); // MODIFICATO 696969 per ESP32
-            #else //rp2040
                 Wire.setSDA(OF_Prefs::pins[OF_Const::camSDA]);
                 Wire.setSCL(OF_Prefs::pins[OF_Const::camSCL]);
-            #endif
             dfrIRPos = new DFRobotIRPositionEx(Wire);
         }
     }
@@ -280,6 +276,7 @@ void FW_Common::SetMode(const FW_Const::GunMode_e &newMode)
         break;
     case FW_Const::GunMode_Pause:
         stateFlags |= FW_Const::StateFlag_SavePreferencesEn | FW_Const::StateFlag_PrintSelectedProfile;
+        pauseModeSelection = FW_Const::PauseMode_Calibrate;
 
         #ifdef USES_DISPLAY
           OLED.ScreenModeChange(ExtDisplay::Screen_Pause);
@@ -355,6 +352,7 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
 
     // Force center mouse to center
     AbsMouse5.move(32768/2, 32768/2);
+    AbsMouse5.report();
 
     // Initialize current mouse positions (local variables)
     int32_t mouseCurrentX = 32768 / 2;
@@ -394,6 +392,7 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                 mouseCurrentY += (deltaY > 0) ? stepY : -stepY;
 
             AbsMouse5.move(mouseCurrentX, mouseCurrentY);
+            AbsMouse5.report();
 
             if (mouseCurrentX == mouseTargetX && mouseCurrentY == mouseTargetY) {
                 mouseMoving = false;
@@ -433,8 +432,10 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
             switch(calStage) {
                 case FW_Const::Cali_Init:
                     // Initial state, nothing to do (but center cursor for desktop use)
-                    if(fromDesktop)
+                    if(fromDesktop) {
                         AbsMouse5.move(32768/2, 32768/2);
+                        AbsMouse5.report();
+                    }
                     break;
                 case FW_Const::Cali_Top:
                     // Reset Offsets
@@ -616,6 +617,7 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                             OF_Prefs::profiles[OF_Prefs::currentProfile].adjY = 384 << 2;
                             SetMode(FW_Const::GunMode_Calibration);
                             AbsMouse5.move(32768/2, 32768/2);
+                            AbsMouse5.report();
                         // Press C/Home to exit without committing new calibration values
                         } else if(buttons.pressedReleased & FW_Const::ExitPauseModeBtnMask && !justBooted) {
                             Serial.printf("%c%c", OF_Const::sCaliStageUpd, FW_Const::Cali_Verify+1);
@@ -773,6 +775,7 @@ void FW_Common::GetPosition()
 
             } else if(gunMode == FW_Const::GunMode_Verification) {
             AbsMouse5.move(conMoveX, conMoveY);
+            AbsMouse5.report();
         } else {
             if(millis() - testLastStamp > 50) {
                 testLastStamp = millis();
@@ -811,7 +814,7 @@ void FW_Common::GetPosition()
                             memcpy(&buf[37], &mouseYscaled, sizeof(int));
                             memcpy(&buf[41], &testMedianX,  sizeof(int));
                             memcpy(&buf[45], &testMedianY,  sizeof(int));
-                            Serial.write(buf, sizeof(buf)), Serial.flush();
+                            Serial.write(buf, sizeof(buf));
                     } else {
                             int testMedianX = map(OpenFIREsquare.testMedianX(), 0, 1023 << 2, 0, 1920);
                             int testMedianY = map(OpenFIREsquare.testMedianY(), 0, 768 << 2, 0, 1080);
@@ -829,7 +832,7 @@ void FW_Common::GetPosition()
                             memcpy(&buf[37], &mouseYscaled, sizeof(int));
                             memcpy(&buf[41], &testMedianX,  sizeof(int));
                             memcpy(&buf[45], &testMedianY,  sizeof(int));
-                            Serial.write(buf, sizeof(buf)), Serial.flush();
+                            Serial.write(buf, sizeof(buf));
                     }
                 }
 
@@ -851,9 +854,9 @@ void FW_Common::PrintIrError()
 
     if(dockedSaving) {
         char buf[2] = { OF_Const::sError, OF_Const::sErrCam };
-        Serial.write(buf, 2), Serial.flush();
+        Serial.write(buf, 2);
     } else if(millis() - camWarningTimestamp > CAM_WARNING_INTERVAL) {
-            Serial.println("CAMERROR: Not available"), Serial.flush();
+        Serial.println("CAMERROR: Not available");
             camWarningTimestamp = millis();
     }
 }

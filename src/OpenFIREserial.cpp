@@ -102,9 +102,7 @@ void OF_Serial::SerialProcessing()
                       #endif // USES_DISPLAY
                       break;
                 }
-                AbsMouse5.releaseAll();
-                Keyboard.releaseAll();
-                Gamepad16.releaseAll();
+                FW_Common::buttons.ReleaseAll();
                 #ifdef USES_DISPLAY
                     if(!serialMode && FW_Common::gunMode == FW_Const::GunMode_Run)
                         FW_Common::OLED.ScreenModeChange(ExtDisplay::Screen_Normal, FW_Common::buttons.analogOutput);
@@ -310,8 +308,7 @@ void OF_Serial::SerialProcessing()
                       serialSolCustomHoldLength = 0;
                       serialSolCustomPauseLength = 0;
                   #endif // USES_SOLENOID
-                  AbsMouse5.releaseAll();
-                  Keyboard.releaseAll();
+                  FW_Common::buttons.ReleaseAll();
                   // remap back to defaults, in case they were changed
                   FW_Common::UpdateBindings(OF_Prefs::toggles[OF_Const::lowButtonsMode]);
                   Serial.println("Received end serial pulse, releasing FF override.");
@@ -347,7 +344,19 @@ void OF_Serial::SerialProcessing()
           break;
         // Enter Docked Mode
         case OF_Const::sDock1:
-          if(Serial.read() == OF_Const::sDock2) FW_Common::SetMode(FW_Const::GunMode_Docked);
+          if(Serial.read() == OF_Const::sDock2) {
+            #ifdef DUAL_CORE // This may be being run from Core 1, so signal if running in main Run Mode.
+            if(FW_Common::gunMode == FW_Const::GunMode_Run)
+                #ifdef ARDUINO_ARCH_ESP32 
+                esp32_fifo.push(FW_Const::GunMode_Docked);
+                #else //rp2040
+                rp2040.fifo.push(FW_Const::GunMode_Docked);
+                #endif
+            else FW_Common::SetMode(FW_Const::GunMode_Docked);
+            #else
+            FW_Common::SetMode(FW_Const::GunMode_Docked);
+            #endif // DUAL_CORE
+          }
           break;
         // Force Feedback
         case 'F':
@@ -914,6 +923,7 @@ void OF_Serial::SerialHandling()
 }
 #endif // MAMEHOOKER
 
+// Serial Buffer in Docked Mode should always be being read by the main core on multicore systems
 void OF_Serial::SerialProcessingDocked()
 {
     switch(Serial.read()) {

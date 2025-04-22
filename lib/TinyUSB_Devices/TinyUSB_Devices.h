@@ -67,11 +67,29 @@
 
 class TinyUSBDevices_ {
 public:
-  TinyUSBDevices_(void);
-  void begin(byte polRate);
+  /// @brief Constructor
+  TinyUSBDevices_() {};
+
+  /// @brief Sends and initializes the array of USB devices to the connected host
+  void begin(int polRate);
+
+  /// @brief Sends and initializes the array of BT devices for paired devices
   void beginBT(const char *localName, const char *hidName);
+
+  /// @brief Whether the device is running in USB mode (false) or Bluetooth (true)
   bool onBattery = false;
+
+  enum reportChannels_e {
+    reportMouse = 0,
+    reportKeyboard,
+    reportGamepad
+  };
+
+  /// @brief Array of which of the three devices have new data that should be reported.
+  bool newReport[3] = { false, false, false };
+
   uint8_t wireless_mode = 0; // 0 = nessuna connessione wireless altro valore connessione // qualsiasi altro valore deve essere diverso da zero - spostato in SerialWireless
+
 };
 extern TinyUSBDevices_ TinyUSBDevices;
 
@@ -113,7 +131,7 @@ class AbsMouse5_
   
   public:
   AbsMouse5_();  // si puo' togliere non serve a nulla
-	void report_absmouse5(void);
+	void report(void);
   void move(int16_t x, int16_t y);
   void move_wheel_pan(int8_t wheel, int8_t pan); // NON INDISPENSABILE AGGIUNTA DA ME
   void press(uint8_t b = hid_mouse_button_bm_t::MOUSE_BUTTON_LEFT); // solo un bottone per volta
@@ -331,10 +349,10 @@ class Keyboard_ : public Print
 {
   private:
     hid_keyboard_report_t _keyReport = {0,0,{0,0,0,0,0,0}};
-    void report_keyboard(void);
 
   public:
     Keyboard_(void);
+    void report(void);
     size_t write(uint8_t k); // mai usata pa serve per print
     size_t write(const uint8_t *buffer, size_t size); // mai usata ma serve per print
     size_t press(uint8_t k);
@@ -406,7 +424,7 @@ class Gamepad16_ {
     void press(uint8_t buttonNum);
     void release(uint8_t buttonNum);
     void padUpdate(uint8_t padMask);
-    void report_gamepad16(void);
+    void report(void);
     void releaseAll(void);
     bool stickRight;
   };
