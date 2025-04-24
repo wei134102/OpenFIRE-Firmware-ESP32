@@ -1207,7 +1207,8 @@ void OF_Serial::SerialProcessingDocked()
                     }
                             break;
                 case OF_Const::sCommitPins:
-                    if(Serial.available() >= 2) {
+                    //if(Serial.available() >= 2) {
+                    if(Serial_available(2)) {     
                         int type = Serial.read();
                         if(type < OF_Const::boardInputsCount) {
                             OF_Prefs::pins[type] = Serial.read();
@@ -1390,6 +1391,11 @@ void OF_Serial::SerialProcessingDocked()
         if(Serial.available() == 1 && Serial.read() == OF_Const::sClearFlash) {
             OF_Prefs::ResetPreferences();
             #ifdef ARDUINO_ARCH_ESP32
+                #ifdef OPENFIRE_WIRELESS_ENABLE
+                    if (TinyUSBDevices.onBattery) {
+                        // invia codice di riavvio anche al dispositivo dongle.. decidere ???
+                    }
+                #endif
                 ESP.restart();
             #else
                 rp2040.reboot();

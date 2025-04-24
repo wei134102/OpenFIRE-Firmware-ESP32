@@ -301,6 +301,7 @@ if(OF_Prefs::usb.devicePID > 0 && OF_Prefs::usb.devicePID < 5) {
         #if defined(ARDUINO_ARCH_ESP32)
             Serial.setTxTimeoutMs(0); // default è 250ms // serve per fare come in arduino pico rp2040
             //Serial.setRxBufferSize(64); // impostato con per arduino pico .. se non si imposta è 256 di default
+            Serial.
             #endif // ARDUINO_ARCH_ESP32
         #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
             if (TinyUSBDevices.onBattery) {  // nel caso incredibile che l'USB sia montato nel momnto esatto in cui è stata stabilita connessione wireless
