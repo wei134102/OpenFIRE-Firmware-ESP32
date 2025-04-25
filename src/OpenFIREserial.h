@@ -23,7 +23,7 @@ public:
     // Main routine that prints information to connected serial monitor when the gun enters Pause Mode.
     static void PrintResults();
 
-    // utility function to wait for n bytes with timeout
+    // utility function to wait for n bytes with timeout //696969 inserita da me
     static bool Serial_available(uint8_t min = 1);
 
     #ifdef DEBUG_SERIAL
@@ -97,6 +97,11 @@ private:
     static inline unsigned long serialSolTimestamp = 0;            // Timestamp of the last solenoid static on command (for safety)
     static inline uint serialSolCustomHoldLength = 0;              // Determines custom solenoid ON state length for sol "pulse" commands - 0 = use system settings
     static inline uint serialSolCustomPauseLength = 0;             // Determines custom solenoid OFF state length for sol "pulse" commands - 0 = use system settings
+    #ifdef USES_TEMP
+    // When tempStatus is above Temp_Safe, new static solenoid ON commands toggles this.
+    // False = disable solenoid ON command, True = allow solenoid ON command
+    static inline bool serialSolTempBuffer = false;
+    #endif // USES_TEMP
     #define SERIAL_SOLENOID_MAXSHUTOFF 2000
     #endif // USES_SOLENOID
 
