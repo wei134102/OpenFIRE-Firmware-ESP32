@@ -949,6 +949,12 @@ void OF_Serial::SerialProcessingDocked()
         Serial_available(1);
         if(Serial.read() == OF_Const::sDock2) FW_Common::SetMode(FW_Const::GunMode_Docked);
         break;
+    case OF_Const::sDockedSaving:
+        Serial_available(1);
+        if(Serial.read() == OF_Const::sDockedSaving_on) FW_Common::dockedSaving = true;
+          else FW_Common::dockedSaving = false;
+          Serial.write(OF_Const::sDockedSaving);  
+        break;      
     // Common terminator
     case OF_Const::serialTerminator:
         if(!FW_Common::justBooted)
