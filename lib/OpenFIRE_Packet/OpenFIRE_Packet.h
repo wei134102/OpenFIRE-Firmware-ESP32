@@ -1,5 +1,5 @@
 /*
-01111110 00000000 11111111 00000000 00000000 00000000 ... 00000000 10000001
+11111111 00000000 11111111 00000000 00000000 00000000 ... 00000000 10000001
 |      | |      | |      | |      | |      | |      | | | |      | |______|__Stop byte
 |      | |      | |      | |      | |      | |      | | | |______|___________8-bit CRC
 |      | |      | |      | |      | |      | |      | |_|____________________Rest of payload
@@ -29,8 +29,8 @@ const int8_t PAYLOAD_ERROR      = -1;
 const int8_t STOP_BYTE_ERROR    = -2;
 const int8_t STALE_PACKET_ERROR = -3;
 
-const uint8_t START_BYTE = 0xFF; // 255 ==== //0x7E; // 126 ~  01111110
-const uint8_t STOP_BYTE  = 0x81; // 129 ü  10000001
+const uint8_t START_BYTE = 0xFF; // 255 -> 11111111 ==== // vecchio valore 0x7E; // 126 ->  01111110
+const uint8_t STOP_BYTE  = 0x81; // 129 ->  10000001
 
 const uint8_t PREAMBLE_SIZE   = 4;    // START_BYTE + COBS + PACKET_ID + LEN
 const uint8_t POSTAMBLE_SIZE  = 2;    // CRC + STOP_BYTE

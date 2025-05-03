@@ -133,9 +133,9 @@ bool SerialWireless_::checkForRxPacket() {
   uint8_t dato;
   for (uint16_t i = 0; i<numAvailableBin; i++) {
     dato = (uint8_t) readBin();
-    if (dato == START_BYTE) {/*resetta inizio pacchetto*/}
+    if (dato == START_BYTE) packet.reset(); //resetta inizio pacchetto - // controllo dato .. se è uguale a packet::start_byte .. azzera tutto e fai partire da capo altrimenti
     // controllo dato .. se è uguale a packet::start_byte .. azzera tutto e fai partire da capo altrimenti (usare secondo parametro parse ?)
-        else packet.parse(dato, true);
+    packet.parse(dato, true);
   }
   return true;
 }
