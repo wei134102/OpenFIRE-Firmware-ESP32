@@ -19,7 +19,21 @@
 
 #include <stdint.h>
 #include <unordered_map>
-//#include <FS.h> // in esp32 non va inserito e non serve neppure in rp2040 ?
+//#include <FS.h> // non serve, viene richiamata direttamente da littlefs
+
+// = 696969 = per la compilazione su esp32 - la libreria exfatlib che viene chiamata da Arduino TinyUSB
+// =========== definisce quelle costanti e ricevo un warning in quanto anche LittleFS le definisce  ===
+// =========== non usola libreria 'adafruit exfatlib', quindi annullo le sue definizioni ==============
+#ifdef ARDUINO_ARCH_ESP32
+    #ifdef FILE_READ
+        #undef FILE_READ
+    #endif
+    #ifdef FILE_WRITE
+        #undef FILE_WRITE
+    #endif
+#endif //ARDUINO_ARCH_ESP32
+// = 696969 ===========================================================================================
+
 #include <LittleFS.h>
 #include <OpenFIREBoard.h>
 #include <DFRobotIRPositionEx.h>
