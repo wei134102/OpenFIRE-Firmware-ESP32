@@ -30,7 +30,6 @@ bool ExtDisplay::Begin()
     // causes the board to hang. Even though this is all correct (and any display objects should get deleted from the above, so don't think it can be a new object thing)...
     if(OF_Prefs::pins[OF_Const::periphSCL] >= 0 && OF_Prefs::pins[OF_Const::periphSDA] >= 0) {
       #ifdef ARDUINO_ARCH_ESP32
-        //Wire1.end();  // 696969 ??? anche per esp32 ????
         Wire1.setPins(OF_Prefs::pins[OF_Const::periphSDA], OF_Prefs::pins[OF_Const::periphSCL]);  // 696969 per esp32
         display = new Adafruit_SSD1306(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire1, -1);
       #else // rp2040
@@ -56,7 +55,7 @@ bool ExtDisplay::Begin()
       #endif
     } else return false;
 
-    if(display->begin(SSD1306_SWITCHCAPVCC, OF_Prefs::oledPrefs[OF_Const::oledAltAddr] ? 0x3D : 0x3C)) {
+    if(display->begin(SSD1306_SWITCHCAPVCC, OF_Prefs::toggles[OF_Const::i2cOLEDaltAddr] ? 0x3D : 0x3C)) {
         display->clearDisplay();
         ScreenModeChange(Screen_None);
         return true;

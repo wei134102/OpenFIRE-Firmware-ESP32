@@ -107,11 +107,10 @@ void FW_Common::FeedbackSet()
        bitRead(OF_Prefs::pins[OF_Const::camSCL], 1) != bitRead(OF_Prefs::pins[OF_Const::periphSCL], 1) &&
        bitRead(OF_Prefs::pins[OF_Const::camSDA], 1) != bitRead(OF_Prefs::pins[OF_Const::periphSDA], 1)) {
     #endif
-    
     #ifdef USES_DISPLAY
     // wrapper will manage display validity
       // check it's not using the camera's I2C line
-        if(OF_Prefs::i2cPeriphs[OF_Const::i2cOLED]) {
+        if(OF_Prefs::toggles[OF_Const::i2cOLED]) {
             if(!OLED.Begin()) { if(OLED.display != nullptr) delete OLED.display; }
         }
     #endif // USES_DISPLAY
@@ -668,7 +667,7 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
             #ifdef ARDUINO_ARCH_ESP32
                 analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0);  // 696969 per EPS32
             #else // rp2040
-                digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW); // 696969 più opportuno LOW anzichè false
+                digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);
             #endif
             delay(50);
             analogWrite(OF_Prefs::pins[OF_Const::rumblePin], OF_Prefs::settings[OF_Const::rumbleStrength]);
@@ -676,7 +675,7 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
             #ifdef ARDUINO_ARCH_ESP32
                 analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0);  // 696969 per ESP32
             #else // rp2040            
-                digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW); // 696969 più opportuno LOW anzichè false
+                digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);
             #endif
         }
     #endif // USES_RUMBLE
@@ -1030,7 +1029,6 @@ int FW_Common::SavePreferences()
             OF_Prefs::SavePins();
 
         OF_Prefs::SaveSettings();
-        OF_Prefs::SavePeriphs();
         OF_Prefs::SaveUSBID();
         
         #ifdef LED_ENABLE

@@ -9,12 +9,11 @@
 #ifndef _OPENFIREDEFINES_H_
 #define _OPENFIREDEFINES_H_
 
+#include "OpenFIREversion.h" // 696969 aggiunto per gestire meglio le versioni
+
 #ifndef OPENFIRE_VERSION
 #define OPENFIRE_VERSION 5.5
 #endif // OPENFIRE_VERSION
-#ifndef OPENFIRE_CODENAME
-#define OPENFIRE_CODENAME "Dawn Sigma rc2"
-#endif // OPENFIRE_CODENAME
 
  // For custom builders, remember to check (COMPILING.md) for IDE instructions!
  // ISSUERS: REMEMBER TO SPECIFY YOUR USING A CUSTOM BUILD & WHAT CHANGES ARE MADE TO THE SKETCH; OTHERWISE YOUR ISSUE MAY BE CLOSED!

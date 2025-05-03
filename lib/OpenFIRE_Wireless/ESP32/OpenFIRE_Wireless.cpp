@@ -10,7 +10,7 @@
 
 
 
-#define ESPNOW_WIFI_CHANNEL_DEFAULT 4
+#define ESPNOW_WIFI_CHANNEL_DEFAULT 12
 
 // la potenza di trasmissione può andare da 8 a 84, dove 84 è il valore massimo che corrisponde a 20 db
 #define ESPNOW_WIFI_POWER_DEFAULT 84 
@@ -133,7 +133,9 @@ bool SerialWireless_::checkForRxPacket() {
   uint8_t dato;
   for (uint16_t i = 0; i<numAvailableBin; i++) {
     dato = (uint8_t) readBin();
-    packet.parse(dato, true);
+    if (dato == START_BYTE) {/*resetta inizio pacchetto*/}
+    // controllo dato .. se è uguale a packet::start_byte .. azzera tutto e fai partire da capo altrimenti (usare secondo parametro parse ?)
+        else packet.parse(dato, true);
   }
   return true;
 }
@@ -197,23 +199,29 @@ void SerialWireless_::SendData() {
     }
     if (xSemaphoreTake(tx_sem, 0) == pdTRUE) {
       esp_err_t result = esp_now_send(peerAddress, buffer_espnow, len_tx);
+      
+      //readIndex += len_tx; 
+      //if (readIndex >= BUFFER_SIZE) { readIndex -= BUFFER_SIZE; }
+      //_writeLen -= len_tx;  
+
+
       if (result == ESP_OK) {
         readIndex += len_tx; 
         if (readIndex >= BUFFER_SIZE) { readIndex -= BUFFER_SIZE; }
         _writeLen -= len_tx;  
       } else if (result == ESP_ERR_ESPNOW_NOT_INIT) {
-        Serial.println("ESPNOW not init.");
+        //Serial.println("ESPNOW not init.");
       } else if (result == ESP_ERR_ESPNOW_ARG) {
-        Serial.println("Invalid argument");
+        //Serial.println("Invalid argument");
       } else if (result == ESP_ERR_ESPNOW_INTERNAL) {
-        Serial.println("Internal Error");
+        //Serial.println("Internal Error");
       } else if (result == ESP_ERR_ESPNOW_NO_MEM) {
-        Serial.println("Our of memory");
+        //Serial.println("Our of memory");
       } else if (result == ESP_ERR_ESPNOW_NOT_FOUND) {
-        Serial.println("Peer not found.");
+        //Serial.println("Peer not found.");
       } else if (result == ESP_ERR_ESPNOW_IF) {
-        Serial.println("Interface does not match.");
-      } else Serial.println("Errore sconosciuto");
+        //Serial.println("Interface does not match.");
+      } //  else Serial.println("Errore sconosciuto");
     }
   }
 }
@@ -267,7 +275,7 @@ size_t SerialWireless_::writeBin(const uint8_t *data, size_t len) {
   }
   else {
     _overflow_write = true;
-    Serial.println("Overflow nello scrivere nel BUFFER scrittura");
+    //Serial.println("Overflow nello scrivere nel BUFFER scrittura");
     return 0;
   }
 }
@@ -298,7 +306,7 @@ void SerialWireless_::write_on_rx_serialBuffer(const uint8_t *data, int len) {
   }
   else {
     _overflow_bufferSerialRead = true;
-    Serial.println("Overflow nello scrivere nel BUFFER lettura del SERIAL BUFFER");
+    //Serial.println("Overflow nello scrivere nel BUFFER lettura del SERIAL BUFFER");
   }
 }
 
@@ -537,6 +545,15 @@ bool SerialWireless_::connection_gun_at_last_dongle() {
   }
   if (stato_connessione_wireless == CONNECTION_STATE::DEVICES_CONNECTED_WITH_LAST_DONGLE) {    
     stato_connessione_wireless = CONNECTION_STATE::DEVICES_CONNECTED;
+    
+    // ================ aggiunto =============================
+    /*
+    if (esp_now_del_peer(peerAddress) != ESP_OK) {  // cancella il broadcast dai peer
+      Serial.println("Errore nella cancellazione del peer");
+    }
+    */
+    // =============================================
+
     TinyUSBDevices.onBattery = true;
     return true;
   } else {
@@ -586,6 +603,9 @@ bool SerialWireless_::connection_gun() {
     if (esp_now_del_peer(peerAddress) != ESP_OK) {  // cancella il broadcast dai peer
       Serial.println("Errore nella cancellazione del peer");
     }
+    
+    // =============== tolto ===========================
+    
     memcpy(peerAddress, mac_esp_another_card, 6);
     memcpy(peerInfo.peer_addr, peerAddress, 6);
     //peerInfo.channel = ESPNOW_WIFI_CHANNEL;
@@ -593,6 +613,9 @@ bool SerialWireless_::connection_gun() {
     if (esp_now_add_peer(&peerInfo) != ESP_OK) {  // inserisce il dongle nei peer
       Serial.println("Errore nell'aggiunta del nuovo peer");
     }                       
+    
+    // =========================================
+    
     TinyUSBDevices.onBattery = true;
     return true;
   }
@@ -785,7 +808,7 @@ static void _esp_now_rx_cb(const esp_now_recv_info_t *info, const uint8_t *data,
   }
   else {
     SerialWireless._overflow_read = true;
-    Serial.println("Overflow nello scrivere nel BUFFER lettura");
+    //Serial.println("Overflow nello scrivere nel BUFFER lettura");
   }
   SerialWireless.checkForRxPacket();
 }

@@ -74,12 +74,13 @@ uint8_t Packet::parse(const uint8_t& recChar, const bool& valid)
 {
 	bool packet_fresh = (packetStart == 0) || ((millis() - packetStart) < timeout);
 	if (!packet_fresh) {
-		if (debug) debugPort->println("ERROR: STALE PACKET");
-		bytesRead   = 0;
-		state       = find_start_byte;
-		status      = STALE_PACKET_ERROR;
-		packetStart = 0;
-		return bytesRead;
+		//if (debug) debugPort->println("ERROR: STALE PACKET");
+		reset();
+		//bytesRead   = 0;
+		//state       = find_start_byte;
+		//status      = STALE_PACKET_ERROR;
+		//packetStart = 0;
+		return 0; //bytesRead;
 	}
 
 	if (valid) {
@@ -119,12 +120,12 @@ uint8_t Packet::parse(const uint8_t& recChar, const bool& valid)
 					rxBuff[3] = recChar;
 				}
 				else {
-					bytesRead = 0;
-					state     = find_start_byte;
-					status    = PAYLOAD_ERROR;
-					if (debug) debugPort->println("ERROR: PAYLOAD_ERROR");
+					//bytesRead = 0;
+					//state     = find_start_byte;
+					//status    = PAYLOAD_ERROR;
+					//if (debug) debugPort->println("ERROR: PAYLOAD_ERROR");
 					reset();
-					return bytesRead;
+					return 0; //bytesRead;
 				}
 				break;
 			}
@@ -146,12 +147,12 @@ uint8_t Packet::parse(const uint8_t& recChar, const bool& valid)
 				uint8_t calcCrc = calculate_crc(&rxBuff[2], bytesToRec+2);
 				if (calcCrc == rxBuff[bytesToRec + PREAMBLE_SIZE]) state = find_end_byte;
 				else {
-					bytesRead = 0;
-					state     = find_start_byte;
-					status    = CRC_ERROR;
-					if (debug) debugPort->println("ERROR: CRC_ERROR");
+					//bytesRead = 0;
+					//state     = find_start_byte;
+					//status    = CRC_ERROR;
+					//if (debug) debugPort->println("ERROR: CRC_ERROR");
 					reset();
-					return bytesRead;
+					return 0; //bytesRead;
 				}
 				break;
 			}
@@ -161,40 +162,42 @@ uint8_t Packet::parse(const uint8_t& recChar, const bool& valid)
 				state = find_start_byte;
 				if (recChar == STOP_BYTE) {
 					bytesRead = bytesToRec;
-					status    = NEW_DATA;
+					//status    = NEW_DATA;
 					if (callbacks) callbacks[0]();
 					packetStart = 0;	// reset the timer
 					return bytesToRec;
 				}
-				bytesRead = 0;
-				status    = STOP_BYTE_ERROR;
-				if (debug) debugPort->println("ERROR: STOP_BYTE_ERROR");
+				//bytesRead = 0;
+				//status    = STOP_BYTE_ERROR;
+				//if (debug) debugPort->println("ERROR: STOP_BYTE_ERROR");
 				reset();
-				return bytesRead;
+				return 0; //bytesRead;
 				break;
 			}
 
 			default:
 			{
+				/*
 				if (debug) {
 					debugPort->print("ERROR: Undefined state ");
 					debugPort->println(state);
 				}
+				*/
 				reset();
-				bytesRead = 0;
-				state     = find_start_byte;
+				//bytesRead = 0;
+				//state     = find_start_byte;
 				break;
 			}
 		}
 	}
 	else {
 		bytesRead = 0;
-		status    = NO_DATA;
-		return bytesRead;
+		//status    = NO_DATA;
+		return 0; //bytesRead;
 	}
 	bytesRead = 0;
-	status    = CONTINUE;
-	return bytesRead;
+	//status    = CONTINUE;
+	return 0; //bytesRead;
 }
 
 uint8_t Packet::currentPacketID()
@@ -253,6 +256,7 @@ void Packet::reset()
 {
 	bytesRead   = 0;
 	packetStart = 0;
+	state       = find_start_byte;
 }
 
 #endif //OPENFIRE_WIRELESS_ENABLE

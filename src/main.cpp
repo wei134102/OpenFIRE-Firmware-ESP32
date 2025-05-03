@@ -78,6 +78,7 @@ void setup() {
         digitalWrite(23, HIGH);
     #endif
 
+    // Init pins array, and OFPresets for later load ops
     OF_Prefs::LoadPresets();
     
     if(OF_Prefs::InitFS() == OF_Prefs::Error_Success) {
@@ -131,9 +132,8 @@ void setup() {
 
         #endif // defined(OPENFIRE_WIRELESS_ENABLE) && defined(ARDUINO_ARCH_ESP32)
         
-    } else {
-        Serial.printf("%c%c (No Storage Available)", OF_Const::sError, (char)OF_Prefs::Error_NoStorage);
-    }
+    } else Serial.printf("%c%c (No Storage Available)", OF_Const::sError, (char)OF_Prefs::Error_NoStorage);
+    
     
 
     // ===== 696969 per trasmettere i dati wireless al dongle ========
@@ -301,6 +301,8 @@ if(OF_Prefs::usb.devicePID > 0 && OF_Prefs::usb.devicePID < 5) {
         #if defined(ARDUINO_ARCH_ESP32)
             Serial.setTxTimeoutMs(0); // default è 250ms // serve per fare come in arduino pico rp2040
             //Serial.setRxBufferSize(64); // impostato con per arduino pico .. se non si imposta è 256 di default
+            //Serial.setRxBufferSize(usbPackageSize + 128);
+            //Serial.setTxBufferSize(64);
         #endif // ARDUINO_ARCH_ESP32
         #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
             if (TinyUSBDevices.onBattery) {  // nel caso incredibile che l'USB sia montato nel momnto esatto in cui è stata stabilita connessione wireless
@@ -355,8 +357,10 @@ if(OF_Prefs::usb.devicePID > 0 && OF_Prefs::usb.devicePID < 5) {
     /////////////////// AbsMouse5.init(true); // 696969 rimosso per il mio nuovo OpenFire_TinyDevice
 
     // IR camera maxes out motion detection at ~300Hz, and millis() isn't good enough
-    startIrCamTimer(209);
-
+    
+    if (TinyUSBDevices.onBattery) startIrCamTimer(100);  // 100->10ms 66 -> 15ms per connessione wireless
+      else startIrCamTimer(209); // 5ms per connessione via seriale
+    
     FW_Common::OpenFIREper.source(OF_Prefs::profiles[OF_Prefs::currentProfile].adjX,
                                   OF_Prefs::profiles[OF_Prefs::currentProfile].adjY);
     FW_Common::OpenFIREper.deinit(0);
@@ -1107,24 +1111,19 @@ void ExecGunModeDocked()
                                     #endif // GIT_HASH
                                     , OPENFIRE_VERSION
                                     #ifdef GIT_HASH
-                                    ,GIT_HASH
+                                    , GIT_HASH
                                     #endif // GIT_HASH
                           );
         buf[pos++] = OF_Const::serialTerminator;
-        pos += sprintf(&buf[pos], "%s", OPENFIRE_CODENAME);
-        buf[pos++] = OF_Const::serialTerminator;
         pos += sprintf(&buf[pos], "%s", OPENFIRE_BOARD);
         buf[pos++] = OF_Const::serialTerminator;
-        buf[pos++] = OF_Prefs::currentProfile;
-        buf[pos++] = OF_Const::serialTerminator;
-        memcpy(&buf[pos], &OF_Prefs::usb.devicePID, sizeof(OF_Prefs::USBMap_t::devicePID));
-        pos += 2;
-        pos += sprintf(&buf[pos], "%s", OF_Prefs::usb.deviceName);
+        memcpy(&buf[pos], &OF_Prefs::usb, sizeof(OF_Prefs::USBMap_t));
+        pos += sizeof(OF_Prefs::USBMap_t);
         if(FW_Common::camNotAvailable) {
             buf[pos++] = OF_Const::serialTerminator;
             buf[pos++] = OF_Const::sError;
         }
-        Serial.write(buf, pos+1);
+        Serial.write(buf, pos);
         Serial.flush();
     }
 

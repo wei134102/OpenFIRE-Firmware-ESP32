@@ -6,8 +6,6 @@
  * @copyright GNU Lesser General Public License
  */ 
 
-#pragma once
- 
 #ifndef _OPENFIRECOMMON_H_
 #define _OPENFIRECOMMON_H_
 

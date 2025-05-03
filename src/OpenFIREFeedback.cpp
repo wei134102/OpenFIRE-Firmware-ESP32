@@ -101,7 +101,7 @@ void OF_FFB::FFBRelease()
             #ifdef ARDUINO_ARCH_ESP32
                 analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0);      // Make sure the rumble is OFF. // 696969 per esp32
             #else // rp2040
-                digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);      // Make sure the rumble is OFF. // 696969 per esp32
+                digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);      // Make sure the rumble is OFF.
             #endif
             rumbleHappening = false;                                // This rumble command is done now.
             rumbleHappened = false;                                 // Make it clear we've stopped holding.
@@ -202,7 +202,7 @@ void OF_FFB::RumbleActivation()
                     #ifdef ARDUINO_ARCH_ESP32
                         analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0);                         // Make sure the rumble is OFF. // 696969 per ESP32
                     #else // rp2040
-                        digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);                         // Make sure the rumble is OFF. // 696969 per ESP32
+                        digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);                         // Make sure the rumble is OFF.
                     #endif
                     rumbleHappening = false;                              // This rumble command is done now.
                     rumbleHappened = true;                                // And just to make sure, to prevent holding == repeat rumble commands.
@@ -213,7 +213,7 @@ void OF_FFB::RumbleActivation()
                 #ifdef ARDUINO_ARCH_ESP32
                     analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0);                         // Make sure the rumble is OFF. // 696969 per ESP32
                 #else // rp2040
-                    digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);                         // Make sure the rumble is OFF. // 696969 per ESP32
+                    digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);                         // Make sure the rumble is OFF.
                 #endif
                 rumbleHappening = false;                              // This rumble command is done now.
                 rumbleHappened = true;                                // And just to make sure, to prevent holding == repeat rumble commands.
@@ -255,7 +255,7 @@ void OF_FFB::FFBShutdown()
     #ifdef ARDUINO_ARCH_ESP32
         analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0); // 696969
     #else // rp2040
-        digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW); //696969
+        digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);
     #endif
     solenoidFirstShot = false;
     rumbleHappening = false;

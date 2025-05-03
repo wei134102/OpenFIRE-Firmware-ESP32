@@ -5,9 +5,9 @@
 |      | |      | |      | |      | |      | |      | |_|____________________Rest of payload
 |      | |      | |      | |      | |      | |______|________________________2nd payload byte
 |      | |      | |      | |      | |______|_________________________________1st payload byte
-|      | |      | |      | |______|__________________________________________# len  of payload bytes (lunghezza del contenuto del paccchetto/payload)
+|      | |      | |      | |______|__________________________________________# len  of payload bytes (lunghezza del contenuto del paccchetto/payload sempre minore di START_BYTE)
 |      | |      | |______|___________________________________________________Packet ID (0 by default) (non deve però essere mai come Start byte)
-|      | |______|____________________________________________________________COBS Overhead byte
+|      | |______|____________________________________________________________COBS Overhead byte (sempre minore di START_BYTE)
 |______|_____________________________________________________________________Start byte (constant)
 */
 
@@ -32,8 +32,8 @@ const int8_t STALE_PACKET_ERROR = -3;
 const uint8_t START_BYTE = 0xFF; // 255 ==== //0x7E; // 126 ~  01111110
 const uint8_t STOP_BYTE  = 0x81; // 129 ü  10000001
 
-const uint8_t PREAMBLE_SIZE   = 4;
-const uint8_t POSTAMBLE_SIZE  = 2;
+const uint8_t PREAMBLE_SIZE   = 4;    // START_BYTE + COBS + PACKET_ID + LEN
+const uint8_t POSTAMBLE_SIZE  = 2;    // CRC + STOP_BYTE
 const uint8_t MAX_PACKET_SIZE = 0xF4; // 244 = 250-6  =====   //0xFE; // 254 Maximum allowed payload bytes per packet
 const uint8_t MAX_COBS        = 0xFE; // 254 aggiunto da me
 
@@ -60,7 +60,7 @@ class Packet
 	uint8_t postamble[POSTAMBLE_SIZE] = {0, STOP_BYTE};
 
 	uint8_t bytesRead = 0;
-	int8_t  status    = 0;
+	//int8_t  status    = 0;
 
 
 	void    begin(const configST& configs);

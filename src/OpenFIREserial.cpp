@@ -949,13 +949,15 @@ void OF_Serial::SerialProcessingDocked()
         Serial_available(1);
         if(Serial.read() == OF_Const::sDock2) FW_Common::SetMode(FW_Const::GunMode_Docked);
         break;
+    // 696969 aggiunto da me per disabilitare invio dati docker (stick, temp)
     case OF_Const::sDockedSaving:
         Serial_available(1);
         if(Serial.read() == OF_Const::sDockedSaving_on) FW_Common::dockedSaving = true;
           else FW_Common::dockedSaving = false;
           Serial.write(OF_Const::sDockedSaving);  
         break;      
-    // Common terminator
+    // 696969 fine aggiunto da me
+        // Common terminator
     case OF_Const::serialTerminator:
         if(!FW_Common::justBooted)
             FW_Common::SetMode(FW_Const::GunMode_Run);
@@ -965,168 +967,61 @@ void OF_Serial::SerialProcessingDocked()
         
     //// Prefs senders
     //
-    case OF_Const::sGetToggles:
-    {
-        char buf[100];
-        uint8_t pos = 0;
-        /*
-        if(OF_Const::boolTypesCount <= 63) {
-        */  
-            memcpy(&buf[pos], (uint8_t*)&OF_Prefs::toggles, OF_Const::boolTypesCount);
-            pos += OF_Const::boolTypesCount;
-            buf[pos++] = OF_Const::serialTerminator;
-            Serial.write(buf, pos);
-        /*
-        } else {
-            for(uint i = 0; i < OF_Const::boolTypesCount; i++) {
-                if(pos >= 63) {
-                    Serial.write(buf, pos);
-                    Serial.flush();
-                    pos = 0;
-                }
-                memcpy(&buf[pos++], (uint8_t*)&OF_Prefs::toggles[i], sizeof(bool));
-                if(i == OF_Const::settingsTypesCount-1) {
-                    buf[pos++] = OF_Const::serialTerminator;
-                    Serial.write(buf, pos);
-                    Serial.flush();
-                }
-            }
-        }*/
-                          break;
-                    }
-    case OF_Const::sGetPins:
-    {
-        char buf[100];
-        uint8_t pos = 0;
-        /*
-        if(OF_Const::boardInputsCount <= 63) {
-*/
-            memcpy(&buf[pos], (uint8_t*)&OF_Prefs::pins, OF_Const::boardInputsCount);
-            pos += OF_Const::boardInputsCount;
-            buf[pos++] = OF_Const::serialTerminator;
-            Serial.write(buf, pos);
-  /*
-        } 
-  */
-        /*
-        else {
-            for(uint i = 0; i < OF_Const::boolTypesCount; i++) {
-                if(pos >= 63) {
-                    Serial.write(buf, pos);
-                    Serial.flush();
-                    pos = 0;
-                }
-                memcpy(&buf[pos++], (uint8_t*)&OF_Prefs::pins[i], sizeof(int8_t));
-                if(i == OF_Const::settingsTypesCount-1) {
-                    buf[pos++] = OF_Const::serialTerminator;
-                    Serial.write(buf, pos);
-                    Serial.flush();
-                }
-            }
-        
-        }
-        */
-        break;
-    }
-    case OF_Const::sGetSettings:
-    {
-        char buf[100];
-        for(uint8_t i = 0, pos = 0; i < OF_Const::settingsTypesCount; i++) {
-            /*
-            Serial.print(1);
-            delay(200);
-            Serial.print(2);
-            delay(200);
-            Serial.print(3);
-            delay(200);
-            Serial.print(4);
-            delay(200);
-            Serial.print(5);
-            delay(200);
-            */
-            //Serial.print("1234");//write((char *)&OF_Prefs::settings[i], 4);
-        
-            /*
-            if(pos >= 60) {
-                
-                Serial.write(buf, pos);
-                Serial.write(buf, 6);
-                //Serial.flush();
-                pos = 0;
-            }
-            */
-            buf[pos++] = i;
-            memcpy(&buf[pos], &OF_Prefs::settings[i], sizeof(uint32_t));
-            pos += sizeof(uint32_t);
-            if(i == OF_Const::settingsTypesCount - 1) {
-                buf[pos++] = OF_Const::serialTerminator;
-                //while (!Serial.availableForWrite()) yield();
-                Serial.write(buf, pos);
-                //Serial.flush();
-                //Serial.print("1234567890");
-                
-            }
-                
-        }
-        break;
-    }
-    case OF_Const::sGetPeriphs:
-    {
-        char buf[100];
-        int pos = 0;
-        buf[pos++] = OF_Const::i2cDevicesEnabled;
-        memcpy(&buf[pos], &OF_Prefs::i2cPeriphs, OF_Const::i2cDevicesCount);
-        pos += OF_Const::i2cDevicesCount;
-        buf[pos++] = OF_Const::serialTerminator;
-        // any settings for I2C devices goes here:
-        for(uint8_t i = 0; i < OF_Const::i2cDevicesCount; i++) {
-            /*
-            if(pos >= 32) {
-                Serial.write(buf, pos);
-                Serial.flush();
-                pos = 0;
-            }
-            */
-            switch(i) {
-            case OF_Const::i2cOLED:
-                buf[pos++] = i;
-                for(uint type = 0; type < OF_Const::oledSettingsTypes; type++) {
-                    buf[pos++] = type;
-                    memcpy(&buf[pos], (uint8_t*)&OF_Prefs::oledPrefs[type], sizeof(uint32_t));
-                    pos += sizeof(uint32_t);
-                }
-                buf[pos++] = OF_Const::serialTerminator;
-                break;
-            default: break;
-            }
-
-            if(i == OF_Const::i2cDevicesCount-1) {
-                buf[pos++] = OF_Const::serialTerminator;
-                Serial.write(buf, pos);
-                Serial.flush();
-            }
-        }
-    }
+    case OF_Const::sGetToggles:  SerialBatchSend(&OF_Prefs::toggles,  OF_Prefs::OFPresets.boolTypes_Strings,     sizeof(OF_Prefs::toggles)  / OF_Const::boolTypesCount    ); break;
+    case OF_Const::sGetPins:     SerialBatchSend(&OF_Prefs::pins,     OF_Prefs::OFPresets.boardInputs_Strings,   sizeof(OF_Prefs::pins)     / OF_Const::boardInputsCount  ); break;
+    case OF_Const::sGetSettings: SerialBatchSend(&OF_Prefs::settings, OF_Prefs::OFPresets.settingsTypes_Strings, sizeof(OF_Prefs::settings) / OF_Const::settingsTypesCount); break;
     case OF_Const::sGetProfile:
     {
-        Serial_available(1);
-        uint8_t i = Serial.read();
-        if(i > -1 && i < PROFILE_COUNT) {
-            // appeasing the wireless folks by using a buffer instead of multiple sends:
-            char buf[100];
-            buf[0]  = OF_Const::profTopOffset,    memcpy(&buf[1],  &OF_Prefs::profiles[i].topOffset,    sizeof(uint32_t));
-            buf[5]  = OF_Const::profBottomOffset, memcpy(&buf[6],  &OF_Prefs::profiles[i].bottomOffset, sizeof(uint32_t));
-            buf[10] = OF_Const::profLeftOffset,   memcpy(&buf[11], &OF_Prefs::profiles[i].leftOffset,   sizeof(uint32_t));
-            buf[15] = OF_Const::profRightOffset,  memcpy(&buf[16], &OF_Prefs::profiles[i].rightOffset,  sizeof(uint32_t));
-            buf[20] = OF_Const::profTLled,        memcpy(&buf[21], &OF_Prefs::profiles[i].TLled,        sizeof(uint32_t));
-            buf[25] = OF_Const::profTRled,        memcpy(&buf[26], &OF_Prefs::profiles[i].TRled,        sizeof(uint32_t));
-            buf[30] = OF_Const::profIrSens,       memcpy(&buf[31], &OF_Prefs::profiles[i].irSens,       sizeof(uint8_t));
-            buf[32] = OF_Const::profRunMode,      memcpy(&buf[33], &OF_Prefs::profiles[i].runMode,      sizeof(uint8_t));
-            buf[34] = OF_Const::profIrLayout,     memcpy(&buf[35], &OF_Prefs::profiles[i].irLayout,     sizeof(uint8_t));
-            buf[36] = OF_Const::profColor,        memcpy(&buf[37], &OF_Prefs::profiles[i].color,        sizeof(uint32_t));
-            buf[41] = OF_Const::profName,         memcpy(&buf[42], &OF_Prefs::profiles[i].name,         sizeof(OF_Prefs::ProfileData_t::name));
-            Serial.write(buf, 58);
-        } else Serial.write(OF_Const::serialTerminator);
+        char buf[64];
+        size_t pos = 0;
+        bool currentProfLogged = false;
+        for(size_t prof = 0; prof < PROFILE_COUNT; ++prof) {
+            for(auto &pair : OF_Prefs::OFPresets.profSettingTypes_Strings) {
+                switch(pair.second) {
+                case OF_Const::profName:
+                    if(pos > 63 - pair.first.length()-1 - sizeof(uint8_t) - sizeof(uint8_t) - sizeof(OF_Prefs::ProfileData_s::name)) {
+                    Serial.write(buf, pos);
+                    Serial.flush();
+                    pos = 0;
+                }
+                    strcpy(&buf[pos], pair.first.c_str());
+                    pos += pair.first.length()+1;
+                    buf[pos++] = sizeof(OF_Prefs::ProfileData_s::name);
+                    buf[pos++] = prof;
+                    memcpy(&buf[pos], OF_Prefs::profiles[prof].name, sizeof(OF_Prefs::ProfileData_s::name));
+                    pos += sizeof(OF_Prefs::ProfileData_s::name);
+                          break;
+                case OF_Const::profCurrent:
+                    if(!currentProfLogged && pos > 63 - pair.first.length()-1 - sizeof(uint8_t) - sizeof(uint8_t)) {
+                    Serial.write(buf, pos);
+                    Serial.flush();
+                    pos = 0;
+                }
+                    strcpy(&buf[pos], pair.first.c_str());
+                    pos += pair.first.length()+1;
+                    buf[pos++] = sizeof(uint8_t);
+                    buf[pos++] = OF_Prefs::currentProfile;
+                    currentProfLogged = true;
+                    break;
+                default:
+                    if(pos > 63 - pair.first.length()-1 - sizeof(uint8_t) - sizeof(uint8_t) - sizeof(uint32_t)) {
+                    Serial.write(buf, pos);
+                    Serial.flush();
+                pos = 0;
+            }
+                    strcpy(&buf[pos], pair.first.c_str());
+                    pos += pair.first.length()+1;
+                    buf[pos++] = sizeof(uint32_t);
+                    buf[pos++] = prof;
+                    memcpy(&buf[pos], (uint8_t*)&OF_Prefs::profiles[prof]+(sizeof(uint32_t)*pair.second), sizeof(uint32_t));
+                    pos+= sizeof(uint32_t);
+        break;
+    }
+            }
+        }
+                buf[pos++] = OF_Const::serialTerminator;
+                Serial.write(buf, pos);
+                Serial.flush();
                 break;
     }
 
@@ -1134,9 +1029,10 @@ void OF_Serial::SerialProcessingDocked()
     //
     case OF_Const::sIRTest:
         if(FW_Common::camNotAvailable) {
-            Serial.write(OF_Const::sError);
-        } else if(FW_Common::runMode == FW_Const::RunMode_Processing) {
-            Serial.println("Exiting processing mode...");
+            Serial.read(); // nomf
+            char message[2] = { OF_Const::sError, OF_Const::sErrCam };
+            Serial.write(message, sizeof(message));
+        } else if(FW_Common::runMode == FW_Const::RunMode_Processing && Serial.read() == false) {
             switch(OF_Prefs::profiles[OF_Prefs::currentProfile].runMode) {
             case FW_Const::RunMode_Normal:
                 FW_Common::SetRunMode(FW_Const::RunMode_Normal);
@@ -1148,10 +1044,8 @@ void OF_Serial::SerialProcessingDocked()
                 FW_Common::SetRunMode(FW_Const::RunMode_Average2);
                               break;
                             }
-        } else {
-            Serial.write(OF_Const::sIRTest);
+        } else if(Serial.read() == true)
             FW_Common::SetRunMode(FW_Const::RunMode_Processing);
-        }
                                     break;
     case OF_Const::sCaliProfile:
     {
@@ -1161,7 +1055,8 @@ void OF_Serial::SerialProcessingDocked()
             Serial.write(buf, 2);
             Serial_available(1);
             if(Serial.read() == OF_Const::sCaliStart) {
-                if(FW_Common::camNotAvailable) Serial.write(OF_Const::sError);  // 696969 va letto anche il byte che sarebbe altrimenti arrivato ??????
+                if(FW_Common::camNotAvailable) Serial.write(OF_Const::sError);
+                // 696969 va letto anche il byte che sarebbe altrimenti arrivato ??????
                 else {
                   // sensitivity/layout preset
                   Serial_available(1); 
@@ -1174,236 +1069,129 @@ void OF_Serial::SerialProcessingDocked()
                   FW_Common::ExecCalMode(true);
                 }
             }
-        }  // else  =================  va gestisto e svuotato il buffer ????
-                            break;
+        }  
+        // else  =================  va gestisto e svuotato il buffer ????
+        break;
                           }
     #ifdef USES_SOLENOID
     case OF_Const::sTestSolenoid:
-        digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], HIGH);
-        delay(OF_Prefs::settings[OF_Const::solenoidOnLength]);
-        digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], LOW);
-                                    break;
+        Serial_available(1);
+        if(Serial.read() == true) {
+            digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], HIGH);
+            delay(OF_Prefs::settings[OF_Const::solenoidOnLength]);
+            digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], LOW);
+        }
+        break;
     #endif // USES_SOLENOID
     #ifdef USES_RUMBLE
     case OF_Const::sTestRumble:
-        analogWrite(OF_Prefs::pins[OF_Const::rumblePin], OF_Prefs::settings[OF_Const::rumbleStrength]);
-        delay(OF_Prefs::settings[OF_Const::rumbleInterval]);
-        #ifdef ARDUINO_ARCH_ESP32
+        Serial_available(1);
+        if(Serial.read() == true) {
+            analogWrite(OF_Prefs::pins[OF_Const::rumblePin], OF_Prefs::settings[OF_Const::rumbleStrength]);
+            delay(OF_Prefs::settings[OF_Const::rumbleInterval]);
+            #ifdef ARDUINO_ARCH_ESP32
             analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0); // 696969 per ESP32
-        #else // rp2040
+            #else // rp2040
             digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);
-        #endif
-                                    break;
+            #endif
+        }
+        break;
     #endif // USES_RUMBLE
     #ifdef LED_ENABLE // meant to be for 4pins, but will update all LED devices anyways.
     case OF_Const::sTestLEDR:
-        OF_RGB::LedUpdate(255, 0, 0);
-                                    break;
+        Serial_available(1);
+        if(Serial.read() == true) OF_RGB::LedUpdate(255, 0, 0);
+        break;
     case OF_Const::sTestLEDG:
-        OF_RGB::LedUpdate(0, 255, 0);
-                            break;
+        Serial_available(1);
+        if(Serial.read() == true) OF_RGB::LedUpdate(0, 255, 0);
+        break;
     case OF_Const::sTestLEDB:
-        OF_RGB::LedUpdate(0, 0, 255);
+        Serial_available(1);
+        if(Serial.read() == true) OF_RGB::LedUpdate(0, 0, 255);
         break;
     #endif // LED_ENABLE
 
     case OF_Const::sCommitStart:
     {
-        FW_Common::buttons.Unset();
-        bool exit = false;
-        Serial.write(OF_Const::sCommitStart), Serial.flush();
-        while(!exit) {
-            if(Serial.available()) {
-                switch(Serial.read()) {
-                //// Saving ops
-                case OF_Const::sCommitToggles:
-                    //if(Serial.available() >= 2) {
-                    if(Serial_available(2)) {    
-                        int type = Serial.read();
-                        if(type < OF_Const::boolTypesCount) {
-                            OF_Prefs::toggles[type] = Serial.read();
-                            Serial.write(OF_Prefs::toggles[type]);
-                        } else Serial.write(Serial.read()), Serial.flush();
-                    } else {
-                        while(Serial.available()) Serial.read();
-                        Serial.write(OF_Const::serialTerminator), Serial.flush();
-                    }
-                            break;
-                case OF_Const::sCommitPins:
-                    //if(Serial.available() >= 2) {
-                    if(Serial_available(2)) {     
-                        int type = Serial.read();
-                        if(type < OF_Const::boardInputsCount) {
-                            OF_Prefs::pins[type] = Serial.read();
-                            Serial.write(OF_Prefs::pins[type]);
-                        } else Serial.write(Serial.read()), Serial.flush();
-                    } else {
-                        while(Serial.available()) Serial.read();
-                        Serial.write(OF_Const::serialTerminator), Serial.flush();
-                    }
-                                    break;
-                case OF_Const::sCommitSettings:
-                    //if(Serial.available() >= 5) {
-                    if(Serial_available(5)) { 
-                        int type = Serial.read();
-                        if(type < OF_Const::settingsTypesCount) {
-                            Serial.readBytes((uint8_t*)&OF_Prefs::settings[type], sizeof(uint32_t));
-                            Serial.write((uint8_t*)&OF_Prefs::settings[type], sizeof(uint32_t)), Serial.flush();
-                        } else {
-                            char junkBuf[sizeof(uint32_t)];
-                            Serial.readBytes(junkBuf, sizeof(junkBuf));
-                            Serial.write(junkBuf, sizeof(junkBuf)), Serial.flush();
-                        }
-                    } else {
-                        while(Serial.available()) Serial.read();
-                        Serial.write(OF_Const::serialTerminator), Serial.flush();
-                    }
-                            break;
-                case OF_Const::sCommitProfile:
-                    //if(Serial.available() >= 6) {
-                    if(Serial_available(2)) { 
-                        int profNum = Serial.read();
-                        if(profNum < PROFILE_COUNT) {
-                            int type = Serial.read();
-                            switch(type) {
-                              case OF_Const::profName:
-                                  //if(Serial.available() > 0 && Serial.available() <= 16) {
-                                  if(Serial_available(sizeof(OF_Prefs::ProfileData_t::name))) {
-                                      memset(OF_Prefs::profiles[profNum].name, '\0', sizeof(OF_Prefs::ProfileData_t::name));
-                                      //Serial.readBytes((uint8_t*)&OF_Prefs::profiles[profNum].name, Serial.available());
-                                      Serial.readBytes((uint8_t*)&OF_Prefs::profiles[profNum].name, sizeof(OF_Prefs::ProfileData_t::name));
-                                      Serial.write((uint8_t*)&OF_Prefs::profiles[profNum].name, sizeof(OF_Prefs::ProfileData_t::name)), Serial.flush();
-                                  } else {
-                                      while(Serial.available()) Serial.read();
-                                      Serial.write(OF_Const::serialTerminator), Serial.flush();
-                                  }
-                            break;
-                              default:
-                                  if(type > OF_Const::profTRled && type < OF_Const::profDataTypes) {
-                                      Serial_available(sizeof(uint32_t));
-                                      Serial.readBytes((uint8_t*)&OF_Prefs::profiles[profNum]+(type*sizeof(uint32_t)), sizeof(uint32_t));
-                                      Serial.write((uint8_t*)&OF_Prefs::profiles[profNum]+(type*sizeof(uint32_t)), sizeof(uint32_t)), Serial.flush();
-                                  } else {
-                                      char junkBuf[sizeof(uint32_t)];
-                                      Serial_available(sizeof(junkBuf));
-                                      Serial.readBytes(junkBuf, sizeof(junkBuf));
-                                      Serial.write(junkBuf, sizeof(junkBuf)), Serial.flush();
-                                  }
-                                  break;
-                            }
-                        } else {
-                            while(Serial.available()) Serial.read();
-                            Serial.write(OF_Const::serialTerminator), Serial.flush();
-                    }
-                }
-                break;
-                case OF_Const::sCommitID:
-                    //if(Serial.available() >= 3) {
-                    if(Serial_available(1)) { 
-                        switch(Serial.read()) {
-                          case OF_Const::usbPID:
-                              Serial_available(sizeof(OF_Prefs::USBMap_t::devicePID));
-                              Serial.readBytes((uint8_t*)&OF_Prefs::usb.devicePID, sizeof(OF_Prefs::USBMap_t::devicePID));
-                              Serial.write((uint8_t*)&OF_Prefs::usb.devicePID, sizeof(OF_Prefs::USBMap_t::devicePID)), Serial.flush();
-                              break;
-                          case OF_Const::usbName:        
-                              //if(Serial.available() > 0 && Serial.available() <= 16) {
-                              if(Serial_available(sizeof(OF_Prefs::USBMap_t::deviceName))) {
-                                  memset(OF_Prefs::usb.deviceName, '\0', sizeof(OF_Prefs::USBMap_t::deviceName));
-                                  //Serial.readBytes(OF_Prefs::usb.deviceName, Serial.available());
-                                  Serial.readBytes(OF_Prefs::usb.deviceName, sizeof(OF_Prefs::USBMap_t::deviceName));
-                                  Serial.write(OF_Prefs::usb.deviceName), Serial.flush();
-                              } else {
-                                  while(Serial.available()) Serial.read();
-                                  Serial.write(OF_Const::serialTerminator), Serial.flush();
-                              }
-                            break;
-                          default:  // ???????????? da rivedere ============================
-                              char junkBuf[Serial.available()];
-                              Serial.readBytes(junkBuf, sizeof(junkBuf));
-                              Serial.write(junkBuf, sizeof(junkBuf)), Serial.flush();
-                            break;
-                        }
-                    } else {
-                        while(Serial.available()) Serial.read();
-                        Serial.write(OF_Const::serialTerminator), Serial.flush();
-                    }
-                    break;
-                case OF_Const::sCommitPeriphs:
-                    //if(Serial.available() >= 2) {
-                    if(Serial_available(2)) { 
-                        switch(Serial.read()) {
-                        case OF_Const::i2cDevicesEnabled:
-                        {
-                            int type = Serial.read();
-                            if(type > -1 && type < OF_Const::i2cDevicesCount) {
-                                Serial_available(1);
-                                OF_Prefs::i2cPeriphs[type] = Serial.read();
-                                Serial.write((uint8_t)OF_Prefs::i2cPeriphs[type]), Serial.flush();
-                            } else Serial.write(Serial.read()), Serial.flush();  // ????????????????????????????????????
-                        break;
-                        }
-                        case OF_Const::i2cOLED:
-                        {
-                            int type = Serial.read();
-                            if(type > -1 && type < OF_Const::oledSettingsTypes) {
-                                Serial_available(sizeof(uint32_t));
-                                Serial.readBytes((uint8_t*)&OF_Prefs::oledPrefs[type], sizeof(uint32_t));
-                                Serial.write((uint8_t*)&OF_Prefs::oledPrefs[type], sizeof(uint32_t)), Serial.flush();
-                            } else {
-                                char junkBuf[sizeof(uint32_t)];
-                                Serial.readBytes(junkBuf, sizeof(junkBuf));
-                                Serial.write(junkBuf, sizeof(junkBuf)), Serial.flush();
-                            }
-                        }  
-                        // ??????????? manca il break ?
-                        default:  // tutto da rivedere ========================================
-                            //int type = Serial.read(); // ?????????????????????????????????????????? 
-                            char junkBuf[Serial.available()];
-                            Serial.readBytes(junkBuf, sizeof(junkBuf));
-                            Serial.write(junkBuf, sizeof(junkBuf)), Serial.flush();
-                        break;
-                        }
-                    } else {
-                        while(Serial.available()) Serial.read();
-                        Serial.write(OF_Const::serialTerminator), Serial.flush();
-                    }
-                 break;
-
-                //// Commands
-                case OF_Const::sSave:
-                    if(FW_Common::SavePreferences() == OF_Prefs::Error_Success) {
-                        // For updating pin data for buttons, cams and periphs
-                        FW_Common::PinsReset();
-                        FW_Common::CameraSet();
-                        FW_Common::FeedbackSet();
+        if(Serial.available() == 1 && Serial.read() == true) {
+            FW_Common::buttons.Unset();
+            bool exit = false;
+            size_t type, rxLen, datSize, profNum;
+            Serial.write(OF_Const::sCommitStart), Serial.flush();
+            while(!exit) {
+                if(Serial.available()) {
+                    rxLen = 0;
+                    type = Serial.read();
+                    switch(type) {
+                    //// Commands
+                    case OF_Const::sSave:
+                        if(FW_Common::SavePreferences() == OF_Prefs::Error_Success) {
+                            // For updating pin data for buttons, cams and periphs
+                            FW_Common::PinsReset();
+                            FW_Common::CameraSet();
+                            FW_Common::FeedbackSet();
                         
-                        // Update bindings so LED/Pixel changes are reflected immediately
-                        if(OF_Prefs::usb.devicePID >= 1 && OF_Prefs::usb.devicePID <= 5) {
-                            playerStartBtn = OF_Prefs::usb.devicePID + '0';
-                            playerSelectBtn = OF_Prefs::usb.devicePID + '0' + 4;
-                        }
-                        FW_Common::UpdateBindings(OF_Prefs::toggles[OF_Const::lowButtonsMode]);
+                            // Update bindings so LED/Pixel changes are reflected immediately
+                            if(OF_Prefs::usb.devicePID >= 1 && OF_Prefs::usb.devicePID <= 4) {
+                                playerStartBtn = OF_Prefs::usb.devicePID + '0';
+                                playerSelectBtn = OF_Prefs::usb.devicePID + '0' + 4;
+                            }
+                            FW_Common::UpdateBindings(OF_Prefs::toggles[OF_Const::lowButtonsMode]);
 
-                    #ifdef LED_ENABLE
-                        // Save op above resets color, so re-set it back to docked idle color
-                        if(FW_Common::gunMode == FW_Const::GunMode_Docked) {
-                            OF_RGB::LedUpdate(127, 127, 255);
-                        } else if(FW_Common::gunMode == FW_Const::GunMode_Pause) {
-                            OF_RGB::SetLedPackedColor(OF_Prefs::profiles[OF_Prefs::currentProfile].color);
-                        }
-                    #endif // LED_ENABLE
-                    } else {
-                        OF_Prefs::Load();
-                }
+                        #ifdef LED_ENABLE
+                            // Save op above resets color, so re-set it back to docked idle color
+                            if(FW_Common::gunMode == FW_Const::GunMode_Docked)
+                                OF_RGB::LedUpdate(127, 127, 255);
+                            else if(FW_Common::gunMode == FW_Const::GunMode_Pause)
+                                OF_RGB::SetLedPackedColor(OF_Prefs::profiles[OF_Prefs::currentProfile].color);
+                        #endif // LED_ENABLE
+                        // unlikely, but attempt to reload settings if save failed
+                        // though this might just load corrupt data instead. :shrug:
+                        } else OF_Prefs::Load();
                     FW_Common::buttons.Begin();
                     exit = true;
-                break;
+                    break;
                 case OF_Const::serialTerminator:
                     // Assumed failed/aborting save, so roll back to what's in flash.
                     OF_Prefs::Load();
                     exit = true;
                     break;
+
+                    //// Saving ops
+                    case OF_Const::sCommitID:
+                        rxLen = Serial.readBytes(RXbuf, Serial.available());
+                        if(rxLen == 18) memcpy(&OF_Prefs::usb, RXbuf, rxLen);
+                        break;
+                    default:
+                        rxLen = Serial.readBytesUntil('\0', RXbuf, 32);
+                        RXbuf[rxLen++] = '\0';
+                        datSize = Serial.read();
+                        RXbuf[rxLen++] = datSize;
+                        if(type == OF_Const::sCommitProfile && OF_Prefs::OFPresets.profSettingTypes_Strings.at(RXbuf) != OF_Const::profCurrent) {
+                            profNum = Serial.read();
+                            RXbuf[rxLen++] = profNum;
+                        }
+                        rxLen += Serial.readBytes(&RXbuf[rxLen], datSize);
+                        switch(type) {
+                            case OF_Const::sCommitToggles:  SerialBatchRecv(RXbuf, OF_Prefs::toggles,  OF_Prefs::OFPresets.boolTypes_Strings,     sizeof(OF_Prefs::toggles)  / OF_Const::boolTypesCount,     datSize, rxLen); break;
+                            case OF_Const::sCommitPins:     SerialBatchRecv(RXbuf, OF_Prefs::pins,     OF_Prefs::OFPresets.boardInputs_Strings,   sizeof(OF_Prefs::pins)     / OF_Const::boardInputsCount,   datSize, rxLen); break;
+                            case OF_Const::sCommitSettings: SerialBatchRecv(RXbuf, OF_Prefs::settings, OF_Prefs::OFPresets.settingsTypes_Strings, sizeof(OF_Prefs::settings) / OF_Const::settingsTypesCount, datSize, rxLen); break;
+                            case OF_Const::sCommitProfile:
+                                if(profNum < PROFILE_COUNT) SerialBatchRecv(RXbuf,
+                                                                            &OF_Prefs::profiles[profNum],
+                                                                            OF_Prefs::OFPresets.profSettingTypes_Strings,
+                                                                            sizeof(uint32_t),
+                                                                            datSize,
+                                                                            rxLen);
+                                break;
+                            default:
+                                break;
+                        }
+                        break;
+                    }
+                    
+                    if(rxLen > 0) { Serial.write(RXbuf, rxLen); Serial.flush(); }
                 }
             }
         }
@@ -1428,6 +1216,40 @@ void OF_Serial::SerialProcessingDocked()
     }
 }
 
+void OF_Serial::SerialBatchSend(void *dataPtr, const std::unordered_map<std::string, int> &mapPtr, const size_t &dataSize)
+{
+    size_t pos = 0;
+    for(auto &pair : mapPtr) {
+        if(pair.second >= 0) {
+            // string lengths don't account for null terminator, which we do need to send
+            // plus the size of the incoming message
+            if(pos > 63 - pair.first.length()-1 - 1 - dataSize) {
+                Serial.write(TXbuf, pos);
+                Serial.flush();
+                pos = 0;
+            }
+
+            strcpy(&TXbuf[pos], pair.first.c_str());
+            pos += pair.first.length()+1;
+            TXbuf[pos++] = dataSize;
+            memcpy(&TXbuf[pos], (uint8_t*)dataPtr + (dataSize * pair.second), dataSize);
+            pos += dataSize;
+        }
+    }
+    TXbuf[pos++] = OF_Const::serialTerminator;
+    Serial.write(TXbuf, pos);
+    Serial.flush();
+}
+
+void OF_Serial::SerialBatchRecv(const char *bufPtr, void *dataPtr, const std::unordered_map<std::string, int> &mapPtr, const size_t &dataSize, const size_t &rxDatSize, const size_t &rxBufSize)
+{
+    if(mapPtr.count(bufPtr)) {
+        if(&mapPtr == &OF_Prefs::OFPresets.profSettingTypes_Strings && mapPtr.count(bufPtr) == OF_Const::profCurrent) {
+            memcpy(&OF_Prefs::currentProfile, &bufPtr[rxBufSize-rxDatSize], rxDatSize);
+        } else memcpy((uint8_t*)dataPtr + (dataSize * mapPtr.at(bufPtr)), &bufPtr[rxBufSize-rxDatSize], rxDatSize);
+    }
+}
+
 void OF_Serial::PrintResults()
 {
     if(millis() - lastPrintMillis < 100)
@@ -1436,7 +1258,7 @@ void OF_Serial::PrintResults()
     #ifdef OPENFIRE_WIRELESS_ENABLE        
         if (!(TinyUSBDevices.onBattery ? SerialWireless : TinyUSBDevice.mounted())) { // 696969 poi decide come sistemare per bene ma così dovrebbe andare bene
     #else
-        if(!Serial) { // 696969 tolta e messo quella successiva
+        if(!Serial) {
     #endif
         FW_Common::stateFlags |= FW_Const::StateFlagsDtrReset;
         return;
@@ -1578,10 +1400,15 @@ void OF_Serial::PrintResults()
             #endif // DUAL_CORE
             // #endif // ARDUINO_ARCH_RP2040 // 696969 per ESP32
 
-            Serial.print("Firmware version: v");
-            Serial.print(OPENFIRE_VERSION, 1);
-            Serial.print(" - ");
-            Serial.println(OPENFIRE_CODENAME);
+            Serial.printf("Firmware version: v%.1f"
+                          #ifdef GIT_HASH
+                          "-%s"
+                          #endif // GIT_ HASH);
+                          , OPENFIRE_VERSION
+                          #ifdef GIT_HASH
+                          , GIT_HASH
+                          #endif // GIT_HASH
+                          );
         }
                     
         lastPrintMillis = millis();
