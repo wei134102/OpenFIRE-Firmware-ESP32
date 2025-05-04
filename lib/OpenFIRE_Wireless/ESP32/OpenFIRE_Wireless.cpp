@@ -170,8 +170,8 @@ int SerialWireless_::availableForWriteBin() {
 }
 
 // decidere se controllare se è vuoto anche il buffer_bin
-void SerialWireless_::flush() { // è bloccante e non esce fino a quando il buffer di uscita è completamente vuoto
-  while (lenBufferSerialWrite || _writeLen) {
+void SerialWireless_::flush() { // è bloccante e non esce fino a quando il buffer di uscita è completamente vuoto // in virtual com con TinyUISB non è bloccante .. invia il pacchetto più grande che può e ritorna
+  //while (lenBufferSerialWrite || _writeLen) { // non è bloccante in USB CDC, forza solo l'inmvio di quello che c'è nel buffer
     if (lenBufferSerialWrite) {
     if (availableForWriteBin() > (lenBufferSerialWrite + PREAMBLE_SIZE + POSTAMBLE_SIZE)) {
         memcpy(&packet.txBuff[PREAMBLE_SIZE], bufferSerialWrite, lenBufferSerialWrite);
@@ -181,7 +181,7 @@ void SerialWireless_::flush() { // è bloccante e non esce fino a quando il buff
     }
     }
     SendData(); // try a send
-  }
+  //}
 }
 
 void SerialWireless_::flushBin() { // mai usata
@@ -243,14 +243,17 @@ size_t SerialWireless_::write(const uint8_t *data, size_t len) { // deve essere 
       lenBufferSerialWrite += len;
       aux_tx = false;
     }
-    //flush();
+    //flush(); // in effetti si può mettere flush al posto dell'if sottostante .. verificare bene
     // =================
+    flush(); // verificare bene
+    /*
     if (availableForWriteBin() > (lenBufferSerialWrite + PREAMBLE_SIZE + POSTAMBLE_SIZE)) {
       memcpy(&packet.txBuff[PREAMBLE_SIZE], bufferSerialWrite, lenBufferSerialWrite);
       packet.constructPacket(lenBufferSerialWrite, PACKET_TX::SERIAL_TX);
       writeBin(packet.txBuff, lenBufferSerialWrite + PREAMBLE_SIZE+POSTAMBLE_SIZE);
       lenBufferSerialWrite = 0;
     }
+    */
     SendData(); // try a send
   } while (aux_tx);
   // =================
@@ -650,7 +653,18 @@ void packet_callback_read_dongle() {
               aux_buffer[0] = CONNECTION_STATE::TX_CONFERM_CONNECTION_LAST_DONGLE; 
               memcpy(&aux_buffer[1], SerialWireless.mac_esp_inteface, 6);
               memcpy(&aux_buffer[7], peerAddress, 6);
-              SerialWireless.SendPacket((const uint8_t *)aux_buffer, 13, PACKET_TX::CHECK_CONNECTION_LAST_DONGLE);
+              // valutare se inviarlo un paio di volte il pacchetto o solo una volta
+              // lo invia 3 volte - una volta ogni 70ms
+              for (uint8_t i = 0; i<3; i++) {
+                if (i>0) {
+                  //vTaskDelay(pdMS_TO_TICKS(1000)); // equivalente a delay(1000) ma non bloccante su esp32
+                  unsigned long lastMillis_tx_packet_connection_last_dongle = millis();
+                  while ((millis() - lastMillis_tx_packet_connection_last_dongle) < 70) yield(); 
+                }
+                SerialWireless.SendPacket((const uint8_t *)aux_buffer, 13, PACKET_TX::CHECK_CONNECTION_LAST_DONGLE);
+              }
+              // pachhetto da inviare
+              ///////SerialWireless.SendPacket((const uint8_t *)aux_buffer, 13, PACKET_TX::CHECK_CONNECTION_LAST_DONGLE);
         }
         break;
       default:
@@ -770,9 +784,42 @@ void packet_callback_read_gun() {
               memcpy(&aux_buffer[13], &usb_data_wireless, sizeof(usb_data_wireless));
 
               // =========================================================
+              // INVIARE IL PACCHETTO FINALE PIU' VOLTE  
+              // =========================================================
+
+              //vTaskDelay(pdMS_TO_TICKS(1000)); // equivalente a delay(1000) ma non bloccante su esp32
+
+              //unsigned long lastMillis_tx_packet_gun_to_dongle_conferm = millis();
+              // invia il pacchetto di avvenuta connessione  3 volte - un pacchetto ogni 70ms
+              for (uint8_t i = 0; i<3; i++) {
+                if (i>0) {
+                  //vTaskDelay(pdMS_TO_TICKS(1000)); // equivalente a delay(1000) ma non bloccante su esp32
+                  unsigned long lastMillis_tx_packet_gun_to_dongle_conferm = millis();
+                  while ((millis() - lastMillis_tx_packet_gun_to_dongle_conferm) < 70) yield(); 
+                  //lastMillis_tx_packet_gun_to_dongle_conferm = millis();
+                }
+                SerialWireless.SendPacket((const uint8_t *)aux_buffer, sizeof(aux_buffer), PACKET_TX::CONNECTION);
+              }
+
+              /*
+              while (!TinyUSBDevice.mounted() && 
+                     (stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED_WITH_LAST_DONGLE) &&
+                     ((millis() - lastMillis_start_dialogue_last_dongle) < TIMEOUT_DIALOGUE_LAST_DONGLE)) { 
+                  if ((millis() - lastMillis_tx_packet_last_dongle) > TIMEOUT_TX_PACKET_LAST_DONGLE)
+                  {
+                    // INSERIRE CHIAMATA INVIO PACCHETTO
+                    SerialWireless.SendPacket((const uint8_t *)aux_buffer, sizeof(aux_buffer), PACKET_TX::CONNECTION);
+                    lastMillis_tx_packet_last_dongle = millis();
+                  }
+                yield();
+              }
+              */
 
 
-              SerialWireless.SendPacket((const uint8_t *)aux_buffer, sizeof(aux_buffer), PACKET_TX::CONNECTION);
+
+
+              // PACCHETO DA INVIARE
+              ////////////SerialWireless.SendPacket((const uint8_t *)aux_buffer, sizeof(aux_buffer), PACKET_TX::CONNECTION);
               
               // assicurati che i dati siano stati spediti
 

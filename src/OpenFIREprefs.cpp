@@ -15,11 +15,11 @@
 int OF_Prefs::InitFS()
 {
     #ifdef ARDUINO_ARCH_ESP32  
-      if(LittleFS.begin(true))
+    if(LittleFS.begin(true))
     #else
-      if(LittleFS.begin())
+    if(LittleFS.begin())
     #endif
-      return Error_Success;
+        return Error_Success;
     else return Error_NoData;
 }
 
@@ -29,6 +29,9 @@ void OF_Prefs::Load()
     if(toggles[OF_Const::customPins]) LoadPins();
     LoadSettings();
     LoadUSBID();
+
+    for(int i = 0; i < ButtonCount; ++i)
+        memcpy(OF_Prefs::backupButtonDesc[i], &LightgunButtons::ButtonDesc[i].reportType, sizeof(OF_Prefs::backupButtonDesc[i]));
 }
 
 int OF_Prefs::LoadProfiles()
@@ -48,13 +51,13 @@ int OF_Prefs::LoadProfiles()
                   case OF_Const::profCurrent:
                       currentProfile = prefsFile.read();
                       if(currentProfile >= PROFILE_COUNT) currentProfile = 0;
-                break;
+                      break;
                   default:
                       profileNum = prefsFile.read();
                       readSize = prefsFile.read();
                       profileNum < PROFILE_COUNT ? prefsFile.readBytes((char*)&profiles[profileNum] + (sizeof(uint32_t) * OFPresets.profSettingTypes_Strings.at(buf)), readSize) : prefsFile.seek(readSize, fs::SeekCur);
-                break;
-              }
+                      break;
+                }
             } else {
                 prefsFile.seek(1, fs::SeekCur);
                 readSize = prefsFile.read();
@@ -77,13 +80,13 @@ int OF_Prefs::SaveProfiles()
                 if(pair.second == OF_Const::profCurrent) {
                     if(!currentProfLogged) {
                         // only write string and profile num
-                        prefsFile.write((const uint8_t *)pair.first.c_str(), pair.first.length()+1);
+                        prefsFile.write((const uint8_t*)pair.first.c_str(), pair.first.length()+1);
                         prefsFile.write((uint8_t)currentProfile);
                         currentProfLogged = true;
                     }
                 } else {
                     // write data type:
-                    prefsFile.write((const uint8_t *)pair.first.c_str(), pair.first.length()+1);
+                    prefsFile.write((const uint8_t*)pair.first.c_str(), pair.first.length()+1);
                     // Append profile number:
                     prefsFile.write((uint8_t*)&i, 1);
 
@@ -114,7 +117,7 @@ int OF_Prefs::SaveToPtr(File prefsFile, void *dataPtr, const std::unordered_map<
     if(prefsFile) {
         for(auto &pair : mapPtr) {
             if(pair.second >= 0) {
-                prefsFile.write((const uint8_t *)pair.first.c_str(), pair.first.length()+1);
+                prefsFile.write((const uint8_t*)pair.first.c_str(), pair.first.length()+1);
                 prefsFile.write((uint8_t)dataSize);
                 prefsFile.write((uint8_t*)dataPtr + (dataSize * pair.second), dataSize);
             }

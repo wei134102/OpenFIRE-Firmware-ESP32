@@ -35,7 +35,8 @@
 #endif // ARDUINO_ARCH_ESP32
 
 
-// button object instance (defined in OpenFIREcommon.h)
+
+// button object instance (defined in OpenFIREcommon.h/OpenFIREprefs.h)
 LightgunButtons FW_Common::buttons(lgbData, ButtonCount);
 
 void FW_Common::FeedbackSet()
@@ -108,8 +109,8 @@ void FW_Common::FeedbackSet()
        bitRead(OF_Prefs::pins[OF_Const::camSDA], 1) != bitRead(OF_Prefs::pins[OF_Const::periphSDA], 1)) {
     #endif
     #ifdef USES_DISPLAY
-    // wrapper will manage display validity
-      // check it's not using the camera's I2C line
+        // wrapper will manage display validity
+        // check it's not using the camera's I2C line
         if(OF_Prefs::toggles[OF_Const::i2cOLED]) {
             if(!OLED.Begin()) { if(OLED.display != nullptr) delete OLED.display; }
         }
@@ -186,8 +187,8 @@ void FW_Common::CameraSet()
         // I2C1
         if(bitRead(OF_Prefs::pins[OF_Const::camSCL], 0) && !bitRead(OF_Prefs::pins[OF_Const::camSDA], 0)) {
             // SDA/SCL are indeed on verified correct pins
-                Wire1.setSDA(OF_Prefs::pins[OF_Const::camSDA]);
-                Wire1.setSCL(OF_Prefs::pins[OF_Const::camSCL]);
+            Wire1.setSDA(OF_Prefs::pins[OF_Const::camSDA]);
+            Wire1.setSCL(OF_Prefs::pins[OF_Const::camSCL]);
             dfrIRPos = new DFRobotIRPositionEx(Wire1);
         }
         
@@ -195,8 +196,8 @@ void FW_Common::CameraSet()
         // I2C0
         if(bitRead(OF_Prefs::pins[OF_Const::camSCL], 0) && !bitRead(OF_Prefs::pins[OF_Const::camSDA], 0)) {
             // SDA/SCL are indeed on verified correct pins
-                Wire.setSDA(OF_Prefs::pins[OF_Const::camSDA]);
-                Wire.setSCL(OF_Prefs::pins[OF_Const::camSCL]);
+            Wire.setSDA(OF_Prefs::pins[OF_Const::camSDA]);
+            Wire.setSCL(OF_Prefs::pins[OF_Const::camSCL]);
             dfrIRPos = new DFRobotIRPositionEx(Wire);
         }
     }
@@ -667,7 +668,7 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
             #ifdef ARDUINO_ARCH_ESP32
                 analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0);  // 696969 per EPS32
             #else // rp2040
-                digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);
+            digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);
             #endif
             delay(50);
             analogWrite(OF_Prefs::pins[OF_Const::rumblePin], OF_Prefs::settings[OF_Const::rumbleStrength]);
@@ -675,7 +676,7 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
             #ifdef ARDUINO_ARCH_ESP32
                 analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0);  // 696969 per ESP32
             #else // rp2040            
-                digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);
+            digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);
             #endif
         }
     #endif // USES_RUMBLE
@@ -687,110 +688,110 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
 void FW_Common::GetPosition()
 {
     if(dfrIRPos != nullptr) {
-    int error = dfrIRPos->basicAtomic(DFRobotIRPositionEx::Retry_2);
-    if(error == DFRobotIRPositionEx::Error_Success) {
-        // if diamond layout, or square
+        int error = dfrIRPos->basicAtomic(DFRobotIRPositionEx::Retry_2);
+        if(error == DFRobotIRPositionEx::Error_Success) {
+            // if diamond layout, or square
             if(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout) {
-            OpenFIREdiamond.begin(dfrIRPos->xPositions(), dfrIRPos->yPositions(), dfrIRPos->seen());
-            OpenFIREper.warp(OpenFIREdiamond.X(0), OpenFIREdiamond.Y(0),
-                             OpenFIREdiamond.X(1), OpenFIREdiamond.Y(1),
-                             OpenFIREdiamond.X(2), OpenFIREdiamond.Y(2),
-                             OpenFIREdiamond.X(3), OpenFIREdiamond.Y(3),
-                             res_x / 2, 0, 0,
-                             res_y / 2, res_x / 2,
-                             res_y, res_x, res_y / 2);
-        } else {
-            OpenFIREsquare.begin(dfrIRPos->xPositions(), dfrIRPos->yPositions(), dfrIRPos->seen());
-            OpenFIREper.warp(OpenFIREsquare.X(0), OpenFIREsquare.Y(0),
-                             OpenFIREsquare.X(1), OpenFIREsquare.Y(1),
-                             OpenFIREsquare.X(2), OpenFIREsquare.Y(2),
-                             OpenFIREsquare.X(3), OpenFIREsquare.Y(3),
-                             OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, 0,
-                             OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, 0,
-                             OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, res_y,
-                             OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, res_y);
-        }
-
-        // Output mapped to screen resolution because offsets are measured in pixels
-        mouseX = map(OpenFIREper.getX(), 0, res_x, (0 - OF_Prefs::profiles[OF_Prefs::currentProfile].leftOffset), (res_x + OF_Prefs::profiles[OF_Prefs::currentProfile].rightOffset));                 
-        mouseY = map(OpenFIREper.getY(), 0, res_y, (0 - OF_Prefs::profiles[OF_Prefs::currentProfile].topOffset), (res_y + OF_Prefs::profiles[OF_Prefs::currentProfile].bottomOffset));
-
-        switch(runMode) {
-                case FW_Const::RunMode_Average:
-                // 2 position moving average
-                moveIndex ^= 1;
-                moveXAxisArr[moveIndex] = mouseX;
-                moveYAxisArr[moveIndex] = mouseY;
-                mouseX = (moveXAxisArr[0] + moveXAxisArr[1]) / 2;
-                mouseY = (moveYAxisArr[0] + moveYAxisArr[1]) / 2;
-                break;
-                case FW_Const::RunMode_Average2:
-                // weighted average of current position and previous 2
-                if(moveIndex < 2)
-                    ++moveIndex;
-                else moveIndex = 0;
-
-                moveXAxisArr[moveIndex] = mouseX;
-                moveYAxisArr[moveIndex] = mouseY;
-                mouseX = (mouseX + moveXAxisArr[0] + moveXAxisArr[1] + moveXAxisArr[2]) / 4;
-                mouseY = (mouseY + moveYAxisArr[0] + moveYAxisArr[1] + moveYAxisArr[2]) / 4;
-                break;
-            default:
-                break;
+                OpenFIREdiamond.begin(dfrIRPos->xPositions(), dfrIRPos->yPositions(), dfrIRPos->seen());
+                OpenFIREper.warp(OpenFIREdiamond.X(0), OpenFIREdiamond.Y(0),
+                                OpenFIREdiamond.X(1), OpenFIREdiamond.Y(1),
+                                OpenFIREdiamond.X(2), OpenFIREdiamond.Y(2),
+                                OpenFIREdiamond.X(3), OpenFIREdiamond.Y(3),
+                                res_x / 2, 0, 0,
+                                res_y / 2, res_x / 2,
+                                res_y, res_x, res_y / 2);
+            } else {
+                OpenFIREsquare.begin(dfrIRPos->xPositions(), dfrIRPos->yPositions(), dfrIRPos->seen());
+                OpenFIREper.warp(OpenFIREsquare.X(0), OpenFIREsquare.Y(0),
+                                OpenFIREsquare.X(1), OpenFIREsquare.Y(1),
+                                OpenFIREsquare.X(2), OpenFIREsquare.Y(2),
+                                OpenFIREsquare.X(3), OpenFIREsquare.Y(3),
+                                OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, 0,
+                                OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, 0,
+                                OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, res_y,
+                                OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, res_y);
             }
 
-        // Constrain that bisch so negatives don't cause underflow
-        int32_t conMoveX = constrain(mouseX, 0, res_x);
-        int32_t conMoveY = constrain(mouseY, 0, res_y);
+            // Output mapped to screen resolution because offsets are measured in pixels
+            mouseX = map(OpenFIREper.getX(), 0, res_x, (0 - OF_Prefs::profiles[OF_Prefs::currentProfile].leftOffset), (res_x + OF_Prefs::profiles[OF_Prefs::currentProfile].rightOffset));                 
+            mouseY = map(OpenFIREper.getY(), 0, res_y, (0 - OF_Prefs::profiles[OF_Prefs::currentProfile].topOffset), (res_y + OF_Prefs::profiles[OF_Prefs::currentProfile].bottomOffset));
 
-        // Output mapped to Mouse resolution
-        conMoveX = map(conMoveX, 0, res_x, 0, 32767);
-        conMoveY = map(conMoveY, 0, res_y, 0, 32767);
+            switch(runMode) {
+                case FW_Const::RunMode_Average:
+                    // 2 position moving average
+                    moveIndex ^= 1;
+                    moveXAxisArr[moveIndex] = mouseX;
+                    moveYAxisArr[moveIndex] = mouseY;
+                    mouseX = (moveXAxisArr[0] + moveXAxisArr[1]) / 2;
+                    mouseY = (moveYAxisArr[0] + moveYAxisArr[1]) / 2;
+                    break;
+                case FW_Const::RunMode_Average2:
+                    // weighted average of current position and previous 2
+                    if(moveIndex < 2)
+                        ++moveIndex;
+                    else moveIndex = 0;
+
+                    moveXAxisArr[moveIndex] = mouseX;
+                    moveYAxisArr[moveIndex] = mouseY;
+                    mouseX = (mouseX + moveXAxisArr[0] + moveXAxisArr[1] + moveXAxisArr[2]) / 4;
+                    mouseY = (mouseY + moveYAxisArr[0] + moveYAxisArr[1] + moveYAxisArr[2]) / 4;
+                    break;
+                default:
+                    break;
+                }
+
+            // Constrain that bisch so negatives don't cause underflow
+            int32_t conMoveX = constrain(mouseX, 0, res_x);
+            int32_t conMoveY = constrain(mouseY, 0, res_y);
+
+            // Output mapped to Mouse resolution
+            conMoveX = map(conMoveX, 0, res_x, 0, 32767);
+            conMoveY = map(conMoveY, 0, res_y, 0, 32767);
 
             if(gunMode == FW_Const::GunMode_Run) {
-            UpdateLastSeen();
+                UpdateLastSeen();
 
-            if(OF_Serial::serialARcorrection) {
-                conMoveX = map(conMoveX, 4147, 28697, 0, 32767);
-                conMoveX = constrain(conMoveX, 0, 32767);
-            }
+                if(OF_Serial::serialARcorrection) {
+                    conMoveX = map(conMoveX, 4147, 28697, 0, 32767);
+                    conMoveX = constrain(conMoveX, 0, 32767);
+                }
 
-            bool offXAxis = false;
-            bool offYAxis = false;
+                bool offXAxis = false;
+                bool offYAxis = false;
 
-            if(conMoveX == 0 || conMoveX == 32767)
-                offXAxis = true;
-            
-            if(conMoveY == 0 || conMoveY == 32767)
-                offYAxis = true;
+                if(conMoveX == 0 || conMoveX == 32767)
+                    offXAxis = true;
+                
+                if(conMoveY == 0 || conMoveY == 32767)
+                    offYAxis = true;
 
-            if(offXAxis || offYAxis)
-                buttons.offScreen = true;
-            else buttons.offScreen = false;
+                if(offXAxis || offYAxis)
+                    buttons.offScreen = true;
+                else buttons.offScreen = false;
 
-            if(buttons.analogOutput)
-                Gamepad16.moveCam(conMoveX, conMoveY);
-            else AbsMouse5.move(conMoveX, conMoveY);
+                if(buttons.analogOutput)
+                    Gamepad16.moveCam(conMoveX, conMoveY);
+                else AbsMouse5.move(conMoveX, conMoveY);
 
             } else if(gunMode == FW_Const::GunMode_Verification) {
-            AbsMouse5.move(conMoveX, conMoveY);
-            AbsMouse5.report();
-        } else {
-            if(millis() - testLastStamp > 50) {
-                testLastStamp = millis();
-                // RAW Camera Output mapped to screen res (1920x1080)
-                int rawX[4];
-                int rawY[4];
-                // RAW Output for viewing in processing sketch mapped to 1920x1080 screen resolution
-                for (int i = 0; i < 4; i++) {
-                    if(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout) {
-                        rawX[i] = map(OpenFIREdiamond.X(i), 0, 1023 << 2, 1920, 0);
-                        rawY[i] = map(OpenFIREdiamond.Y(i), 0, 768 << 2, 0, 1080);
-                    } else {
-                        rawX[i] = map(OpenFIREsquare.X(i), 0, 1023 << 2, 0, 1920);
-                        rawY[i] = map(OpenFIREsquare.Y(i), 0, 768 << 2, 0, 1080);
+                AbsMouse5.move(conMoveX, conMoveY);
+                AbsMouse5.report();
+            } else {
+                if(millis() - testLastStamp > 50) {
+                    testLastStamp = millis();
+                    // RAW Camera Output mapped to screen res (1920x1080)
+                    int rawX[4];
+                    int rawY[4];
+                    // RAW Output for viewing in processing sketch mapped to 1920x1080 screen resolution
+                    for (int i = 0; i < 4; i++) {
+                        if(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout) {
+                            rawX[i] = map(OpenFIREdiamond.X(i), 0, 1023 << 2, 1920, 0);
+                            rawY[i] = map(OpenFIREdiamond.Y(i), 0, 768 << 2, 0, 1080);
+                        } else {
+                            rawX[i] = map(OpenFIREsquare.X(i), 0, 1023 << 2, 0, 1920);
+                            rawY[i] = map(OpenFIREsquare.Y(i), 0, 768 << 2, 0, 1080);
+                        }
                     }
-                }
 
                     if(runMode == FW_Const::RunMode_Processing) {
                         int mouseXscaled = mouseX / 4;
@@ -814,7 +815,7 @@ void FW_Common::GetPosition()
                             memcpy(&buf[41], &testMedianX,  sizeof(int));
                             memcpy(&buf[45], &testMedianY,  sizeof(int));
                             Serial.write(buf, sizeof(buf));
-                    } else {
+                        } else {
                             int testMedianX = map(OpenFIREsquare.testMedianX(), 0, 1023 << 2, 0, 1920);
                             int testMedianY = map(OpenFIREsquare.testMedianY(), 0, 768 << 2, 0, 1080);
                             char buf[49];
@@ -832,14 +833,14 @@ void FW_Common::GetPosition()
                             memcpy(&buf[41], &testMedianX,  sizeof(int));
                             memcpy(&buf[45], &testMedianY,  sizeof(int));
                             Serial.write(buf, sizeof(buf));
+                        }
                     }
-                }
 
-                #ifdef USES_DISPLAY
-                    OLED.DrawVisibleIR(rawX, rawY);
-                #endif // USES_DISPLAY
+                    #ifdef USES_DISPLAY
+                        OLED.DrawVisibleIR(rawX, rawY);
+                    #endif // USES_DISPLAY
+                }
             }
-        }
         } else if(error != DFRobotIRPositionEx::Error_DataMismatch)
             PrintIrError();
     } else  PrintIrError();
@@ -847,16 +848,16 @@ void FW_Common::GetPosition()
 
 void FW_Common::PrintIrError()
 {
-        // set flag to warn desktop app when docking
-        if(!camNotAvailable)
-            camNotAvailable = true;
+    // set flag to warn desktop app when docking
+    if(!camNotAvailable)
+        camNotAvailable = true;
 
     if(dockedSaving) {
         char buf[2] = { OF_Const::sError, OF_Const::sErrCam };
         Serial.write(buf, 2);
     } else if(millis() - camWarningTimestamp > CAM_WARNING_INTERVAL) {
         Serial.println("CAMERROR: Not available");
-            camWarningTimestamp = millis();
+        camWarningTimestamp = millis();
     }
 }
 
@@ -1015,7 +1016,7 @@ int FW_Common::SavePreferences()
                 OLED.ScreenModeChange(ExtDisplay::Screen_Saving);
         #endif // USES_DISPLAY
     }
-    
+
     if(OF_Prefs::SaveProfiles() == OF_Prefs::Error_Success) {
         #ifdef USES_DISPLAY
             OLED.ScreenModeChange(ExtDisplay::Screen_SaveSuccess);
@@ -1030,7 +1031,7 @@ int FW_Common::SavePreferences()
 
         OF_Prefs::SaveSettings();
         OF_Prefs::SaveUSBID();
-        
+
         #ifdef LED_ENABLE
             for(uint i = 0; i < 3; ++i) {
                 OF_RGB::LedUpdate(25,25,255);
@@ -1074,9 +1075,9 @@ int FW_Common::SavePreferences()
             }
         #endif // LED_ENABLE
 
-    #ifdef USES_DISPLAY
+        #ifdef USES_DISPLAY
             RedrawDisplay();
-    #endif // USES_DISPLAY
+        #endif // USES_DISPLAY
 
         return OF_Prefs::Error_Write;
     }
@@ -1085,22 +1086,15 @@ int FW_Common::SavePreferences()
 void FW_Common::UpdateBindings(const bool &lowButtons)
 {
     if(gunMode != FW_Const::GunMode_Run) {
-    // Updates pins
-    LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Trigger].pin = OF_Prefs::pins[OF_Const::btnTrigger];
-    LightgunButtons::ButtonDesc[FW_Const::BtnIdx_A].pin       = OF_Prefs::pins[OF_Const::btnGunA];
-    LightgunButtons::ButtonDesc[FW_Const::BtnIdx_B].pin       = OF_Prefs::pins[OF_Const::btnGunB];
-    LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Reload].pin  = OF_Prefs::pins[OF_Const::btnGunC];
-    LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Start].pin   = OF_Prefs::pins[OF_Const::btnStart];
-    LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Select].pin  = OF_Prefs::pins[OF_Const::btnSelect];
-    LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Up].pin      = OF_Prefs::pins[OF_Const::btnGunUp];
-    LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Down].pin    = OF_Prefs::pins[OF_Const::btnGunDown];
-    LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Left].pin    = OF_Prefs::pins[OF_Const::btnGunLeft];
-    LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Right].pin   = OF_Prefs::pins[OF_Const::btnGunRight];
-    LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Pedal].pin   = OF_Prefs::pins[OF_Const::btnPedal];
-    LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Pedal2].pin  = OF_Prefs::pins[OF_Const::btnPedal2];
-    LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Pump].pin    = OF_Prefs::pins[OF_Const::btnPump];
-    LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Home].pin    = OF_Prefs::pins[OF_Const::btnHome];
+        // Updates pins
+        for(int i = 0; i < ButtonCount; ++i)
+            LightgunButtons::ButtonDesc[i].pin = OF_Prefs::pins[i];
     }
+
+    for(int i = 0; i < ButtonCount; ++i)
+        memcpy(&LightgunButtons::ButtonDesc[i].reportType,
+               OF_Prefs::backupButtonDesc[i],
+               sizeof(OF_Prefs::backupButtonDesc[0]));
 
     // Updates button functions for low-button mode
     if(lowButtons) {
@@ -1108,11 +1102,6 @@ void FW_Common::UpdateBindings(const bool &lowButtons)
         LightgunButtons::ButtonDesc[FW_Const::BtnIdx_A].reportCode2 = playerStartBtn;
         LightgunButtons::ButtonDesc[FW_Const::BtnIdx_B].reportType2 = LightgunButtons::ReportType_Keyboard;
         LightgunButtons::ButtonDesc[FW_Const::BtnIdx_B].reportCode2 = playerSelectBtn;
-    } else { // TODO: we should just reload btn config table from flash instead
-        LightgunButtons::ButtonDesc[FW_Const::BtnIdx_A].reportType2 = LightgunButtons::ReportType_Mouse;
-        LightgunButtons::ButtonDesc[FW_Const::BtnIdx_A].reportCode2 = MOUSE_RIGHT;
-        LightgunButtons::ButtonDesc[FW_Const::BtnIdx_B].reportType2 = LightgunButtons::ReportType_Mouse;
-        LightgunButtons::ButtonDesc[FW_Const::BtnIdx_B].reportCode2 = MOUSE_MIDDLE;
     }
 
     // update start/select button keyboard bindings
@@ -1120,9 +1109,6 @@ void FW_Common::UpdateBindings(const bool &lowButtons)
     LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Start].reportCode2  = playerStartBtn;
     LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Select].reportCode  = playerSelectBtn;
     LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Select].reportCode2 = playerSelectBtn;
-
-    LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Trigger].reportType2 = LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Trigger].reportType;
-    LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Trigger].reportCode2 = LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Trigger].reportCode;
 }
 
 // ============ 696969 ========== ripristino di Serial dopo definizione per connessione seriali ==============
