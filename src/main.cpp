@@ -66,7 +66,7 @@ void setup() {
     // (can happen due to bad pin mappings)
     Wire.setTimeout(100);
     Wire1.setTimeout(100);
-
+  
     #ifdef ARDUINO_ADAFRUIT_ITSYBITSY_RP2040
         // SAMCO 1.1 needs Pin 5 normally HIGH for the camera
         pinMode(14, OUTPUT);
@@ -84,10 +84,10 @@ void setup() {
     if(OF_Prefs::InitFS() == OF_Prefs::Error_Success) {
         //OF_Prefs::ResetPreferences(); //FORMATTA IL FILE SYSTEM
         OF_Prefs::LoadProfiles();
-        
+    
         // Profile sanity checks
         // resets offsets that are wayyyyy too unreasonably high
-        for(uint i = 0; i < PROFILE_COUNT; ++i) {
+        for(int i = 0; i < PROFILE_COUNT; ++i) {
             if(OF_Prefs::profiles[i].rightOffset >= 32768 || OF_Prefs::profiles[i].bottomOffset >= 32768 ||
                OF_Prefs::profiles[i].topOffset >= 32768   || OF_Prefs::profiles[i].leftOffset >= 32768) {
                 OF_Prefs::profiles[i].topOffset = 0;
@@ -107,14 +107,11 @@ void setup() {
         if(OF_Prefs::currentProfile >= PROFILE_COUNT)
             OF_Prefs::currentProfile = 0;
 
-                // set the current IR camera sensitivity
-        if(OF_Prefs::profiles[OF_Prefs::currentProfile].irSens <= DFRobotIRPositionEx::Sensitivity_Max)
-            FW_Common::irSensitivity = (DFRobotIRPositionEx::Sensitivity_e)OF_Prefs::profiles[OF_Prefs::currentProfile].irSens;
-                // set the run mode
-                if(OF_Prefs::profiles[OF_Prefs::currentProfile].runMode < FW_Const::RunMode_Count)
-                FW_Common::runMode = (FW_Const::RunMode_e)OF_Prefs::profiles[OF_Prefs::currentProfile].runMode;
-    
-            OF_Prefs::Load();
+        // set the run mode
+        if(OF_Prefs::profiles[OF_Prefs::currentProfile].runMode < FW_Const::RunMode_Count)
+            FW_Common::runMode = (FW_Const::RunMode_e)OF_Prefs::profiles[OF_Prefs::currentProfile].runMode;
+
+        OF_Prefs::Load();
         
         #if defined(OPENFIRE_WIRELESS_ENABLE) && defined(ARDUINO_ARCH_ESP32)
             uint8_t aux_espnow_wifi_channel, aux_espnow_wifi_power;
@@ -147,6 +144,7 @@ void setup() {
     #endif // defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
     // ===============================================================
 
+ 
     // We're setting our custom USB identifiers, as defined in the configuration area!
     #ifdef USE_TINYUSB
         // Initializes TinyUSB identifier
@@ -200,7 +198,7 @@ if(OF_Prefs::usb.devicePID > 0 && OF_Prefs::usb.devicePID < 5) {
     #endif // LED_ENABLE
 
     ////////////////////////////////////////////////////////////
-
+    // scrive sulla parte superiore del diplay "connessione"
     #ifdef ARDUINO_ARCH_ESP32
     #ifdef USES_DISPLAY
         //FW_Common::OLED.ScreenModeChange(ExtDisplay::Screen_Init);
@@ -239,7 +237,7 @@ if(OF_Prefs::usb.devicePID > 0 && OF_Prefs::usb.devicePID < 5) {
 // ===================================================================================================================
 
 #ifdef USE_TINYUSB
-    #if defined(ARDUINO_RASPBERRY_PI_PICO_W) && defined(ENABLE_CLASSIC)
+        #if defined(ARDUINO_RASPBERRY_PI_PICO_W) && defined(ENABLE_CLASSIC)
         // is VBUS (USB voltage) detected?
         if(digitalRead(34)) {
             // If so, we're connected via USB, so initializing the USB devices chunk.
@@ -332,6 +330,17 @@ if(OF_Prefs::usb.devicePID > 0 && OF_Prefs::usb.devicePID < 5) {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////// 
     #endif
 #endif //USE_TINYUSB
+
+    // ripristina la parte superiore del diplay come in originale
+    #ifdef ARDUINO_ARCH_ESP32
+    #ifdef USES_DISPLAY
+        FW_Common::OLED.ScreenModeChange(ExtDisplay::ScreenMode_e::Screen_None);
+        //FW_Common::OLED.ScreenModeChange(ExtDisplay::Screen_Init);
+        //FW_Common::OLED.TopPanelUpdate(" ... CONNECTION ...");
+    #endif // USES_DISPLAY
+    #endif //ARDUINO_ARCH_ESP32
+
+
 
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -535,7 +544,7 @@ void loop1()
 
         if(OF_Prefs::toggles[OF_Const::holdToPause]) {
             if(FW_Common::buttons.debounced == FW_Const::EnterPauseModeHoldBtnMask
-                && !FW_Common::lastSeen && !pauseHoldStarted) {
+               && !FW_Common::lastSeen && !pauseHoldStarted) {
                 pauseHoldStarted = true;
                 pauseHoldStartstamp = millis();
                 if(!OF_Serial::serialMode)
@@ -558,8 +567,8 @@ void loop1()
                         esp32_fifo.push(FW_Const::GunMode_Pause);
                         esp32_fifo.pop();
                     #else // rp2040
-                        rp2040.fifo.push(FW_Const::GunMode_Pause);
-                        rp2040.fifo.pop();
+                    rp2040.fifo.push(FW_Const::GunMode_Pause);
+                    rp2040.fifo.pop();
                     #endif
                 }
             }
@@ -575,8 +584,8 @@ void loop1()
                     esp32_fifo.push(FW_Const::GunMode_Pause);
                     esp32_fifo.pop();
                 #else // rp2040
-                    rp2040.fifo.push(FW_Const::GunMode_Pause);
-                    rp2040.fifo.pop();
+                rp2040.fifo.push(FW_Const::GunMode_Pause);
+                rp2040.fifo.pop();
                 #endif
             }
         }
@@ -601,11 +610,11 @@ void loop()
                 #ifdef ARDUINO_ARCH_ESP32
                     analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0); // 696969 per ESP32
                 #else //rp2040
-                    digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);
+                digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);
                 #endif
             }
         #endif // USES_RUMBLE
-        
+
         // if any buttons are still held, keep polling until all buttons are debounced
         while(FW_Common::buttons.debounced)
             FW_Common::buttons.Poll(1);
@@ -798,7 +807,7 @@ void loop()
                                 #ifdef ARDUINO_ARCH_ESP32
                                     analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0);  // 696969 per ESP32
                                 #else // rp2040
-                                    digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);
+                                digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);
                                 #endif
                                 delay(50);
                             }
@@ -826,9 +835,9 @@ void loop()
             } else if(FW_Common::buttons.pressedReleased == FW_Const::RunModeAverageBtnMask) {
                 FW_Common::SetRunMode(FW_Common::runMode == FW_Const::RunMode_Average ? FW_Const::RunMode_Average2 : FW_Const::RunMode_Average);
             } else if(FW_Common::buttons.pressedReleased == FW_Const::IRSensitivityUpBtnMask) {
-                IncreaseIrSensitivity();
+                IncreaseIrSensitivity(OF_Prefs::profiles[OF_Prefs::currentProfile].irSens);
             } else if(FW_Common::buttons.pressedReleased == FW_Const::IRSensitivityDownBtnMask) {
-                DecreaseIrSensitivity();
+                DecreaseIrSensitivity(OF_Prefs::profiles[OF_Prefs::currentProfile].irSens);
             } else if(FW_Common::buttons.pressedReleased == FW_Const::SaveBtnMask) {
                 FW_Common::SavePreferences();
             #ifdef USES_RUMBLE
@@ -934,29 +943,29 @@ void ExecRunMode()
         #ifdef USES_DISPLAY
             else {
                 FW_Common::OLED.IdleOps();
-        #ifdef MAMEHOOKER
+                #ifdef MAMEHOOKER
                     // Solenoid feedback on the second core is hella wonky when ammo updates are performed there likely due to blocking I2C transactions,
-                // so just do it here using the signal sent by it.
-                if(OF_Serial::serialDisplayChange) {
-                    if(FW_Common::OLED.serialDisplayType == ExtDisplay::ScreenSerial_Ammo) {
-                        FW_Common::OLED.PrintAmmo(OF_Serial::serialAmmoCount);
-                    } else if(FW_Common::OLED.serialDisplayType == ExtDisplay::ScreenSerial_Life && FW_Common::OLED.lifeBar) {
-                        FW_Common::OLED.PrintLife(FW_Common::dispLifePercentage);
-                    } else if(FW_Common::OLED.serialDisplayType == ExtDisplay::ScreenSerial_Life) {
-                        FW_Common::OLED.PrintLife(OF_Serial::serialLifeCount);
-                    } else if(FW_Common::OLED.serialDisplayType == ExtDisplay::ScreenSerial_Both && FW_Common::OLED.lifeBar) {
-                        FW_Common::OLED.PrintAmmo(OF_Serial::serialAmmoCount);
-                        FW_Common::OLED.PrintLife(FW_Common::dispLifePercentage);
-                    } else if(FW_Common::OLED.serialDisplayType == ExtDisplay::ScreenSerial_Both) {
-                        FW_Common::OLED.PrintAmmo(OF_Serial::serialAmmoCount);
-                        FW_Common::OLED.PrintLife(OF_Serial::serialLifeCount);
-                    }
+                    // so just do it here using the signal sent by it.
+                    if(OF_Serial::serialDisplayChange) {
+                        if(FW_Common::OLED.serialDisplayType == ExtDisplay::ScreenSerial_Ammo) {
+                            FW_Common::OLED.PrintAmmo(OF_Serial::serialAmmoCount);
+                        } else if(FW_Common::OLED.serialDisplayType == ExtDisplay::ScreenSerial_Life && FW_Common::OLED.lifeBar) {
+                            FW_Common::OLED.PrintLife(FW_Common::dispLifePercentage);
+                        } else if(FW_Common::OLED.serialDisplayType == ExtDisplay::ScreenSerial_Life) {
+                            FW_Common::OLED.PrintLife(OF_Serial::serialLifeCount);
+                        } else if(FW_Common::OLED.serialDisplayType == ExtDisplay::ScreenSerial_Both && FW_Common::OLED.lifeBar) {
+                            FW_Common::OLED.PrintAmmo(OF_Serial::serialAmmoCount);
+                            FW_Common::OLED.PrintLife(FW_Common::dispLifePercentage);
+                        } else if(FW_Common::OLED.serialDisplayType == ExtDisplay::ScreenSerial_Both) {
+                            FW_Common::OLED.PrintAmmo(OF_Serial::serialAmmoCount);
+                            FW_Common::OLED.PrintLife(OF_Serial::serialLifeCount);
+                        }
 
-                    OF_Serial::serialDisplayChange = false;
+                        OF_Serial::serialDisplayChange = false;
                     }
                 #endif // MAMEHOOKER
-                }
-            #endif // USES_DISPLAY
+            }
+        #endif // USES_DISPLAY
 
         // If using RP2040, we offload the button processing to the second core.
         #if /*!defined(ARDUINO_ARCH_RP2040) ||*/ !defined(DUAL_CORE)  // 696969 per ESP32     
@@ -1021,7 +1030,7 @@ void ExecRunMode()
             if(FW_Common::buttons.pressedReleased == FW_Const::EnterPauseModeBtnMask || FW_Common::buttons.pressedReleased == FW_Const::BtnMask_Home) {
                 // MAKE SURE EVERYTHING IS DISENGAGED:
                 OF_FFB::FFBShutdown();
-		        FW_Common::SetMode(FW_Const::GunMode_Pause);
+		FW_Common::SetMode(FW_Const::GunMode_Pause);
                 FW_Common::buttons.ReleaseAll();
                 FW_Common::buttons.ReportDisable();
                 return;
@@ -1040,7 +1049,7 @@ void ExecRunMode()
             #ifdef ARDUINO_ARCH_ESP32
                 esp32_fifo.push(true);
             #else // rp2040
-                rp2040.fifo.push(true);
+            rp2040.fifo.push(true);
             #endif
             return;
         }
@@ -1149,17 +1158,17 @@ void ExecGunModeDocked()
 
             #ifdef USES_TEMP
                 if(OF_Prefs::pins[OF_Const::tempPin] > -1)
-            OF_FFB::TemperatureUpdate();
+                    OF_FFB::TemperatureUpdate();
 
-            unsigned long currentMillis = millis();
-            if(currentMillis - tempChecked >= 1000) {
-                if(OF_Prefs::pins[OF_Const::tempPin] >= 0) {
-                    const char buf[] = {OF_Const::sTemperatureUpd, (uint8_t)OF_FFB::temperatureCurrent};
-                    Serial.write(buf, 2);
+                unsigned long currentMillis = millis();
+                if(currentMillis - tempChecked >= 1000) {
+                    if(OF_Prefs::pins[OF_Const::tempPin] >= 0) {
+                        const char buf[] = {OF_Const::sTemperatureUpd, (uint8_t)OF_FFB::temperatureCurrent};
+                        Serial.write(buf, 2);
+                    }
+
+                    tempChecked = currentMillis;
                 }
-
-                tempChecked = currentMillis;
-            }
             #endif // USES_TEMP
             
             #ifdef USES_ANALOG
@@ -1168,12 +1177,12 @@ void ExecGunModeDocked()
 
                     uint16_t analogValueX = analogRead(OF_Prefs::pins[OF_Const::analogX]);
                     uint16_t analogValueY = analogRead(OF_Prefs::pins[OF_Const::analogY]);
-                    
+
                     char buf[5] = {OF_Const::sAnalogPosUpd};
                     memcpy(&buf[1], (uint8_t*)&analogValueX, sizeof(uint16_t));
                     memcpy(&buf[3], (uint8_t*)&analogValueY, sizeof(uint16_t));
                     Serial.write(buf, sizeof(buf));
-            }
+                }
             #endif // USES_ANALOG
         }
 
@@ -1221,7 +1230,7 @@ void TriggerFire()
         // If we are in offscreen button mode (and aren't dragging a shot offscreen)
         if(!OF_FFB::triggerHeld) {
             if(FW_Common::buttons.analogOutput) // always uses the same button
-                    Gamepad16.press(LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Trigger].reportCode3);
+                Gamepad16.press(LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Trigger].reportCode3);
             else switch(LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Trigger].reportType2) {
                 case LightgunButtons::ReportType_Mouse:   AbsMouse5.press(LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Trigger].reportCode2); break;
                 case LightgunButtons::ReportType_Keyboard: Keyboard.press(LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Trigger].reportCode2); break;
@@ -1241,8 +1250,8 @@ void TriggerFire()
 void TriggerNotFire()
 {
     if(OF_FFB::triggerHeld) {
-            if(FW_Common::buttons.analogOutput)
-                Gamepad16.release(LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Trigger].reportCode3);
+        if(FW_Common::buttons.analogOutput)
+            Gamepad16.release(LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Trigger].reportCode3);
         else if(FW_Common::triggerPressedOffscreen) {
             switch(LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Trigger].reportType2) {
                 case LightgunButtons::ReportType_Mouse:   AbsMouse5.release(LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Trigger].reportCode2); break;
@@ -1474,32 +1483,16 @@ void SelectCalProfileFromBtnMask(const uint32_t &mask)
     }
 }
 
-void CycleIrSensitivity()
+void IncreaseIrSensitivity(const uint32_t &sens)
 {
-    uint8_t sens = FW_Common::irSensitivity;
-    if(FW_Common::irSensitivity < DFRobotIRPositionEx::Sensitivity_Max)
-        sens++;
-    else sens = DFRobotIRPositionEx::Sensitivity_Min;
-
-    FW_Common::SetIrSensitivity(sens);
+    if(sens < DFRobotIRPositionEx::Sensitivity_Max)
+        FW_Common::SetIrSensitivity(sens-1);
 }
 
-void IncreaseIrSensitivity()
+void DecreaseIrSensitivity(const uint32_t &sens)
 {
-    uint8_t sens = FW_Common::irSensitivity;
-    if(FW_Common::irSensitivity < DFRobotIRPositionEx::Sensitivity_Max) {
-        sens++;
-        FW_Common::SetIrSensitivity(sens);
-    }
-}
-
-void DecreaseIrSensitivity()
-{
-    uint8_t sens = FW_Common::irSensitivity;
-    if(FW_Common::irSensitivity > DFRobotIRPositionEx::Sensitivity_Min) {
-        sens--;
-        FW_Common::SetIrSensitivity(sens);
-    }
+    if(sens > DFRobotIRPositionEx::Sensitivity_Min)
+        FW_Common::SetIrSensitivity(sens-1);
 }
 
 /*
@@ -1585,17 +1578,18 @@ void RumbleToggle()
         #ifdef LED_ENABLE
             OF_RGB::SetLedPackedColor(WikiColor::Salmon);
         #endif // LED_ENABLE
+
         
         #ifdef ARDUINO_ARCH_ESP32  // 696969 per ESP32
             analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 255);       // Pulse the motor on to notify the user,
             delay(300);                                               // Hold that,
             analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0);        // Then turn off,
         #else // rp2040
-            digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], HIGH);       // Pulse the motor on to notify the user,
-            delay(300);                                               // Hold that,
-            digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);        // Then turn off,
+        digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], HIGH);       // Pulse the motor on to notify the user,
+        delay(300);                                               // Hold that,
+        digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);        // Then turn off,
         #endif
-        
+
         #ifdef LED_ENABLE
             OF_RGB::SetLedPackedColor(OF_Prefs::profiles[OF_Prefs::currentProfile].color);// And reset the LED back to pause mode color
         #endif // LED_ENABLE
