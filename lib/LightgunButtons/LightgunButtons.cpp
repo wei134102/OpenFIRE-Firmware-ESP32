@@ -184,7 +184,7 @@ uint32_t LightgunButtons::Poll(unsigned long minTicks)
                                         Gamepad16.press(btn.reportCode3);
                                     } else {
                                         bitSet(padMask, btn.reportCode3-START_DPAD_KEY);
-                                        Gamepad16.padUpdate(PadMaskConvert());
+                                        Gamepad16.padUpdate(PadMaskConvert(padMask));
                                     }
                                 }
                             } else if(offScreen) {
@@ -198,7 +198,7 @@ uint32_t LightgunButtons::Poll(unsigned long minTicks)
                                         Gamepad16.press(btn.reportCode2);
                                     } else {
                                         bitSet(padMask, btn.reportCode2-START_DPAD_KEY);
-                                        Gamepad16.padUpdate(PadMaskConvert());
+                                        Gamepad16.padUpdate(PadMaskConvert(padMask));
                                     }
                                 }
                             } else {
@@ -211,7 +211,7 @@ uint32_t LightgunButtons::Poll(unsigned long minTicks)
                                         Gamepad16.press(btn.reportCode);
                                     } else {
                                         bitSet(padMask, btn.reportCode-START_DPAD_KEY);
-                                        Gamepad16.padUpdate(PadMaskConvert());
+                                        Gamepad16.padUpdate(PadMaskConvert(padMask));
                                     }
                                 }
                             }
@@ -240,7 +240,7 @@ uint32_t LightgunButtons::Poll(unsigned long minTicks)
                                         Gamepad16.release(btn.reportCode3);
                                     } else {
                                         bitClear(padMask, btn.reportCode3-START_DPAD_KEY);
-                                        Gamepad16.padUpdate(PadMaskConvert());
+                                        Gamepad16.padUpdate(PadMaskConvert(padMask));
                                     }
                                 }
                             } else if(bitRead(internalOffscreenMask, i)) {
@@ -254,7 +254,7 @@ uint32_t LightgunButtons::Poll(unsigned long minTicks)
                                         Gamepad16.release(btn.reportCode2);
                                     } else {
                                         bitClear(padMask, btn.reportCode2-START_DPAD_KEY);
-                                        Gamepad16.padUpdate(PadMaskConvert());
+                                        Gamepad16.padUpdate(PadMaskConvert(padMask));
                                     }
                                 }
                             } else {
@@ -267,7 +267,7 @@ uint32_t LightgunButtons::Poll(unsigned long minTicks)
                                         Gamepad16.release(btn.reportCode);
                                     } else {
                                         bitClear(padMask, btn.reportCode-START_DPAD_KEY);
-                                        Gamepad16.padUpdate(PadMaskConvert());
+                                        Gamepad16.padUpdate(PadMaskConvert(padMask));
                                     }
                                 }
                             }
@@ -328,9 +328,9 @@ uint32_t LightgunButtons::Repeat()
     return repeat;
 }
 
-uint32_t LightgunButtons::PadMaskConvert()
+uint32_t LightgunButtons::PadMaskConvert(const uint32_t &mask)
 {
-    switch(padMask) {
+    switch(mask) {
         case 1: // 0x00000001
             return GAMEPAD_HAT_UP;
             break;

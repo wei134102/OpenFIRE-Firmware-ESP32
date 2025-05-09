@@ -189,6 +189,7 @@ void SerialWireless_::flushBin() { // mai usata
 }
 
 void SerialWireless_::SendData() {
+  // spedire a gruppi di pacchetti, non mezzo pacchetto // sistemare TODO
   uint16_t dataAvailable = _writeLen;
   if (dataAvailable > 0) {
     uint16_t len_tx = dataAvailable > ESP_NOW_MAX_DATA_LEN ? ESP_NOW_MAX_DATA_LEN : dataAvailable;
@@ -253,8 +254,8 @@ size_t SerialWireless_::write(const uint8_t *data, size_t len) { // deve essere 
       writeBin(packet.txBuff, lenBufferSerialWrite + PREAMBLE_SIZE+POSTAMBLE_SIZE);
       lenBufferSerialWrite = 0;
     }
-    */
     SendData(); // try a send
+    */
   } while (aux_tx);
   // =================
   return len;

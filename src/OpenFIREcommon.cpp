@@ -396,7 +396,7 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
 
             if (mouseCurrentX == mouseTargetX && mouseCurrentY == mouseTargetY) {
                 mouseMoving = false;
-                // delay(5);  // Optional small delay  // tolto da me 696969 non serve
+                delay(5);  // Optional small delay
             }
         }
 
@@ -1027,6 +1027,7 @@ int FW_Common::SavePreferences()
             OF_Prefs::SavePins();
 
         OF_Prefs::SaveSettings();
+        OF_Prefs::SaveButtons();
         OF_Prefs::SaveUSBID();
 
         #ifdef LED_ENABLE
@@ -1088,25 +1089,51 @@ void FW_Common::UpdateBindings(const bool &lowButtons)
             LightgunButtons::ButtonDesc[i].pin = OF_Prefs::pins[i];
     }
 
-    for(int i = 0; i < ButtonCount; ++i)
+    #if defined(PLAYER_START) && defined(PLAYER_SELECT)
+    playerStartBtn = PLAYER_START;
+    playerSelectBtn = PLAYER_SELECT;
+    #else
+    if(OF_Prefs::usb.devicePID > 0 && OF_Prefs::usb.devicePID < 5) {
+        playerStartBtn = OF_Prefs::usb.devicePID + '0';
+        playerSelectBtn = OF_Prefs::usb.devicePID + '4';
+    } else {
+        playerStartBtn = '1';
+        playerSelectBtn = '5';
+    }
+    #endif // PLAYER_NUMBER
+
+    for(int i = 0; i < ButtonCount; ++i) {
         memcpy(&LightgunButtons::ButtonDesc[i].reportType,
                OF_Prefs::backupButtonDesc[i],
                sizeof(OF_Prefs::backupButtonDesc[0]));
+        
+        while(true) {
+            uint8_t *ptr = (uint8_t*)memchr(&LightgunButtons::ButtonDesc[i].reportCode, 0xFF, sizeof(OF_Prefs::backupButtonDesc[i]-1));
+            if(ptr != nullptr)
+                *ptr = playerStartBtn;
+            else break;
+        }
+
+        while(true) {
+            uint8_t *ptr = (uint8_t*)memchr(&LightgunButtons::ButtonDesc[i].reportCode, 0xFE, sizeof(OF_Prefs::backupButtonDesc[i]-1));
+            if(ptr != nullptr)
+                *ptr = playerSelectBtn;
+            else break;
+        }
+    }
 
     // Updates button functions for low-button mode
     if(lowButtons) {
-        LightgunButtons::ButtonDesc[FW_Const::BtnIdx_A].reportType2 = LightgunButtons::ReportType_Keyboard;
-        LightgunButtons::ButtonDesc[FW_Const::BtnIdx_A].reportCode2 = playerStartBtn;
-        LightgunButtons::ButtonDesc[FW_Const::BtnIdx_B].reportType2 = LightgunButtons::ReportType_Keyboard;
-        LightgunButtons::ButtonDesc[FW_Const::BtnIdx_B].reportCode2 = playerSelectBtn;
+        memcpy(&LightgunButtons::ButtonDesc[FW_Const::BtnIdx_A].reportType2,
+               OF_Prefs::backupButtonDesc[FW_Const::BtnIdx_Start],
+               2);
+        memcpy(&LightgunButtons::ButtonDesc[FW_Const::BtnIdx_B].reportType2,
+               OF_Prefs::backupButtonDesc[FW_Const::BtnIdx_Select],
+               2);
     }
-
-    // update start/select button keyboard bindings
-    LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Start].reportCode   = playerStartBtn;
-    LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Start].reportCode2  = playerStartBtn;
-    LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Select].reportCode  = playerSelectBtn;
-    LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Select].reportCode2 = playerSelectBtn;
 }
+
+
 
 // ============ 696969 ========== ripristino di Serial dopo definizione per connessione seriali ==============
 #ifdef OPENFIRE_WIRELESS_ENABLE

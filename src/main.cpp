@@ -170,18 +170,21 @@ void setup() {
             }
         } else {
             TinyUSBDevice.setProductDescriptor(DEVICE_NAME);
-            TinyUSBDevice.setID(DEVICE_VID, PLAYER_NUMBER);
+            TinyUSBDevice.setID(DEVICE_VID,
+            #ifdef PLAYER_NUMBER
+            PLAYER_NUMBER
+            #else
+            1
+            #endif // PLAYER_NUMBER
+            );
         }
+
 #endif //USE_TINYUSB
+
 
 // ===================================================================================================================
 // ===================================================================================================================
 // ====== 696969 ============ spostato sopra prima della connessione =================================================
-
-if(OF_Prefs::usb.devicePID > 0 && OF_Prefs::usb.devicePID < 5) {
-    playerStartBtn = OF_Prefs::usb.devicePID + '0';
-    playerSelectBtn = OF_Prefs::usb.devicePID + '4';
-}
 
     // this is needed for both customs and builtins, as defaults are all uninitialized
     FW_Common::UpdateBindings(OF_Prefs::toggles[OF_Const::lowButtonsMode]);
@@ -367,7 +370,7 @@ if(OF_Prefs::usb.devicePID > 0 && OF_Prefs::usb.devicePID < 5) {
 
     // IR camera maxes out motion detection at ~300Hz, and millis() isn't good enough
     
-    if (TinyUSBDevices.onBattery) startIrCamTimer(100);  // 100->10ms 66 -> 15ms per connessione wireless
+    if (TinyUSBDevices.onBattery) startIrCamTimer(120);  // 100->10ms 66 -> 15ms per connessione wireless
       else startIrCamTimer(209); // 5ms per connessione via seriale
     
     FW_Common::OpenFIREper.source(OF_Prefs::profiles[OF_Prefs::currentProfile].adjX,
@@ -1278,17 +1281,51 @@ void TriggerNotFire()
 #ifdef USES_ANALOG
 void AnalogStickPoll()
 {
-    unsigned int analogValueX = analogRead(OF_Prefs::pins[OF_Const::analogX]);
-    unsigned int analogValueY = analogRead(OF_Prefs::pins[OF_Const::analogY]);
+    int analogValueX = analogRead(OF_Prefs::pins[OF_Const::analogX]);
+    int analogValueY = analogRead(OF_Prefs::pins[OF_Const::analogY]);
     
-    // Analog stick deadzone should help mitigate overwriting USB commands for the other input channels.
-    if((analogValueX < ANALOG_STICK_DEADZONE_X_MIN || analogValueX > ANALOG_STICK_DEADZONE_X_MAX) ||   // 696969 per calibrazione
-       (analogValueY < ANALOG_STICK_DEADZONE_Y_MIN || analogValueY > ANALOG_STICK_DEADZONE_Y_MAX)) {   // 696969 per calibrazione
-          Gamepad16.moveStick(analogValueX, analogValueY);
+    if(OF_Prefs::settings[OF_Const::analogMode] == OF_Const::analogModeStick) {
+        // Analog stick deadzone should help mitigate overwriting USB commands for the other input channels.
+        if((analogValueX < ANALOG_STICK_DEADZONE_X_MIN || analogValueX > ANALOG_STICK_DEADZONE_X_MAX) ||
+        (analogValueY < ANALOG_STICK_DEADZONE_Y_MIN || analogValueY > ANALOG_STICK_DEADZONE_Y_MAX)) {
+            Gamepad16.moveStick(analogValueX, analogValueY);
+        } else {
+            // Duplicate coords won't be reported, so no worries.
+            Gamepad16.moveStick(ANALOG_STICK_CENTER_X, ANALOG_STICK_CENTER_Y);
+        }
     } else {
-        // Duplicate coords won't be reported, so no worries.
-        Gamepad16.moveStick(ANALOG_STICK_CENTER_X, ANALOG_STICK_CENTER_Y);  // 696969 per calibrazione
+        uint32_t newPos = 0;
+
+        // TODO: need to consider inverted axis toggle, currently assumes axises are inverted by default
+        // would this also benefit from custom Analog->Digital deadzone?
+        if(analogValueY < (ANALOG_STICK_DEADZONE_Y_MIN-700))
+            newPos = 2; // down
+        else if(analogValueY > (ANALOG_STICK_DEADZONE_Y_MAX+700))
+            newPos = 1; // up
+
+        if(analogValueX < (ANALOG_STICK_DEADZONE_X_MIN-700))
+            newPos |= 8; // right
+        else if(analogValueX > (ANALOG_STICK_DEADZONE_X_MAX+700))
+            newPos |= 4; // left
+
+        switch(OF_Prefs::settings[OF_Const::analogMode]) {
+        case OF_Const::analogModeDpad: Gamepad16.padUpdate(FW_Common::buttons.PadMaskConvert(newPos)); break;
+        case OF_Const::analogModeKeys:
+            if(FW_Common::aStickADCLastPos ^ newPos) {
+                for(int i = 0; i < 4; ++i) {
+                    if(FW_Common::aStickADCLastPos ^ newPos & 1 << i)
+                        Keyboard.release(KEY_UP_ARROW-i);
+                }
+            }
+            for(int i = 0; i < 4; ++i) {
+                if(newPos & 1 << i)
+                    Keyboard.press(KEY_UP_ARROW-i);
+            }
+            break;
+        }
+        FW_Common::aStickADCLastPos = newPos;
     }
+        
 }
 #endif // USES_ANALOG
 

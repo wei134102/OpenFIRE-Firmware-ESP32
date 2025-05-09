@@ -966,9 +966,10 @@ void OF_Serial::SerialProcessingDocked()
         
     //// Prefs senders
     //
-    case OF_Const::sGetToggles:  SerialBatchSend(&OF_Prefs::toggles,  OF_Prefs::OFPresets.boolTypes_Strings,     sizeof(OF_Prefs::toggles)  / OF_Const::boolTypesCount    ); break;
-    case OF_Const::sGetPins:     SerialBatchSend(&OF_Prefs::pins,     OF_Prefs::OFPresets.boardInputs_Strings,   sizeof(OF_Prefs::pins)     / OF_Const::boardInputsCount  ); break;
-    case OF_Const::sGetSettings: SerialBatchSend(&OF_Prefs::settings, OF_Prefs::OFPresets.settingsTypes_Strings, sizeof(OF_Prefs::settings) / OF_Const::settingsTypesCount); break;
+    case OF_Const::sGetToggles:  SerialBatchSend(OF_Prefs::toggles,          OF_Prefs::OFPresets.boolTypes_Strings,     sizeof(OF_Prefs::toggles)          / OF_Const::boolTypesCount    ); break;
+    case OF_Const::sGetPins:     SerialBatchSend(OF_Prefs::pins,             OF_Prefs::OFPresets.boardInputs_Strings,   sizeof(OF_Prefs::pins)             / OF_Const::boardInputsCount  ); break;
+    case OF_Const::sGetSettings: SerialBatchSend(OF_Prefs::settings,         OF_Prefs::OFPresets.settingsTypes_Strings, sizeof(OF_Prefs::settings)         / OF_Const::settingsTypesCount); break;
+    case OF_Const::sGetBtns:     SerialBatchSend(OF_Prefs::backupButtonDesc, OF_Prefs::OFPresets.boardInputs_Strings,   sizeof(OF_Prefs::backupButtonDesc) / ButtonCount);                  break;
     case OF_Const::sGetProfile:
         for(int prof = 0; prof < PROFILE_COUNT; ++prof)
             SerialBatchSend(&OF_Prefs::profiles[prof], OF_Prefs::OFPresets.profSettingTypes_Strings, sizeof(uint32_t), prof);
@@ -1081,11 +1082,6 @@ void OF_Serial::SerialProcessingDocked()
                             FW_Common::CameraSet();
                             FW_Common::FeedbackSet();
                             
-                            // Update bindings so LED/Pixel changes are reflected immediately
-                            if(OF_Prefs::usb.devicePID >= 1 && OF_Prefs::usb.devicePID <= 4) {
-                                playerStartBtn = OF_Prefs::usb.devicePID + '0';
-                                playerSelectBtn = OF_Prefs::usb.devicePID + '0' + 4;
-                            }
                             FW_Common::UpdateBindings(OF_Prefs::toggles[OF_Const::lowButtonsMode]);
 
                         #ifdef LED_ENABLE
@@ -1123,9 +1119,10 @@ void OF_Serial::SerialProcessingDocked()
                         }
                         rxLen += Serial.readBytes(&RXbuf[rxLen], datSize);
                         switch(type) {
-                            case OF_Const::sCommitToggles:  SerialBatchRecv(RXbuf, OF_Prefs::toggles,  OF_Prefs::OFPresets.boolTypes_Strings,     sizeof(OF_Prefs::toggles)  / OF_Const::boolTypesCount,     datSize, rxLen); break;
-                            case OF_Const::sCommitPins:     SerialBatchRecv(RXbuf, OF_Prefs::pins,     OF_Prefs::OFPresets.boardInputs_Strings,   sizeof(OF_Prefs::pins)     / OF_Const::boardInputsCount,   datSize, rxLen); break;
-                            case OF_Const::sCommitSettings: SerialBatchRecv(RXbuf, OF_Prefs::settings, OF_Prefs::OFPresets.settingsTypes_Strings, sizeof(OF_Prefs::settings) / OF_Const::settingsTypesCount, datSize, rxLen); break;
+                            case OF_Const::sCommitToggles:  SerialBatchRecv(RXbuf, OF_Prefs::toggles,           OF_Prefs::OFPresets.boolTypes_Strings,     sizeof(OF_Prefs::toggles)          / OF_Const::boolTypesCount,     datSize, rxLen); break;
+                            case OF_Const::sCommitPins:     SerialBatchRecv(RXbuf, OF_Prefs::pins,              OF_Prefs::OFPresets.boardInputs_Strings,   sizeof(OF_Prefs::pins)             / OF_Const::boardInputsCount,   datSize, rxLen); break;
+                            case OF_Const::sCommitSettings: SerialBatchRecv(RXbuf, OF_Prefs::settings,          OF_Prefs::OFPresets.settingsTypes_Strings, sizeof(OF_Prefs::settings)         / OF_Const::settingsTypesCount, datSize, rxLen); break;
+                            case OF_Const::sCommitBtns:     SerialBatchRecv(RXbuf, OF_Prefs::backupButtonDesc,  OF_Prefs::OFPresets.boardInputs_Strings,   sizeof(OF_Prefs::backupButtonDesc) / ButtonCount,                  datSize, rxLen); break;
                             case OF_Const::sCommitProfile:
                                 if(profNum < PROFILE_COUNT) SerialBatchRecv(RXbuf,
                                                                             &OF_Prefs::profiles[profNum],
@@ -1196,6 +1193,7 @@ void OF_Serial::SerialBatchSend(void *dataPtr, const std::unordered_map<std::str
                     }
                 }
             } else {
+                if(dataPtr == OF_Prefs::backupButtonDesc && pair.second >= ButtonCount-1) continue;
                 TXbuf[pos++] = dataSize;
                 memcpy(&TXbuf[pos], (uint8_t*)dataPtr + (dataSize * pair.second), dataSize);
                 pos += dataSize;
@@ -1204,7 +1202,6 @@ void OF_Serial::SerialBatchSend(void *dataPtr, const std::unordered_map<std::str
             for(int sendTry = 0; sendTry < 3; ++sendTry) {
                 Serial.write(TXbuf, pos);
                 Serial.flush();
-                //Serial_available(pos); // 696969
                 while(Serial.available() < pos) yield();
                 Serial.readBytes(RXbuf, Serial.available());
 
