@@ -999,6 +999,7 @@ void OF_Serial::SerialProcessingDocked()
         break;
     case OF_Const::sCaliProfile:
     {
+        Serial_available(1);
         if(Serial.peek() < PROFILE_COUNT) {
             FW_Common::SelectCalProfile(Serial.read());
             char buf[2] = {OF_Const::sCurrentProf, (uint8_t)OF_Prefs::currentProfile};
@@ -1006,7 +1007,6 @@ void OF_Serial::SerialProcessingDocked()
             Serial_available(1);
             if(Serial.read() == OF_Const::sCaliStart) {
                 if(FW_Common::camNotAvailable) Serial.write(OF_Const::sError);
-                // 696969 va letto anche il byte che sarebbe altrimenti arrivato ??????
                 else {
                   // sensitivity/layout preset
                   Serial_available(1); 
@@ -1019,8 +1019,15 @@ void OF_Serial::SerialProcessingDocked()
                   FW_Common::ExecCalMode(true);
                 }
             }
+        } else {
+            Serial_available(1);
+            Serial.read();
+            Serial_available(1);
+            if(Serial.read() == OF_Const::sCaliStart) {
+                Serial_available(1);
+                if(Serial.read() != -1) Serial.read();
+            }
         }
-        // else  =================  va gestisto e svuotato il buffer ????
         break;
     }
     #ifdef USES_SOLENOID
@@ -1113,7 +1120,9 @@ void OF_Serial::SerialProcessingDocked()
                         RXbuf[rxLen++] = '\0';
                         datSize = Serial.read();
                         RXbuf[rxLen++] = datSize;
-                        if(type == OF_Const::sCommitProfile && OF_Prefs::OFPresets.profSettingTypes_Strings.at(RXbuf) != OF_Const::profCurrent) {
+                        if(type == OF_Const::sCommitProfile && (OF_Prefs::OFPresets.profSettingTypes_Strings.count(RXbuf) == 0 ||
+                                                               (OF_Prefs::OFPresets.profSettingTypes_Strings.count(RXbuf) && OF_Prefs::OFPresets.profSettingTypes_Strings.at(RXbuf) != OF_Const::profCurrent)))
+                        {
                             profNum = Serial.read();
                             RXbuf[rxLen++] = profNum;
                         }
@@ -1224,7 +1233,7 @@ void OF_Serial::SerialBatchSend(void *dataPtr, const std::unordered_map<std::str
 void OF_Serial::SerialBatchRecv(const char *bufPtr, void *dataPtr, const std::unordered_map<std::string, int> &mapPtr, const size_t &dataSize, const size_t &rxDatSize, const size_t &rxBufSize)
 {
     if(mapPtr.count(bufPtr)) {
-        if(&mapPtr == &OF_Prefs::OFPresets.profSettingTypes_Strings && mapPtr.count(bufPtr) == OF_Const::profCurrent) {
+        if(&mapPtr == &OF_Prefs::OFPresets.profSettingTypes_Strings && mapPtr.at(bufPtr) == OF_Const::profCurrent) {
             memcpy(&OF_Prefs::currentProfile, &bufPtr[rxBufSize-rxDatSize], rxDatSize);
         } else memcpy((uint8_t*)dataPtr + (dataSize * mapPtr.at(bufPtr)), &bufPtr[rxBufSize-rxDatSize], rxDatSize);
     }

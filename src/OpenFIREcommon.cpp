@@ -751,9 +751,14 @@ void FW_Common::GetPosition()
             if(gunMode == FW_Const::GunMode_Run) {
                 UpdateLastSeen();
 
-                if(OF_Serial::serialARcorrection) {
-                    conMoveX = map(conMoveX, 4147, 28697, 0, 32767);
-                    conMoveX = constrain(conMoveX, 0, 32767);
+                if(OF_Serial::serialARcorrection) switch(OF_Prefs::profiles[OF_Prefs::currentProfile].aspectRatio) {
+                    case OF_Const::ar16_9:
+                        conMoveX = map(conMoveX, 4147, 28697, 0, 32767);
+                        conMoveX = constrain(conMoveX, 0, 32767);
+                        break;
+                    case OF_Const::ar16_10:
+                    case OF_Const::ar4_3:
+                        break;
                 }
 
                 bool offXAxis = false;
@@ -766,11 +771,11 @@ void FW_Common::GetPosition()
                     offYAxis = true;
 
                 if(offXAxis || offYAxis)
-                    buttons.offScreen = true;
+                     buttons.offScreen = true;
                 else buttons.offScreen = false;
 
                 if(buttons.analogOutput)
-                    Gamepad16.moveCam(conMoveX, conMoveY);
+                     Gamepad16.moveCam(conMoveX, conMoveY);
                 else AbsMouse5.move(conMoveX, conMoveY);
 
             } else if(gunMode == FW_Const::GunMode_Verification) {
@@ -906,7 +911,7 @@ bool FW_Common::SelectCalProfile(const int &profile)
         OF_Prefs::currentProfile = profile;
     }
 
-    OpenFIREper.source(OF_Prefs::profiles[OF_Prefs::currentProfile].adjX, OF_Prefs::profiles[OF_Prefs::currentProfile].adjY);                                                          
+    OpenFIREper.source(OF_Prefs::profiles[profile].adjX, OF_Prefs::profiles[profile].adjY);                                                          
     OpenFIREper.deinit(0);
 
     // set IR sensitivity
@@ -919,7 +924,7 @@ bool FW_Common::SelectCalProfile(const int &profile)
 
     #ifdef USES_DISPLAY
         if(gunMode != FW_Const::GunMode_Docked)
-            OLED.TopPanelUpdate("Using ", OF_Prefs::profiles[OF_Prefs::currentProfile].name);
+            OLED.TopPanelUpdate("Using ", OF_Prefs::profiles[profile].name);
     #endif // USES_DISPLAY
  
     #ifdef LED_ENABLE
@@ -980,7 +985,7 @@ void FW_Common::SetIrSensitivity(const int &sensitivity)
         stateFlags |= FW_Const::StateFlag_SavePreferencesEn;
     }
 
-    dfrIRPos->sensitivityLevel((DFRobotIRPositionEx::Sensitivity_e)sensitivity);
+    if(dfrIRPos != nullptr) dfrIRPos->sensitivityLevel((DFRobotIRPositionEx::Sensitivity_e)sensitivity);
     //if(!(stateFlags & FW_Const::StateFlag_PrintSelectedProfile))
         //PrintIrSensitivity();
 }
