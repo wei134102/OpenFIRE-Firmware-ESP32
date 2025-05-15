@@ -370,7 +370,7 @@ void setup() {
 
     // IR camera maxes out motion detection at ~300Hz, and millis() isn't good enough
     
-    if (TinyUSBDevices.onBattery) startIrCamTimer(120);  // 100->10ms 66 -> 15ms per connessione wireless
+    if (TinyUSBDevices.onBattery) startIrCamTimer(209);  // 120 ---- 100->10ms 66 -> 15ms per connessione wireless
       else startIrCamTimer(209); // 5ms per connessione via seriale
     
     FW_Common::OpenFIREper.source(OF_Prefs::profiles[OF_Prefs::currentProfile].adjX,

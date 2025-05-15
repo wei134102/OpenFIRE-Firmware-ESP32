@@ -1,0 +1,59 @@
+name: OpenFIRE Firmware ESP32 Builds
+on:
+  push:
+  pull_request:
+  #workflow_dispatch:
+
+
+jobs:
+  
+  pio-run:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        boards: 
+          - 'ESP32_S3_WROOM1_DevKitC_1_N16R8' 
+          - 'WAVESHARE_ESP32_S3_PICO'
+    name: OpenFIRE-${{ matrix.boards }}           
+
+    steps:
+      - name: Checkout OpenFIRE-Firmware
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3"
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: ${{ runner.os }}-${{ hashFiles('**/lockfiles') }}
+
+      - name: Install PlatformIO
+        run: |
+          python -m pip install --upgrade pip
+          pip install --upgrade platformio
+
+      - if: (matrix.boards == 'ESP32_S3_WROOM1_DevKitC_1_N16R8' || matrix.boards == 'WAVESHARE_ESP32_S3_PICO')
+        name: Build OpenFIRE S3 - FLASH 16Mb - Compile for ${{ matrix.boards }}
+        run: |
+          pio run -e ${{ matrix.boards }}
+          pio run -e ${{ matrix.boards }} -t buildfs
+          python ~/.platformio/packages/tool-esptoolpy/esptool.py --chip esp32s3 merge_bin -o OpenFIRE-firmware-esp32.bin --flash_mode dio --flash_size 16MB \
+            0x0000 .pio/build/${{ matrix.boards }}/bootloader.bin \
+            0x8000 .pio/build/${{ matrix.boards }}/partitions.bin \
+            0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin \
+            0x10000 .pio/build/${{ matrix.boards }}/firmware.bin \
+            0xc90000 .pio/build/${{ matrix.boards }}/littlefs.bin
+          cp .pio/build/${{ matrix.boards }}/OpenFIRE-firmware-esp32.bin OpenFIREfw-${{ matrix.boards }}.bin
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenFIRE-${{ matrix.boards }}
+          path: OpenFIREfw-${{ matrix.boards }}.bin
+          if-no-files-found: error
