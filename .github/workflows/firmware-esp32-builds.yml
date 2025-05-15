@@ -46,7 +46,7 @@ jobs:
             0x0000 .pio/build/${{ matrix.boards }}/bootloader.bin \
             0x8000 .pio/build/${{ matrix.boards }}/partitions.bin \
             0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin \
-            0x10000 .pio/build/${{ matrix.boards }}/firmware.bin # \
+            0x10000 .pio/build/${{ matrix.boards }}/firmware.bin \
             0xc90000 .pio/build/${{ matrix.boards }}/littlefs.bin
           cp .pio/build/${{ matrix.boards }}/OpenFIRE-firmware-esp32.bin OpenFIREfw-${{ matrix.boards }}.bin
 
