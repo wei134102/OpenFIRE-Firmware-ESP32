@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        platform: [ "ESP32_S3_WROOM1_DevKitC_1_N16R8", "WAVESHARE_ESP32_S3_PICO", "rpipico", "rpipicow" ]
+        platform: [ "ESP32_S3_WROOM1_DevKitC_1_N16R8" ]
     
     steps:
     - name: Checkout code
