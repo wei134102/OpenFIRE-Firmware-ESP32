@@ -13,17 +13,17 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        platform: [ "ESP32_S3_WROOM1_DevKitC_1_N16R8" ]
+        platform: [ "ESP32_S3_WROOM1_DevKitC_1_N16R8", "WAVESHARE_ESP32_S3_PICO" ]
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       
     - name: Set up PlatformIO
-      uses: platformio/setup-platformio@v1
+      uses: platformio/setup-platformio@v2
       
     - name: Cache PlatformIO dependencies
-      uses: actions/cache@v4
+      uses: actions/cache@v3
       with:
         path: |
           ~/.platformio
@@ -36,7 +36,7 @@ jobs:
       run: pio run -e ${{ matrix.platform }}
       
     - name: Archive firmware
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v3
       with:
         name: firmware-${{ matrix.platform }}
         path: .pio/build/${{ matrix.platform }}/firmware.*
