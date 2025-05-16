@@ -131,6 +131,7 @@ void OF_Serial::SerialProcessing()
                           memcpy(&LightgunButtons::ButtonDesc[FW_Const::BtnIdx_A].reportType,
                                  OF_Prefs::backupButtonDesc[FW_Const::BtnIdx_A],
                                  sizeof(LightgunButtons::Desc_s::reportType)*2);
+                      serialMappingsOffscreenShot = false;
                       break;
                     // offscreen button
                     case '2':
@@ -142,9 +143,10 @@ void OF_Serial::SerialProcessing()
                           memcpy(&LightgunButtons::ButtonDesc[FW_Const::BtnIdx_A].reportType,
                                  OF_Prefs::backupButtonDesc[FW_Const::BtnIdx_Reload],
                                  sizeof(LightgunButtons::Desc_s::reportType)*2);
+                      serialMappingsOffscreenShot = true;
                       break;
                 }
-                FW_Common::UpdateStartSelect();
+                FW_Common::UpdateBindings(false);
                 break;
               // pedal functionality
               case '2':
@@ -155,21 +157,24 @@ void OF_Serial::SerialProcessing()
                       memcpy(&LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Pedal].reportType,
                              OF_Prefs::backupButtonDesc[FW_Const::BtnIdx_Pedal],
                              sizeof(OF_Prefs::backupButtonDesc[0]));
+                      serialMappingsPedalMode = 0;
                       break;
                     // make reload button (mapping of Button A)
                     case '1':
                       memcpy(&LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Pedal].reportType,
                              OF_Prefs::backupButtonDesc[FW_Const::BtnIdx_A],
                              sizeof(OF_Prefs::backupButtonDesc[0]));
+                      serialMappingsPedalMode = 1;
                       break;
                     // make middle mouse button (mapping of Button B, useful for low buttons mode & e.g. using VCop3 ES mode)
                     case '2':
                       memcpy(&LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Pedal].reportType,
                              OF_Prefs::backupButtonDesc[FW_Const::BtnIdx_B],
                              sizeof(OF_Prefs::backupButtonDesc[0]));
+                      serialMappingsPedalMode = 2;
                       break;
                 }
-                FW_Common::UpdateStartSelect();
+                FW_Common::UpdateBindings(false);
                 break;
               // aspect ratio correction
               case '3':
@@ -282,6 +287,8 @@ void OF_Serial::SerialProcessing()
                   serialMode = false;
                   memset(serialQueue, false, sizeof(serialQueue));
                   serialARcorrection = false;
+                  serialMappingsOffscreenShot = false;
+                  serialMappingsPedalMode = 0;
                   #ifdef USES_DISPLAY
                       FW_Common::OLED.serialDisplayType = ExtDisplay::ScreenSerial_None;
                       if(FW_Common::gunMode == FW_Const::GunMode_Run) FW_Common::OLED.ScreenModeChange(ExtDisplay::Screen_Normal, FW_Common::buttons.analogOutput);
@@ -320,7 +327,7 @@ void OF_Serial::SerialProcessing()
                   #endif // USES_SOLENOID
                   FW_Common::buttons.ReleaseAll();
                   // remap back to defaults, in case they were changed
-                  FW_Common::UpdateBindings(OF_Prefs::toggles[OF_Const::lowButtonsMode]);
+                  FW_Common::UpdateBindings(true);
                   Serial.println("Received end serial pulse, releasing FF override.");
               }
               break;
@@ -338,9 +345,9 @@ void OF_Serial::SerialProcessing()
               {
                 char serialInput = Serial.read();
                 if(serialInput >= '1' && serialInput <= '4') {
-                    playerStartBtn = serialInput;
-                    playerSelectBtn = serialInput + 4;
-                    FW_Common::UpdateBindings(OF_Prefs::toggles[OF_Const::lowButtonsMode]);
+                    FW_Common::playerStartBtn = serialInput;
+                    FW_Common::playerSelectBtn = serialInput + 4;
+                    FW_Common::UpdateBindings(false);
                 } else Serial.println("SERIALREAD: Player remap command called, but an invalid or no slot number was declared!");
                 break;
               }
@@ -1100,7 +1107,7 @@ void OF_Serial::SerialProcessingDocked()
                             FW_Common::CameraSet();
                             FW_Common::FeedbackSet();
                             
-                            FW_Common::UpdateBindings(OF_Prefs::toggles[OF_Const::lowButtonsMode]);
+                            FW_Common::UpdateBindings(true);
 
                         #ifdef LED_ENABLE
                             // Save op above resets color, so re-set it back to docked idle color

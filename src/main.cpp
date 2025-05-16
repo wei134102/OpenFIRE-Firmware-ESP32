@@ -187,7 +187,7 @@ void setup() {
 // ====== 696969 ============ spostato sopra prima della connessione =================================================
 
     // this is needed for both customs and builtins, as defaults are all uninitialized
-    FW_Common::UpdateBindings(OF_Prefs::toggles[OF_Const::lowButtonsMode]);
+    FW_Common::UpdateBindings(true);
 
     // Initialize DFRobot Camera Wires & Object
     FW_Common::CameraSet();
