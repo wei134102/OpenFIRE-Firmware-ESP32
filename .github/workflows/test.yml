@@ -23,7 +23,7 @@ jobs:
       uses: platformio/setup-platformio@v1
       
     - name: Cache PlatformIO dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           ~/.platformio
@@ -36,7 +36,7 @@ jobs:
       run: pio run -e ${{ matrix.platform }}
       
     - name: Archive firmware
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: firmware-${{ matrix.platform }}
         path: .pio/build/${{ matrix.platform }}/firmware.*
