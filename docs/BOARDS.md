@@ -13,7 +13,12 @@
                        (x) = GND/No Connect | (-) = GPIO | (p) = Power
 ```
 
-### NOTE: Any button/function GPIO pin assignments written here are the *defaults*, and can be changed for any other function from the OpenFIRE App.
+> [!NOTE]
+> Any button/function GPIO pin assignments written here are the ***defaults***, and can be changed for any other function from within the OpenFIRE App.
+> 
+> All of these layouts can also be previewed from within the OpenFIRE App (v3.0+) under *Help->View Compatible Boards*.
+
+### 
 
 ## waveshare esp32-s3-pico
 ```
