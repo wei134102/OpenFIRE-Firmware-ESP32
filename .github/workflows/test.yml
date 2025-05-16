@@ -11,9 +11,12 @@ jobs:
   build:
     name: Build Firmware
     runs-on: ubuntu-latest
+    timeout-minutes: 120  # 设置2小时超时
     strategy:
       matrix:
-        platform: [ "ESP32_S3_WROOM1_DevKitC_1_N16R8", "WAVESHARE_ESP32_S3_PICO" ]
+        platform: 
+          - "ESP32_S3_WROOM1_DevKitC_1_N16R8"
+          - "WAVESHARE_ESP32_S3_PICO"
     
     steps:
     - name: Checkout code
