@@ -1,0 +1,42 @@
+name: PlatformIO Build
+
+on:
+  # push:
+  #   branches: [ main ]
+  # pull_request:
+  #   branches: [ main ]
+  workflow_dispatch: # 允许手动触发
+
+jobs:
+  build:
+    name: Build Firmware
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: [ "ESP32_S3_WROOM1_DevKitC_1_N16R8", "WAVESHARE_ESP32_S3_PICO", "rpipico", "rpipicow" ]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up PlatformIO
+      uses: platformio/setup-platformio@v1
+      
+    - name: Cache PlatformIO dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.platformio
+          .pio
+        key: ${{ runner.os }}-platformio-${{ hashFiles('platformio.ini') }}
+        restore-keys: |
+          ${{ runner.os }}-platformio-
+          
+    - name: Build for ${{ matrix.platform }}
+      run: pio run -e ${{ matrix.platform }}
+      
+    - name: Archive firmware
+      uses: actions/upload-artifact@v3
+      with:
+        name: firmware-${{ matrix.platform }}
+        path: .pio/build/${{ matrix.platform }}/firmware.*
