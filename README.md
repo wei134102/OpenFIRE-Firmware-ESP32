@@ -29,7 +29,7 @@ This is simply an adaptation to make it work on ESP32S3, with the addition of wi
 
 ### Like our work? [Remember to support the developers!](https://github.com/TeamOpenFIRE/.github/blob/main/profile/README.md)
 
-![BannerDark](of_bannerLoD.png#gh-dark-mode-only)![BannerLight](of_bannerDoL.png#gh-light-mode-only)
+![BannerDark](docs/of_bannerLoD.png#gh-dark-mode-only)![BannerLight](docs/of_bannerDoL.png#gh-light-mode-only)
 # OpenFIRE - The Open *Four Infa-Red Emitter* Light Gun System
 ###### Successor to [IR-GUN4ALL](http://github.com/SeongGino/ir-light-gun-plus), which is based on the [Prow Enhanced fork](https://github.com/Prow7/ir-light-gun), which in itself is based on the 4IR Beta "Big Code Update" [SAMCO project](https://github.com/samuelballantyne/IR-Light-Gun)
 
@@ -57,13 +57,13 @@ This is simply an adaptation to make it work on ESP32S3, with the addition of wi
    * Optional: **Any WS2812B GRB NeoPixels,** or any four-pin RGB LED for realtime lighting and reactions. [Amazon](https://www.amazon.com/BTF-LIGHTING-WS2812B-Heatsink-10mm3mm-WS2811/dp/B01DC0J0WS) | [AliExpress (International)](https://www.aliexpress.us/item/3256801340809756.html)
    * Optional: **SSD1306-based I2C (2wire/4pin) 128x64 OLED display** for visual UI and life/ammo counter feedback support. [AliExpress (International)](https://www.aliexpress.us/item/3256806186748120.html)
  
-***Refer to [BOARDS.md](BOARDS.md) for default pinouts for various boards** - though keep in mind that every board supports completely custom pin layouts, configurable through the OpenFIRE App.*
+***Refer to [BOARDS.md](docs/BOARDS.md) for default pinouts for various boards** - though keep in mind that every board supports completely custom pin layouts, configurable through the OpenFIRE App.*
  
 ## Installation:
 Grab the latest *.UF2* binary for your respective board [from the releases page](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware/releases/latest), and drag'n'drop the file to your microcontroller while booted into Bootloader mode; the RP2040 is automatically mounted like this when no program is loaded, but it can be forced into this mode by holding BOOTSEL while plugging it into the computer - it will appear as a removable storage device called **RPI-RP2**.
 
 ## Additional information
-[Check out the enclosed instruction book!](OpenFIREmain/README.md) For developers, consult [the documentation on setting up and building the OpenFIRE Firmware.](COMPILING.md)
+[Check out the enclosed instruction book!](src/README.md) For developers, consult [the documentation on setting up and building the OpenFIRE Firmware.](docs/COMPILING.md)
 
 ## Known Issues:
 - With Pico W & Bluetooth enabled, TinyUSB/Serial fails to initialize properly when connected via USB, so the firmware is deadlocked either sending serial or USB report data.
