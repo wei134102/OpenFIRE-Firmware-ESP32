@@ -1,26 +1,41 @@
 name: OpenFIRE Firmware ESP32 Builds
 
 on:
+  push:
+    tags:
+      - "v*"
   # push:
   #   branches: [ main ]
   # pull_request:
   #   branches: [ main ]
   workflow_dispatch: # Permetti l'attivazione manuale
+    inputs:
+      release:
+        description: "Creare una versione?"
+        required: true
+        default: "no"
+        type: choice
+        options:
+          - "no"
+          - "yes"
 
 jobs:
-  
-  pio-run:
+  build:
     runs-on: ubuntu-latest
     timeout-minutes: 120  # imposta un timeout di 2 ore
+    name: Build Firmware for ${{ matrix.boards }}
     strategy:
       matrix:
-        boards: 
-          - "ESP32_S3_WROOM1_DevKitC_1_N16R8" 
-          - "WAVESHARE_ESP32_S3_PICO"
-    name: Build Firmware OpenFIRE-${{ matrix.boards }}           
-
+        include:
+          - name: ESP32_S3_WROOM1_DevKitC_1_N16R8 
+            boards: 'ESP32_S3_WROOM1_DevKitC_1_N16R8'
+            flash_size: '16MB'
+          - name: WAVESHARE_ESP32_S3_PICO 
+            boards: 'WAVESHARE_ESP32_S3_PICO'
+            flash_size: '16MB'         
+    
     steps:
-      - name: Checkout OpenFIRE-Firmware code with submodules
+      - name: Checkout repository OpenFIRE-Firmware-Esp32 with submodules
         uses: actions/checkout@v4
         with:
           submodules: recursive
@@ -41,7 +56,7 @@ jobs:
           path: ~/.platformio
           key: ${{ runner.os }}-${{ hashFiles('**/lockfiles') }}
 
-      - if: (matrix.boards == 'ESP32_S3_WROOM1_DevKitC_1_N16R8' || matrix.boards == 'WAVESHARE_ESP32_S3_PICO')
+      - if: (matrix.flash_size == '16MB')
         name: Build OpenFIRE S3 - FLASH 16Mb - Compile for ${{ matrix.boards }}
         run: |
           pio run -e ${{ matrix.boards }}
@@ -53,9 +68,49 @@ jobs:
             0x10000 .pio/build/${{ matrix.boards }}/firmware.bin \
             0xc90000 .pio/build/${{ matrix.boards }}/littlefs.bin
 
+      - if: (matrix.flash_size == '8MB')
+        name: Build OpenFIRE S3 - FLASH 8Mb - Compile for ${{ matrix.boards }}
+        run: |
+          pio run -e ${{ matrix.boards }}
+          pio run -e ${{ matrix.boards }} -t buildfs
+          python ~/.platformio/packages/tool-esptoolpy/esptool.py --chip esp32s3 merge_bin -o OpenFIREfw-${{ matrix.boards }}.bin --flash_mode dio --flash_size 8MB \
+            0x0000 .pio/build/${{ matrix.boards }}/bootloader.bin \
+            0x8000 .pio/build/${{ matrix.boards }}/partitions.bin \
+            0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin \
+            0x10000 .pio/build/${{ matrix.boards }}/firmware.bin \
+            0x670000 .pio/build/${{ matrix.boards }}/littlefs.bin
+
+      - if: (matrix.flash_size == '4MB')
+        name: Build OpenFIRE S3 - FLASH 4Mb - Compile for ${{ matrix.boards }}
+        run: |
+          pio run -e ${{ matrix.boards }}
+          pio run -e ${{ matrix.boards }} -t buildfs
+          python ~/.platformio/packages/tool-esptoolpy/esptool.py --chip esp32s3 merge_bin -o OpenFIREfw-${{ matrix.boards }}.bin --flash_mode dio --flash_size 4MB \
+            0x0000 .pio/build/${{ matrix.boards }}/bootloader.bin \
+            0x8000 .pio/build/${{ matrix.boards }}/partitions.bin \
+            0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin \
+            0x10000 .pio/build/${{ matrix.boards }}/firmware.bin \
+            0x290000 .pio/build/${{ matrix.boards }}/littlefs.bin
+            
       - name: Upload/Archive firmware
         uses: actions/upload-artifact@v4
         with:
           name: OpenFIRE-${{ matrix.boards }}
           path: OpenFIREfw-${{ matrix.boards }}.bin
           if-no-files-found: error
+
+  release:
+    needs: build
+    if: ${{ github.event.inputs.release == 'yes' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all firmware artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Package all firmware in a single ZIP
+        run: zip -r OpenFIRE-Firmware-v${{ github.ref_name }}.zip OpenFIRE-*
+
+      - name: Create GitHub Release with all firmware
+        uses: softprops/action-gh-release@v1
+        with:
+          files: OpenFIRE-Firmware-v${{ github.ref_name }}.zip

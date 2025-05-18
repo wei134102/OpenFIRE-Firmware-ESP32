@@ -76,12 +76,16 @@ Stream* Serial_OpenFIRE_Stream; // SERVE PER GESTIRE LE SERIALE WIRELESS
     uint16_t ANALOG_STICK_DEADZONE_X_MIN = 1900;  // impostati gli stessi valori originali di OpenFIRE 
     uint16_t ANALOG_STICK_DEADZONE_X_MAX = 2200;  // impostati gli stessi valori originali di OpenFIRE 
     uint16_t ANALOG_STICK_DEADZONE_Y_MIN = 1900;  // impostati gli stessi valori originali di OpenFIRE 
-    uint16_t ANALOG_STICK_DEADZONE_Y_MAX = 2200;  // impostati gli stessi valori originali di OpenFIRE 
+    uint16_t ANALOG_STICK_DEADZONE_Y_MAX = 2200;  // impostati gli stessi valori originali di OpenFIRE
+    uint16_t ANALOG_STICK_DEADZONE_X_CENTER = ANALOG_STICK_CENTER_X;  // serve per inviare dati nel joystic simulato valore tra 0 a 4095
+    uint16_t ANALOG_STICK_DEADZONE_Y_CENTER = ANALOG_STICK_CENTER_Y;  // serve per inviare dati nel joystic simulato valore tra 0 a 4095
 #elif defined(ARDUINO_ARCH_ESP32)
     uint16_t ANALOG_STICK_DEADZONE_X_MIN = ANALOG_STICK_MAX_X;  // serve per leggere i valori del joystick collegato al micro (deadzone rispetto al centro, lo calcola in fate di setup)  
     uint16_t ANALOG_STICK_DEADZONE_X_MAX = ANALOG_STICK_MIN_X;  // serve per leggere i valori del joystick collegato al micro (deadzone rispetto al centro, lo calcola in fate di setup)
     uint16_t ANALOG_STICK_DEADZONE_Y_MIN = ANALOG_STICK_MAX_Y;  // serve per leggere i valori del joystick collegato al micro (deadzone rispetto al centro, lo calcola in fate di setup)
     uint16_t ANALOG_STICK_DEADZONE_Y_MAX = ANALOG_STICK_MIN_Y;  // serve per leggere i valori del joystick collegato al micro (deadzone rispetto al centro, lo calcola in fate di setup)
+    uint16_t ANALOG_STICK_DEADZONE_X_CENTER = ANALOG_STICK_CENTER_X;  // serve per inviare dati nel joystic simulato valore tra 0 a 4095
+    uint16_t ANALOG_STICK_DEADZONE_Y_CENTER = ANALOG_STICK_CENTER_Y;  // serve per inviare dati nel joystic simulato valore tra 0 a 4095
 #endif
 // == FINE per gestione Analog Stick ==
 
@@ -105,7 +109,6 @@ void OffscreenToggle();
 void AutofireSpeedToggle();
 void SelectCalProfileFromBtnMask(const uint32_t &mask);
 void ExecRunMode();
-void delay_nb(uint32_t duration);
 
 #ifdef ARDUINO_ARCH_RP2040
   void rp2040EnablePWMTimer(const unsigned int &slice_num, const unsigned int &frequency);

@@ -362,13 +362,16 @@ void OF_Serial::SerialProcessing()
         // Enter Docked Mode
         case OF_Const::sDock1:
           if(Serial.read() == OF_Const::sDock2) {
-            #ifdef DUAL_CORE // This may be being run from Core 1, so signal if running in main Run Mode.
-            if(FW_Common::gunMode == FW_Const::GunMode_Run)
+            #if /*defined(ARDUINO_ARCH_RP2040) &&*/ defined(DUAL_CORE) // This may be being run from Core 1, so signal if running in main Run Mode.
+            if(FW_Common::gunMode == FW_Const::GunMode_Run) {
                 #ifdef ARDUINO_ARCH_ESP32 
                 esp32_fifo.push(FW_Const::GunMode_Docked);
+                esp32_fifo.pop();
                 #else //rp2040
                 rp2040.fifo.push(FW_Const::GunMode_Docked);
+                rp2040.fifo.pop();
                 #endif
+            }
             else FW_Common::SetMode(FW_Const::GunMode_Docked);
             #else
             FW_Common::SetMode(FW_Const::GunMode_Docked);
@@ -1125,6 +1128,7 @@ void OF_Serial::SerialProcessingDocked()
                     case OF_Const::serialTerminator:
                         // Assumed failed/aborting save, so roll back to what's in flash.
                         OF_Prefs::Load();
+                        FW_Common::buttons.Begin();
                         exit = true;
                         break;
 
