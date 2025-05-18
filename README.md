@@ -1,3 +1,13 @@
+## ATTENZIONE
+
+Per clonare correttamente il repository e compilarlo devi usare git clone col parametro --recursive, nel seguente modo:
+git clone --recursive https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32.git
+
+## WARNING
+
+To properly clone the repository and compile it you must use git clone with the --recursive parameter, as follows:
+git clone --recursive https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32.git
+
 ## ... porting OpenFIRE-firmware for EPS32
 
 Questo repository è un porting del progetto originale 'OpenFIRE-firmware' del TeamOpenFIRE, adattato per funzionare sul microcontrollore ESP32S3.
