@@ -1,6 +1,9 @@
 name: OpenFIRE Firmware ESP32 Builds
 
 on:
+  release:
+    types: [created]
+    # types: [published]
   push:
     tags:
       - "v*"
@@ -19,6 +22,9 @@ on:
           - "no"
           - "yes"
 
+# permissions:
+#   contents: write # Necessario per actions/upload-release-asset per caricare asset sulla release
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -26,14 +32,21 @@ jobs:
     name: Build Firmware for ${{ matrix.boards }}
     strategy:
       matrix:
+        #os: [windows-latest, ubuntu-latest, macos-latest]
         include:
-          - name: ESP32_S3_WROOM1_DevKitC_1_N16R8 
+          - name: 'ESP32_S3_WROOM1_DevKitC_1_N16R8' 
             boards: 'ESP32_S3_WROOM1_DevKitC_1_N16R8'
+            chip_type: 'esp32s3'
             flash_size: '16MB'
-          - name: WAVESHARE_ESP32_S3_PICO 
+            flash_mode: 'qio'
+            address_littleFS: '0xc90000'
+          - name: 'WAVESHARE_ESP32_S3_PICO' 
             boards: 'WAVESHARE_ESP32_S3_PICO'
-            flash_size: '16MB'         
-    
+            chip_type: 'esp32s3'
+            flash_size: '16MB'
+            flash_mode: 'qio'         
+            address_littleFS: '0xc90000'
+
     steps:
       - name: Checkout repository OpenFIRE-Firmware-Esp32 with submodules
         uses: actions/checkout@v4
@@ -56,48 +69,37 @@ jobs:
           path: ~/.platformio
           key: ${{ runner.os }}-${{ hashFiles('**/lockfiles') }}
 
-      - if: (matrix.flash_size == '16MB')
-        name: Build OpenFIRE S3 - FLASH 16Mb - Compile for ${{ matrix.boards }}
+      - if: (matrix.chip_type == 'esp32s3')
+        name: Build firmware OpenFIRE ESP32-S3 - FLASH ${{ matrix.flash_size }} - Compile for ${{ matrix.boards }}
         run: |
           pio run -e ${{ matrix.boards }}
           pio run -e ${{ matrix.boards }} -t buildfs
-          python ~/.platformio/packages/tool-esptoolpy/esptool.py --chip esp32s3 merge_bin -o OpenFIREfw-${{ matrix.boards }}.bin --flash_mode dio --flash_size 16MB \
+          python ~/.platformio/packages/tool-esptoolpy/esptool.py --chip esp32s3 merge_bin -o OpenFIREfw-${{ matrix.boards }}.bin --flash_mode ${{ matrix.flash_mode }} --flash_size ${{ matrix.flash_size }} \
             0x0000 .pio/build/${{ matrix.boards }}/bootloader.bin \
             0x8000 .pio/build/${{ matrix.boards }}/partitions.bin \
             0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin \
             0x10000 .pio/build/${{ matrix.boards }}/firmware.bin \
-            0xc90000 .pio/build/${{ matrix.boards }}/littlefs.bin
-
-      - if: (matrix.flash_size == '8MB')
-        name: Build OpenFIRE S3 - FLASH 8Mb - Compile for ${{ matrix.boards }}
-        run: |
-          pio run -e ${{ matrix.boards }}
-          pio run -e ${{ matrix.boards }} -t buildfs
-          python ~/.platformio/packages/tool-esptoolpy/esptool.py --chip esp32s3 merge_bin -o OpenFIREfw-${{ matrix.boards }}.bin --flash_mode dio --flash_size 8MB \
+            ${{ matrix.address_littleFS }} .pio/build/${{ matrix.boards }}/littlefs.bin
+          python ~/.platformio/packages/tool-esptoolpy/esptool.py --chip esp32s3 merge_bin -o OpenFIREfw-NoFS-${{ matrix.boards }}.bin --flash_mode ${{ matrix.flash_mode }} --flash_size ${{ matrix.flash_size }} \
             0x0000 .pio/build/${{ matrix.boards }}/bootloader.bin \
             0x8000 .pio/build/${{ matrix.boards }}/partitions.bin \
             0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin \
-            0x10000 .pio/build/${{ matrix.boards }}/firmware.bin \
-            0x670000 .pio/build/${{ matrix.boards }}/littlefs.bin
-
-      - if: (matrix.flash_size == '4MB')
-        name: Build OpenFIRE S3 - FLASH 4Mb - Compile for ${{ matrix.boards }}
-        run: |
-          pio run -e ${{ matrix.boards }}
-          pio run -e ${{ matrix.boards }} -t buildfs
-          python ~/.platformio/packages/tool-esptoolpy/esptool.py --chip esp32s3 merge_bin -o OpenFIREfw-${{ matrix.boards }}.bin --flash_mode dio --flash_size 4MB \
-            0x0000 .pio/build/${{ matrix.boards }}/bootloader.bin \
-            0x8000 .pio/build/${{ matrix.boards }}/partitions.bin \
-            0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin \
-            0x10000 .pio/build/${{ matrix.boards }}/firmware.bin \
-            0x290000 .pio/build/${{ matrix.boards }}/littlefs.bin
-            
-      - name: Upload/Archive firmware
+            0x10000 .pio/build/${{ matrix.boards }}/firmware.bin
+          
+      - name: Upload OpenFIRE firmware
         uses: actions/upload-artifact@v4
         with:
           name: OpenFIRE-${{ matrix.boards }}
           path: OpenFIREfw-${{ matrix.boards }}.bin
           if-no-files-found: error
+
+      - name: Upload OpenFIRE-NoFS firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenFIRE-NoFS-${{ matrix.boards }}
+          path: OpenFIREfw-NoFS-${{ matrix.boards }}.bin
+          if-no-files-found: error
+
 
   release:
     needs: build
