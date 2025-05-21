@@ -310,8 +310,8 @@ jobs:
       - name: Upload ZIP Assets
         uses: actions/upload-artifact@v4
         with:
-          name: "$ARCHIVE_FILENAME" # Nome dell'asset sulla release
-          path: "${{ github.workspace }}/$ARCHIVE_FILENAME" # Path all'archivio ZIP creato
+          name: OpenFIRE-${{ matrix.boards }}-${{ matrix.os_config.name }}.zip # Nome dell'asset sulla release
+          path: ${{ github.workspace }}/OpenFIRE-${{ matrix.boards }}-${{ matrix.os_config.name }}.zip # Path all'archivio ZIP creato
           if-no-files-found: error
 
 
