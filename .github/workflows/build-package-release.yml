@@ -229,7 +229,7 @@ jobs:
               echo Flashing del firmware completato con successo!
             )
             pause
-EOF
+            EOF
           else # Script per Linux o macOS (.sh) 
             cat <<EOF > "$SCRIPT_PATH"
             #!/bin/bash
@@ -279,7 +279,7 @@ EOF
               echo "ERRORE: Flashing del firmware fallito. Controlla connessioni e porta seriale."
             fi
             read -r -p "Premi Invio per uscire."
-EOF
+            EOF
             
             chmod +x "$SCRIPT_PATH" # Rende lo script generato eseguibile
           fi
