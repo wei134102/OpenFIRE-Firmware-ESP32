@@ -209,7 +209,7 @@ jobs:
 
           if [[ "${{ matrix.os_config.name }}" == "windows" ]]; then
             # Script per Windows (.bat)
-            cat <<END > "$SCRIPT_PATH"
+            cat "$SCRIPT_PATH" <<EOF
             @echo off
             echo Flashing OpenFIRE Firmware for board: ${{ matrix.boards }}
             echo Target chip: $CHIP_TYPE (ATTENZIONE: Verifica che sia corretto per la tua board!)
@@ -230,10 +230,10 @@ jobs:
             )
             pause
 
-            END
+            EOF
 
           else # Script per Linux o macOS (.sh) 
-            cat <<END > "$SCRIPT_PATH"
+            cat "$SCRIPT_PATH" <<EOF
             #!/bin/bash
             echo "Flashing OpenFIRE Firmware for board: ${{ matrix.boards }}"
             echo "Target chip: $CHIP_TYPE (ATTENZIONE: Verifica che sia corretto per la tua board!)"
@@ -251,7 +251,7 @@ jobs:
               # Pattern comuni per Linux
               SERIAL_PORT=\$(ls /dev/ttyUSB* /dev/ttyACM* 2>/dev/null | head -n 1)
             elif [[ "\$(uname)" == "Darwin" ]]; then
-              # Pattern comuni per macOS
+              # Pattern comuni pcat <<END > er macOS
               SERIAL_PORT=\$(ls /dev/cu.usbserial-* /dev/cu.SLAB_USBtoUART* /dev/cu.wchusbserial* 2>/dev/null | head -n 1)
             fi
 
@@ -282,7 +282,7 @@ jobs:
             fi
             read -r -p "Premi Invio per uscire."
 
-            END
+            EOF
 
             chmod +x "$SCRIPT_PATH" # Rende lo script generato eseguibile
           fi
