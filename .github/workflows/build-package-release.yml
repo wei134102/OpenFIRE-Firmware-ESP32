@@ -238,16 +238,16 @@ jobs:
           echo ""
           FIRMWARE_FILE="firmware-NoFS.bin"
           read -r -p "Se vuoi flashare il firmware con l'intero filesystem (verranno cancellate le precedenti configurazioni) digita '1' altrimenti premi Invio: " FIRMWARE_CHOICE
-          if [[ '$FIRMWARE_CHOICE' == "1" ]]; then
+          if [[ \$FIRMWARE_CHOICE == "1" ]]; then
             FIRMWARE_FILE="firmware.bin"
           fi
           read -r -p "Inserisci la porta COM (es. /dev/ttyUSB0 per Linux, oppure /dev/tty.usbserial per macOS), oppure lascia vuoto per il rilevamento automatico: " COMPORT
-          if [[ -n '$COMPORT' ]]; then
-            COMPORT="--port \"'$COMPORT'\""
+          if [[ -n \$COMPORT ]]; then
+            COMPORT="--port \"\$COMPORT\""
           fi
-          ./$ESPTOOL_EXECUTABLE_NAME --chip $CHIP_TYPE '$COMPORT' --baud $BAUD --before default_reset --after hard_reset write_flash -z --flash_mode $FLASH_MODE --flash_freq $FLASH_FREQ --flash_size detect 0x0000 '$FIRMWARE_FILE'
+          ./$ESPTOOL_EXECUTABLE_NAME --chip $CHIP_TYPE \$COMPORT --baud $BAUD --before default_reset --after hard_reset write_flash -z --flash_mode $FLASH_MODE --flash_freq $FLASH_FREQ --flash_size detect 0x0000 \$FIRMWARE_FILE
           echo ""
-          if [[ '$?' -ne 0 ]]; then
+          if [[ \$? -ne 0 ]]; then
             echo "ERRORE: Flashing del firmware fallito. Controlla connessioni e micro."
           else
             echo "Flashing del firmware completato con successo!"
