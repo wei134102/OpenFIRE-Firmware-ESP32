@@ -101,7 +101,7 @@ jobs:
           if-no-files-found: error
 
   package_and_upload_release_assets:
-    name: Package for ${{ matrix.boards }} on ${{ matrix.os_config.name }}
+    name: Package for ${{ matrix.boards.name }} on ${{ matrix.os_config.name }}
     needs: build_firmware # Esegui solo se build_firmware ha successo
     if: ${{ github.event.inputs.release == 'yes' }}
     runs-on: ${{ matrix.os_config.runner }}
@@ -145,25 +145,25 @@ jobs:
       - name: Download firmware .bin artifact
         uses: actions/download-artifact@v4
         with:
-          name: OpenFIRE-${{ matrix.boards }} # Corrisponde al nome dell'artefatto caricato da build_firmware
+          name: OpenFIRE-${{ matrix.boards.name }} # Corrisponde al nome dell'artefatto caricato da build_firmware
           path: ./downloaded_firmware # Scarica in una sottocartella per evitare conflitti di nomi
 
       - name: Download firmware .bin artifact - NoFS
         uses: actions/download-artifact@v4
         with:
-          name: OpenFIRE-NoFS-${{ matrix.boards }} # Corrisponde al nome dell'artefatto caricato da build_firmware
+          name: OpenFIRE-NoFS-${{ matrix.boards.name }} # Corrisponde al nome dell'artefatto caricato da build_firmware
           path: ./downloaded_firmware # Scarica in una sottocartella per evitare conflitti di nomi
 
       - name: Prepare staging directory
         shell: bash
         run: |
           mkdir staging_dir
-          # Il file firmware scaricato è OpenFIREfw-${{ matrix.boards }}.bin
-          # Il file firmware scaricato è OpenFIREfw-NoFS-${{ matrix.boards }}.bin
-          mv ./downloaded_firmware/OpenFIREfw-${{ matrix.boards }}.bin ./staging_dir/firmware.bin
-          mv ./downloaded_firmware/OpenFIREfw-NoFS-${{ matrix.boards }}.bin ./staging_dir/firmware-NoFS.bin
-          echo "Moved OpenFIREfw-${{ matrix.boards }}.bin to staging_dir/firmware.bin"
-          echo "Moved OpenFIREfw-NoFS-${{ matrix.boards }}.bin to staging_dir/firmware-NoFS.bin"
+          # Il file firmware scaricato è OpenFIREfw-${{ matrix.boards.name }}.bin
+          # Il file firmware scaricato è OpenFIREfw-NoFS-${{ matrix.boards.name }}.bin
+          mv ./downloaded_firmware/OpenFIREfw-${{ matrix.boards.name }}.bin ./staging_dir/firmware.bin
+          mv ./downloaded_firmware/OpenFIREfw-NoFS-${{ matrix.boards.name }}.bin ./staging_dir/firmware-NoFS.bin
+          echo "Moved OpenFIREfw-${{ matrix.boards.name }}.bin to staging_dir/firmware.bin"
+          echo "Moved OpenFIREfw-NoFS-${{ matrix.boards.name }}.bin to staging_dir/firmware-NoFS.bin"
           ls -l ./staging_dir
 
       - name: Download and extract esptool
@@ -196,16 +196,16 @@ jobs:
           SCRIPT_PATH="staging_dir/${{ matrix.os_config.script_name }}"
           # ATTENZIONE: Questo chip_type è preso dalla matrice os_config. 
           # Se hai chip diversi per diverse 'matrix.board', dovrai modificare questa logica.
-          CHIP_TYPE="${{ matrix.chip }}" 
+          CHIP_TYPE="${{ matrix.boards.chip }}" 
           ESPTOOL_EXECUTABLE_NAME="${{ matrix.os_config.esptool_filename_in_zip }}"
 
-          echo "Creating script $SCRIPT_PATH for board ${{ matrix.boards }} with chip $CHIP_TYPE"
+          echo "Creating script $SCRIPT_PATH for board ${{ matrix.boards.name }} with chip $CHIP_TYPE"
           
           if [[ "${{ matrix.os_config.name }}" == "windows-64bit" ]]; then
           # Script per Windows (.bat)
           cat <<EOF > "$SCRIPT_PATH"
           @echo off
-          echo Flashing OpenFIRE Firmware for board: ${{ matrix.boards }}
+          echo Flashing OpenFIRE Firmware for board: ${{ matrix.boards.name }}
           echo Target chip: $CHIP_TYPE (ATTENZIONE: Verifica che sia corretto per la tua board!)
           echo Firmware file to flash: firmware.bin
           echo esptool executable: %~dp0\\$ESPTOOL_EXECUTABLE_NAME
@@ -228,7 +228,7 @@ jobs:
           else # Script per Linux o macOS (.sh) 
           cat <<EOF > "$SCRIPT_PATH"
           #!/bin/bash
-          echo "Flashing OpenFIRE Firmware for board: ${{ matrix.boards }}"
+          echo "Flashing OpenFIRE Firmware for board: ${{ matrix.boards.name }}"
           echo "Target chip: $CHIP_TYPE (ATTENZIONE: Verifica che sia corretto per la tua board!)"
           echo "Firmware file to flash: firmware.bin"
           echo "esptool executable: ./$ESPTOOL_EXECUTABLE_NAME"
@@ -287,7 +287,7 @@ jobs:
       - name: Create ZIP archive
         shell: bash
         run: |
-          ARCHIVE_FILENAME="OpenFIRE-${{ matrix.boards }}-${{ matrix.os_config.name }}.zip"
+          ARCHIVE_FILENAME="OpenFIRE-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip"
           echo "ARCHIVE_FILENAME=$ARCHIVE_FILENAME" >> $GITHUB_ENV
           
           echo "Creating archive: $ARCHIVE_FILENAME from staging_dir contents..."
@@ -304,8 +304,8 @@ jobs:
       - name: Upload ZIP Assets
         uses: actions/upload-artifact@v4
         with:
-          name: OpenFIRE-${{ matrix.boards }}-${{ matrix.os_config.name }}.zip # Nome dell'asset sulla release
-          path: ${{ github.workspace }}/OpenFIRE-${{ matrix.boards }}-${{ matrix.os_config.name }}.zip # Path all'archivio ZIP creato
+          name: OpenFIRE-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip # Nome dell'asset sulla release
+          path: ${{ github.workspace }}/OpenFIRE-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip # Path all'archivio ZIP creato
           if-no-files-found: error
 
 
