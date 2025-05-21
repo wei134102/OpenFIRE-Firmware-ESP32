@@ -284,9 +284,9 @@ jobs:
             chmod +x "$SCRIPT_PATH" # Rende lo script generato eseguibile
           fi
           echo "Creato script: $SCRIPT_PATH"
-          echo "--- Contenuto dello script ---"
-          cat "$SCRIPT_PATH"
-          echo "---------------------------"
+        # echo "--- Contenuto dello script ---"
+        # cat "$SCRIPT_PATH"
+        # echo "---------------------------"
 
       - name: Create ZIP archive
         shell: bash
