@@ -151,13 +151,13 @@ jobs:
       - name: Download firmware .bin artifact
         uses: actions/download-artifact@v4
         with:
-          name: OpenFIRE-firmware-${{ matrix.boards }} # Corrisponde al nome dell'artefatto caricato da build_firmware
+          name: OpenFIRE-${{ matrix.boards }} # Corrisponde al nome dell'artefatto caricato da build_firmware
           path: ./downloaded_firmware # Scarica in una sottocartella per evitare conflitti di nomi
 
       - name: Download firmware .bin artifact - NoFS
         uses: actions/download-artifact@v4
         with:
-          name: OpenFIRE-firmware-NoFS-${{ matrix.boards }} # Corrisponde al nome dell'artefatto caricato da build_firmware
+          name: OpenFIRE-NoFS-${{ matrix.boards }} # Corrisponde al nome dell'artefatto caricato da build_firmware
           path: ./downloaded_firmware # Scarica in una sottocartella per evitare conflitti di nomi
 
       - name: Prepare staging directory
