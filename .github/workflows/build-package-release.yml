@@ -122,21 +122,21 @@ jobs:
             address_littleFS: '0xc90000' 
         
         os_config:
-          - name: windows 64bit
+          - name: windows-64bit
             runner: windows-latest
             esptool_url: https://github.com/espressif/esptool/releases/download/v4.8.1/esptool-v4.8.1-win64.zip
             esptool_path_in_zip: esptool-win64/
             esptool_filename_in_zip: esptool.exe # Nome del file eseguibile dentro lo ZIP di esptool
             script_name: flash_firmware.bat
             # chip_type: esp32s3 # ATTENZIONE: Modifica se le tue board usano chip diversi
-          - name: linux amd 64 bit
+          - name: linux-amd-64bit
             runner: ubuntu-latest
             esptool_url: https://github.com/espressif/esptool/releases/download/v4.8.1/esptool-v4.8.1-linux-amd64.zip
             esptool_path_in_zip: esptool-linux-amd64/
             esptool_filename_in_zip: esptool
             script_name: flash_firmware.sh
             # chip_type: esp32s3
-          - name: macos
+          - name: macos-64bit
             runner: macos-latest
             esptool_url: https://github.com/espressif/esptool/releases/download/v4.8.1/esptool-v4.8.1-macos.zip
             esptool_path_in_zip: esptool-macos/
@@ -186,7 +186,7 @@ jobs:
           ls -l staging_dir
           
           # Rendi esptool eseguibile su Linux/macOS
-          if [[ "${{ matrix.os_config.name }}" == "linux" || "${{ matrix.os_config.name }}" == "macos" ]]; then
+          if [[ "${{ matrix.os_config.name }}" == "linux-amd-64bit" || "${{ matrix.os_config.name }}" == "macos-64bit" ]]; then
             if [ -f "staging_dir/${{ matrix.os_config.esptool_filename_in_zip }}" ]; then
               chmod +x "staging_dir/${{ matrix.os_config.esptool_filename_in_zip }}"
               echo "Made staging_dir/${{ matrix.os_config.esptool_filename_in_zip }} executable."
@@ -207,7 +207,7 @@ jobs:
 
           echo "Creating script $SCRIPT_PATH for board ${{ matrix.boards }} with chip $CHIP_TYPE"
           
-          if [[ "${{ matrix.os_config.name }}" == "windows" ]]; then
+          if [[ "${{ matrix.os_config.name }}" == "windows-64bit" ]]; then
           # Script per Windows (.bat)
           cat <<EOF > "$SCRIPT_PATH"
           @echo off
@@ -297,7 +297,7 @@ jobs:
           echo "ARCHIVE_FILENAME=$ARCHIVE_FILENAME" >> $GITHUB_ENV
           
           echo "Creating archive: $ARCHIVE_FILENAME from staging_dir contents..."
-          if [[ "${{ matrix.os_config.name }}" == "windows" ]]; then
+          if [[ "${{ matrix.os_config.name }}" == "windows-64bit" ]]; then
             # Utilizza Compress-Archive di PowerShell, standard su Windows runners
             powershell -Command "Compress-Archive -Path staging_dir\* -DestinationPath ${{ github.workspace }}/$ARCHIVE_FILENAME -Force"
           else
