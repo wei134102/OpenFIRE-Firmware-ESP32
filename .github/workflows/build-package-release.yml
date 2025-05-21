@@ -209,7 +209,7 @@ jobs:
 
           if [[ "${{ matrix.os_config.name }}" == "windows" ]]; then
             # Script per Windows (.bat)
-            cat <<EOF > "$SCRIPT_PATH"
+            cat <<END > "$SCRIPT_PATH"
             @echo off
             echo Flashing OpenFIRE Firmware for board: ${{ matrix.boards }}
             echo Target chip: $CHIP_TYPE (ATTENZIONE: Verifica che sia corretto per la tua board!)
@@ -229,9 +229,11 @@ jobs:
               echo Flashing del firmware completato con successo!
             )
             pause
-            EOF
+
+            END
+
           else # Script per Linux o macOS (.sh) 
-            cat <<EOF > "$SCRIPT_PATH"
+            cat <<END > "$SCRIPT_PATH"
             #!/bin/bash
             echo "Flashing OpenFIRE Firmware for board: ${{ matrix.boards }}"
             echo "Target chip: $CHIP_TYPE (ATTENZIONE: Verifica che sia corretto per la tua board!)"
@@ -279,8 +281,9 @@ jobs:
               echo "ERRORE: Flashing del firmware fallito. Controlla connessioni e porta seriale."
             fi
             read -r -p "Premi Invio per uscire."
-            EOF
-            
+
+            END
+
             chmod +x "$SCRIPT_PATH" # Rende lo script generato eseguibile
           fi
           echo "Creato script: $SCRIPT_PATH"
