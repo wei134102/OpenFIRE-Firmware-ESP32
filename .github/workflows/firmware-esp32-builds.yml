@@ -38,13 +38,13 @@ jobs:
             boards: 'ESP32_S3_WROOM1_DevKitC_1_N16R8'
             chip: 'esp32s3'
             flash_size: '16MB'
-            flash_mode: 'qio'
+            flash_mode: 'dio'
             address_littleFS: '0xc90000'
           - name: 'WAVESHARE_ESP32_S3_PICO' 
             boards: 'WAVESHARE_ESP32_S3_PICO'
             chip: 'esp32s3'
             flash_size: '16MB'
-            flash_mode: 'qio'         
+            flash_mode: 'dio'         
             address_littleFS: '0xc90000'
 
     steps:
@@ -74,13 +74,13 @@ jobs:
         run: |
           pio run -e ${{ matrix.boards }}
           pio run -e ${{ matrix.boards }} -t buildfs
-          python ~/.platformio/packages/tool-esptoolpy/esptool.py --chip esp32s3 merge_bin -o OpenFIREfw-${{ matrix.boards }}.bin --flash_mode ${{ matrix.flash_mode }} --flash_size ${{ matrix.flash_size }} \
+          python ~/.platformio/packages/tool-esptoolpy/esptool.py --chip ${{ matrix.chip }} merge_bin -o OpenFIREfw-${{ matrix.boards }}.bin --flash_mode ${{ matrix.flash_mode }} --flash_size ${{ matrix.flash_size }} \
             0x0000 .pio/build/${{ matrix.boards }}/bootloader.bin \
             0x8000 .pio/build/${{ matrix.boards }}/partitions.bin \
             0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin \
             0x10000 .pio/build/${{ matrix.boards }}/firmware.bin \
             ${{ matrix.address_littleFS }} .pio/build/${{ matrix.boards }}/littlefs.bin
-          python ~/.platformio/packages/tool-esptoolpy/esptool.py --chip esp32s3 merge_bin -o OpenFIREfw-NoFS-${{ matrix.boards }}.bin --flash_mode ${{ matrix.flash_mode }} --flash_size ${{ matrix.flash_size }} \
+          python ~/.platformio/packages/tool-esptoolpy/esptool.py --chip ${{ matrix.chip }} merge_bin -o OpenFIREfw-NoFS-${{ matrix.boards }}.bin --flash_mode ${{ matrix.flash_mode }} --flash_size ${{ matrix.flash_size }} \
             0x0000 .pio/build/${{ matrix.boards }}/bootloader.bin \
             0x8000 .pio/build/${{ matrix.boards }}/partitions.bin \
             0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin \
