@@ -1,9 +1,9 @@
 name: OpenFIRE Build Package and Upload release assets
 
 on:
-  release:
+# release:
 #   types: [created]
-    types: [published]
+#   types: [published]
 # push:
 #   tags:
 #     - "v*"
@@ -215,16 +215,16 @@ jobs:
           echo Flashing OpenFIRE Firmware for board: ${{ matrix.boards.name }}
           echo.
           set FIRMWARE_FILE=firmware-NoFS.bin
-          set /p FIRMWARE_CHOICE="Se vuoi flashare il firmware con l'intero filesystem (verranno cancellate le precedenti configurazioni) digita '1' altrimenti premi Invio: "
+          set /p FIRMWARE_CHOICE="If you want to flash the firmware with the entire filesystem (previous configurations will be erased) type '1' otherwise press Enter: "
           if "%FIRMWARE_CHOICE%"=="1" set FIRMWARE_FILE=firmware.bin
-          set /p COMPORT="Inserisci la porta COM (es. COM3), oppure lascia vuoto per il rilevamento automatico: "
+          set /p COMPORT="Enter the COM port (e.g. COM3), or leave blank for automatic detection: "
           if not "%COMPORT%"=="" set COMPORT=--port "%COMPORT%"
           %~dp0\\$ESPTOOL_EXECUTABLE_NAME --chip $CHIP_TYPE %COMPORT% --baud $BAUD --before default_reset --after hard_reset write_flash -z --flash_mode $FLASH_MODE --flash_freq $FLASH_FREQ --flash_size detect 0x0000 %FIRMWARE_FILE%
           echo.
           if %errorlevel% neq 0 (
-            echo ERRORE: Flashing del firmware fallito. Controlla connessioni e micro.
+            echo ERROR: Firmware flashing failed. Check connections and micro.
           ) else (
-            echo Flashing del firmware completato con successo!
+            echo Firmware flashing completed!
           )
           pause
           EOF
@@ -237,22 +237,22 @@ jobs:
           chmod +x ./$ESPTOOL_EXECUTABLE_NAME
           echo ""
           FIRMWARE_FILE="firmware-NoFS.bin"
-          read -r -p "Se vuoi flashare il firmware con l'intero filesystem (verranno cancellate le precedenti configurazioni) digita '1' altrimenti premi Invio: " FIRMWARE_CHOICE
+          read -r -p "If you want to flash the firmware with the entire filesystem (previous configurations will be erased) type '1' otherwise press Enter: " FIRMWARE_CHOICE
           if [[ \$FIRMWARE_CHOICE == "1" ]]; then
             FIRMWARE_FILE="firmware.bin"
           fi
-          read -r -p "Inserisci la porta COM (es. /dev/ttyUSB0 per Linux, oppure /dev/tty.usbserial per macOS), oppure lascia vuoto per il rilevamento automatico: " COMPORT
+          read -r -p "Enter the COM port (e.g. /dev/ttyUSB0 for Linux, or /dev/tty.usbserial for macOS), or leave blank for automatic detection: " COMPORT
           if [[ -n \$COMPORT ]]; then
             COMPORT="--port \$COMPORT"
           fi
           ./$ESPTOOL_EXECUTABLE_NAME --chip $CHIP_TYPE \$COMPORT --baud $BAUD --before default_reset --after hard_reset write_flash -z --flash_mode $FLASH_MODE --flash_freq $FLASH_FREQ --flash_size detect 0x0000 \$FIRMWARE_FILE
           echo ""
           if [[ \$? -ne 0 ]]; then
-            echo "ERRORE: Flashing del firmware fallito. Controlla connessioni e micro."
+            echo "ERROR: Firmware flashing failed. Check connections and micro."
           else
-            echo "Flashing del firmware completato con successo!"
+            echo "Firmware flashing completed!"
           fi
-          read -r -p "Premi Invio per uscire."          
+          read -r -p "Press Enter to exit."          
           EOF
 
           chmod +x "$SCRIPT_PATH" # Rende lo script generato eseguibile

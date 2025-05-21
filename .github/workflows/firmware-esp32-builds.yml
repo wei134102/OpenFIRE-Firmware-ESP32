@@ -4,9 +4,9 @@ on:
 # release:
 #   types: [created]
 #   # types: [published]
-  push:
-    tags:
-      - "v*"
+# push:
+#   tags:
+#     - "v*"
 # push:
 #   branches: [ main ]
 # pull_request:
