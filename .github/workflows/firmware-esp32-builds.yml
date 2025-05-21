@@ -1,16 +1,16 @@
 name: OpenFIRE Firmware ESP32 Builds
 
 on:
-  release:
-    types: [created]
-    # types: [published]
+# release:
+#   types: [created]
+#   # types: [published]
   push:
     tags:
       - "v*"
-  # push:
-  #   branches: [ main ]
-  # pull_request:
-  #   branches: [ main ]
+# push:
+#   branches: [ main ]
+# pull_request:
+#   branches: [ main ]
   workflow_dispatch: # Permetti l'attivazione manuale
     inputs:
       release:
@@ -26,7 +26,7 @@ on:
 #   contents: write # Necessario per actions/upload-release-asset per caricare asset sulla release
 
 jobs:
-  build:
+  build_firmware:
     runs-on: ubuntu-latest
     timeout-minutes: 120  # imposta un timeout di 2 ore
     name: Build Firmware for ${{ matrix.boards }}
@@ -36,13 +36,13 @@ jobs:
         include:
           - name: 'ESP32_S3_WROOM1_DevKitC_1_N16R8' 
             boards: 'ESP32_S3_WROOM1_DevKitC_1_N16R8'
-            chip_type: 'esp32s3'
+            chip: 'esp32s3'
             flash_size: '16MB'
             flash_mode: 'qio'
             address_littleFS: '0xc90000'
           - name: 'WAVESHARE_ESP32_S3_PICO' 
             boards: 'WAVESHARE_ESP32_S3_PICO'
-            chip_type: 'esp32s3'
+            chip: 'esp32s3'
             flash_size: '16MB'
             flash_mode: 'qio'         
             address_littleFS: '0xc90000'
@@ -69,7 +69,7 @@ jobs:
           path: ~/.platformio
           key: ${{ runner.os }}-${{ hashFiles('**/lockfiles') }}
 
-      - if: (matrix.chip_type == 'esp32s3')
+      - if: (matrix.chip == 'esp32s3')
         name: Build firmware OpenFIRE ESP32-S3 - FLASH ${{ matrix.flash_size }} - Compile for ${{ matrix.boards }}
         run: |
           pio run -e ${{ matrix.boards }}
@@ -102,7 +102,7 @@ jobs:
 
 
   release:
-    needs: build
+    needs: build_firmware
     if: ${{ github.event.inputs.release == 'yes' }}
     runs-on: ubuntu-latest
     steps:

@@ -969,6 +969,7 @@ void OF_Serial::SerialProcessingDocked()
         Serial_available(1);
         if(Serial.read() == OF_Const::sDock2) FW_Common::SetMode(FW_Const::GunMode_Docked);
         break;
+    /*
     // 696969 aggiunto da me per disabilitare invio dati docker (stick, temp)
     case OF_Const::sDockedSaving:
         Serial_available(1);
@@ -977,6 +978,7 @@ void OF_Serial::SerialProcessingDocked()
           Serial.write(OF_Const::sDockedSaving);  
         break;      
     // 696969 fine aggiunto da me
+    */
     // Common terminator
     case OF_Const::serialTerminator:
         if(!FW_Common::justBooted)
