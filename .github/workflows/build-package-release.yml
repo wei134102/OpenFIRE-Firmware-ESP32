@@ -208,81 +208,81 @@ jobs:
           echo "Creating script $SCRIPT_PATH for board ${{ matrix.boards }} with chip $CHIP_TYPE"
           
           if [[ "${{ matrix.os_config.name }}" == "windows" ]]; then
-            # Script per Windows (.bat)
-            cat <<EOF > "$SCRIPT_PATH"
-            @echo off
-            echo Flashing OpenFIRE Firmware for board: ${{ matrix.boards }}
-            echo Target chip: $CHIP_TYPE (ATTENZIONE: Verifica che sia corretto per la tua board!)
-            echo Firmware file to flash: firmware.bin
-            echo esptool executable: %~dp0\\$ESPTOOL_EXECUTABLE_NAME
-            echo.
-            echo IMPORTANTE: Questo script tentera' di flashare firmware.bin dalla directory corrente.
-            echo Potrebbe essere necessario modificare questo script per specificare la porta COM corretta.
-            echo Esempio di comando esptool: %~dp0\\$ESPTOOL_EXECUTABLE_NAME --port COM3 ...
-            echo.
-            set /p COMPORT="Inserisci la porta COM (es. COM3, lascia vuoto per provare il rilevamento automatico se supportato da esptool): "
-            %~dp0\\$ESPTOOL_EXECUTABLE_NAME --chip $CHIP_TYPE --port %COMPORT% --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 80m --flash_size detect 0x0000 firmware.bin
-            echo.
-            if %errorlevel% neq 0 (
-              echo ERRORE: Flashing del firmware fallito. Controlla connessioni e porta COM.
-            ) else (
-              echo Flashing del firmware completato con successo!
-            )
-            pause
-EOF
+          # Script per Windows (.bat)
+          cat <<EOF > "$SCRIPT_PATH"
+          @echo off
+          echo Flashing OpenFIRE Firmware for board: ${{ matrix.boards }}
+          echo Target chip: $CHIP_TYPE (ATTENZIONE: Verifica che sia corretto per la tua board!)
+          echo Firmware file to flash: firmware.bin
+          echo esptool executable: %~dp0\\$ESPTOOL_EXECUTABLE_NAME
+          echo.
+          echo IMPORTANTE: Questo script tentera' di flashare firmware.bin dalla directory corrente.
+          echo Potrebbe essere necessario modificare questo script per specificare la porta COM corretta.
+          echo Esempio di comando esptool: %~dp0\\$ESPTOOL_EXECUTABLE_NAME --port COM3 ...
+          echo.
+          set /p COMPORT="Inserisci la porta COM (es. COM3, lascia vuoto per provare il rilevamento automatico se supportato da esptool): "
+          %~dp0\\$ESPTOOL_EXECUTABLE_NAME --chip $CHIP_TYPE --port %COMPORT% --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 80m --flash_size detect 0x0000 firmware.bin
+          echo.
+          if %errorlevel% neq 0 (
+            echo ERRORE: Flashing del firmware fallito. Controlla connessioni e porta COM.
+          ) else (
+            echo Flashing del firmware completato con successo!
+          )
+          pause
+          EOF
 
           else # Script per Linux o macOS (.sh) 
-            cat <<EOF > "$SCRIPT_PATH"
-            #!/bin/bash
-            echo "Flashing OpenFIRE Firmware for board: ${{ matrix.boards }}"
-            echo "Target chip: $CHIP_TYPE (ATTENZIONE: Verifica che sia corretto per la tua board!)"
-            echo "Firmware file to flash: firmware.bin"
-            echo "esptool executable: ./$ESPTOOL_EXECUTABLE_NAME"
-            echo ""
+          cat <<EOF > "$SCRIPT_PATH"
+          #!/bin/bash
+          echo "Flashing OpenFIRE Firmware for board: ${{ matrix.boards }}"
+          echo "Target chip: $CHIP_TYPE (ATTENZIONE: Verifica che sia corretto per la tua board!)"
+          echo "Firmware file to flash: firmware.bin"
+          echo "esptool executable: ./$ESPTOOL_EXECUTABLE_NAME"
+          echo ""
 
-            # Rende esptool eseguibile (dovrebbe essere gia' stato fatto, ma e' una sicurezza)
-            chmod +x "./$ESPTOOL_EXECUTABLE_NAME"
+          # Rende esptool eseguibile (dovrebbe essere gia' stato fatto, ma e' una sicurezza)
+          chmod +x "./$ESPTOOL_EXECUTABLE_NAME"
 
-            SERIAL_PORT=""
+          SERIAL_PORT=""
 
-            # Tenta di rilevare la porta seriale
-            if [[ "\$(uname)" == "Linux" ]]; then
-              # Pattern comuni per Linux
-              SERIAL_PORT=\$(ls /dev/ttyUSB* /dev/ttyACM* 2>/dev/null | head -n 1)
-            elif [[ "\$(uname)" == "Darwin" ]]; then
-              # Pattern comuni pcat <<END > er macOS
-              SERIAL_PORT=\$(ls /dev/cu.usbserial-* /dev/cu.SLAB_USBtoUART* /dev/cu.wchusbserial* 2>/dev/null | head -n 1)
-            fi
+          # Tenta di rilevare la porta seriale
+          if [[ "\$(uname)" == "Linux" ]]; then
+          # Pattern comuni per Linux
+          SERIAL_PORT=\$(ls /dev/ttyUSB* /dev/ttyACM* 2>/dev/null | head -n 1)
+          elif [[ "\$(uname)" == "Darwin" ]]; then
+          # Pattern comuni pcat <<END > er macOS
+          SERIAL_PORT=\$(ls /dev/cu.usbserial-* /dev/cu.SLAB_USBtoUART* /dev/cu.wchusbserial* 2>/dev/null | head -n 1)
+          fi
 
-            if [ -z "\$SERIAL_PORT" ]; then
-              echo "Impossibile rilevare automaticamente la porta seriale."
-              echo "Pattern comuni: Linux: /dev/ttyUSB0, /dev/ttyACM0. macOS: /dev/cu.usbserial-XXXX, /dev/cu.SLAB_USBtoUART."
-              read -r -p "Inserisci la porta seriale (es. /dev/ttyUSB0 o /dev/cu.usbserial-XXXX): " SERIAL_PORT
-            else
-              echo "Porta seriale rilevata: \$SERIAL_PORT"
-              read -r -p "Premi Invio per usare questa porta (\$SERIAL_PORT), o inseriscine una differente: " USER_PORT
-              if [ ! -z "\$USER_PORT" ]; then
-                SERIAL_PORT="\$USER_PORT"
-              fi
-            fi
+          if [ -z "\$SERIAL_PORT" ]; then
+          echo "Impossibile rilevare automaticamente la porta seriale."
+          echo "Pattern comuni: Linux: /dev/ttyUSB0, /dev/ttyACM0. macOS: /dev/cu.usbserial-XXXX, /dev/cu.SLAB_USBtoUART."
+          read -r -p "Inserisci la porta seriale (es. /dev/ttyUSB0 o /dev/cu.usbserial-XXXX): " SERIAL_PORT
+          else
+          echo "Porta seriale rilevata: \$SERIAL_PORT"
+          read -r -p "Premi Invio per usare questa porta (\$SERIAL_PORT), o inseriscine una differente: " USER_PORT
+          if [ ! -z "\$USER_PORT" ]; then
+          SERIAL_PORT="\$USER_PORT"
+          fi
+          fi
 
-            if [ -z "\$SERIAL_PORT" ]; then
-              echo "Nessuna porta seriale specificata. Uscita."
-              exit 1
-            fi
+          if [ -z "\$SERIAL_PORT" ]; then
+          echo "Nessuna porta seriale specificata. Uscita."
+          exit 1
+          fi
 
-            echo "Utilizzo della porta seriale: \$SERIAL_PORT"
-            "./$ESPTOOL_EXECUTABLE_NAME" --chip $CHIP_TYPE --port "\$SERIAL_PORT" --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 80m --flash_size detect 0x0000 firmware.bin
+          echo "Utilizzo della porta seriale: \$SERIAL_PORT"
+          "./$ESPTOOL_EXECUTABLE_NAME" --chip $CHIP_TYPE --port "\$SERIAL_PORT" --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 80m --flash_size detect 0x0000 firmware.bin
 
-            if [ \$? -eq 0 ]; then
-              echo "Flashing del firmware completato con successo!"
-            else
-              echo "ERRORE: Flashing del firmware fallito. Controlla connessioni e porta seriale."
-            fi
-            read -r -p "Premi Invio per uscire."
-EOF
+          if [ \$? -eq 0 ]; then
+          echo "Flashing del firmware completato con successo!"
+          else
+          echo "ERRORE: Flashing del firmware fallito. Controlla connessioni e porta seriale."
+          fi
+          read -r -p "Premi Invio per uscire."
+          EOF
 
-            chmod +x "$SCRIPT_PATH" # Rende lo script generato eseguibile
+          chmod +x "$SCRIPT_PATH" # Rende lo script generato eseguibile
           fi
           
           echo "Creato script: $SCRIPT_PATH"
