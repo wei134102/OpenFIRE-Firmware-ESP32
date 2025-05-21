@@ -230,7 +230,7 @@ jobs:
             )
             pause
 EOF
-          else # Script per Linux o macOS (.sh)
+          else # Script per Linux o macOS (.sh) 
             cat <<EOF > "$SCRIPT_PATH"
             #!/bin/bash
             echo "Flashing OpenFIRE Firmware for board: ${{ matrix.boards }}"
