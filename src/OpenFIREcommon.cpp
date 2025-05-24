@@ -725,6 +725,36 @@ void FW_Common::GetPosition()
                     mouseX = (mouseX + moveXAxisArr[0] + moveXAxisArr[1] + moveXAxisArr[2]) / 4;
                     mouseY = (mouseY + moveYAxisArr[0] + moveYAxisArr[1] + moveYAxisArr[2]) / 4;
                     break;
+                case 69: //FW_Const::RunMode_Average2:
+                    // https://github.com/denyssene/SimpleKalmanFilter                    
+                    // Calcolo del guadagno di Kalman per X e Y
+                    _kalman_gain_x = _err_estimate_x / (_err_estimate_x + _err_measure_x);
+                    _kalman_gain_y = _err_estimate_y / (_err_estimate_y + _err_measure_y);
+
+                    // Nuova stima della posizione X e Y
+                    _current_estimate_x = _last_estimate_x + _kalman_gain_x * (mouseX - _last_estimate_x);
+                    _current_estimate_y = _last_estimate_y + _kalman_gain_y * (mouseY - _last_estimate_y);
+
+                    // Rilevamento di movimenti bruschi e adattamento dei parametri
+                    if (fabsf(mouseX - _last_estimate_x) > movementThresholdX || fabsf(mouseY - _last_estimate_y) > movementThresholdY) {
+                        _err_estimate_x *= fastAdaptFactor;
+                        _err_estimate_y *= fastAdaptFactor;
+                        _q_x *= fastAdaptFactor;
+                        _q_y *= fastAdaptFactor;
+                        // po i valore di q devono essere ripristinati
+                    } else {
+                        _err_estimate_x = (1.0f - _kalman_gain_x) * _err_estimate_x + fabsf(_last_estimate_x - _current_estimate_x) * _q_x;
+                        _err_estimate_y = (1.0f - _kalman_gain_y) * _err_estimate_y + fabsf(_last_estimate_y - _current_estimate_y) * _q_y;
+                    }
+
+                    // Aggiornamento delle stime precedenti
+                    _last_estimate_x = _current_estimate_x;
+                    _last_estimate_y = _current_estimate_y;
+                    mouseX = _current_estimate_x;
+                    mouseY = _current_estimate_y;
+                    break;
+////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////
                 default:
                     break;
                 }

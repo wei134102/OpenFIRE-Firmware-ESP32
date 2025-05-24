@@ -969,16 +969,6 @@ void OF_Serial::SerialProcessingDocked()
         Serial_available(1);
         if(Serial.read() == OF_Const::sDock2) FW_Common::SetMode(FW_Const::GunMode_Docked);
         break;
-    /*
-    // 696969 aggiunto da me per disabilitare invio dati docker (stick, temp)
-    case OF_Const::sDockedSaving:
-        Serial_available(1);
-        if(Serial.read() == OF_Const::sDockedSaving_on) FW_Common::dockedSaving = true;
-          else FW_Common::dockedSaving = false;
-          Serial.write(OF_Const::sDockedSaving);  
-        break;      
-    // 696969 fine aggiunto da me
-    */
     // Common terminator
     case OF_Const::serialTerminator:
         if(!FW_Common::justBooted)
@@ -1026,11 +1016,14 @@ void OF_Serial::SerialProcessingDocked()
         if(Serial.peek() < PROFILE_COUNT) {
             FW_Common::SelectCalProfile(Serial.read());
             char buf[2] = {OF_Const::sCurrentProf, (uint8_t)OF_Prefs::currentProfile};
-            Serial.write(buf, 2);
+            Serial.write(buf, sizeof(buf));
             Serial_available(1);
             if(Serial.read() == OF_Const::sCaliStart) {
-                if(FW_Common::camNotAvailable) Serial.write(OF_Const::sError);
-                else {
+                if(FW_Common::camNotAvailable) {
+                    buf[0] = OF_Const::sError;
+                    buf[1] = OF_Const::sErrCam;
+                    Serial.write(buf, sizeof(buf));
+                } else {
                   // sensitivity/layout preset
                   Serial_available(1); 
                   if(Serial.peek() != -1) {

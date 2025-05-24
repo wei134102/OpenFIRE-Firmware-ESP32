@@ -144,6 +144,27 @@ public:
     static inline int moveYAxisArr[3] = {0, 0, 0};
     static inline int moveIndex = 0;
 
+    // 696969 for kalman filter
+    ///*
+    // https://github.com/denyssene/SimpleKalmanFilter
+    static inline float _kalman_gain_x = 0;
+    static inline float _err_estimate_x;
+    static inline float _err_measure_x = 0.2f; // IMPOSTATI DI DEFAULT
+    static inline float _current_estimate_x = 0;
+    static inline float _last_estimate_x = 0;
+    static inline float _q_x = 0.1f; // IMPOSTATI DI DEFAULT
+    static inline float _kalman_gain_y = 0;
+    static inline float _err_estimate_y;
+    static inline float _err_measure_y = 0.2f; // IMPOSTATI DI DEFAULT
+    static inline float _current_estimate_y = 0;
+    static inline float _last_estimate_y = 0;
+    static inline float _q_y = 0.1f; // IMPOSTATI DI DEFAULT
+    static constexpr float movementThresholdX = res_x * 0.05f;  // 5% della larghezza dello schermo
+    static constexpr float movementThresholdY = res_y * 0.05f; // 5% dell'altezza dello schermo
+    static constexpr float fastAdaptFactor = 1.5f; // Aumento temporaneo della reattività
+    //*/
+    // 696969 for kalman filter
+
     // timer will set this to 1 when the IR position can update
     static inline volatile unsigned int irPosUpdateTick = 0;
 
