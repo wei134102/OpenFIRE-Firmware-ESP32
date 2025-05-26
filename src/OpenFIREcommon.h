@@ -113,6 +113,12 @@ public:
     /// @brief    Checks Button Descriptor and replaces instances of 0xFF/0xFE with player-relative Start/Select
     static void UpdateStartSelect();
 
+    // =============== 696969 ==================================
+    #ifdef CAM_SIMPLE_KALMAN_FILTER   
+    static void Kalman_filter(int& mouseX,int& mouseY);
+    #endif //CAM_SIMPLE_KALMAN_FILTER   
+    // =============== 696969 ==================================
+
     // initial gunmode
     static inline FW_Const::GunMode_e gunMode = FW_Const::GunMode_Init;
 
@@ -144,26 +150,59 @@ public:
     static inline int moveYAxisArr[3] = {0, 0, 0};
     static inline int moveIndex = 0;
 
-    // 696969 for kalman filter
-    ///*
-    // https://github.com/denyssene/SimpleKalmanFilter
-    static inline float _kalman_gain_x = 0;
-    static inline float _err_estimate_x;
-    static inline float _err_measure_x = 0.2f; // IMPOSTATI DI DEFAULT
-    static inline float _current_estimate_x = 0;
-    static inline float _last_estimate_x = 0;
-    static inline float _q_x = 0.1f; // IMPOSTATI DI DEFAULT
-    static inline float _kalman_gain_y = 0;
-    static inline float _err_estimate_y;
-    static inline float _err_measure_y = 0.2f; // IMPOSTATI DI DEFAULT
-    static inline float _current_estimate_y = 0;
-    static inline float _last_estimate_y = 0;
-    static inline float _q_y = 0.1f; // IMPOSTATI DI DEFAULT
-    static constexpr float movementThresholdX = res_x * 0.05f;  // 5% della larghezza dello schermo
-    static constexpr float movementThresholdY = res_y * 0.05f; // 5% dell'altezza dello schermo
-    static constexpr float fastAdaptFactor = 1.5f; // Aumento temporaneo della reattività
-    //*/
-    // 696969 for kalman filter
+    // ================================ 696969 for filter ==================================
+    #ifdef CAM_SIMPLE_KALMAN_FILTER   
+   
+    // --- Variabili Globali per il filtro di Kalman ---
+    // Stima dello stato attuale (posizione, velocità, accelerazione) per X e Y.
+    // Queste variabili mantengono lo stato filtrato del mouse.
+    static inline float estimatedX = 0.0f;
+    static inline float estimatedY = 0.0f;
+    static inline float velocityX = 0.0f;
+    static inline float velocityY = 0.0f;
+    static inline float accelerationX = 0.0f;
+    static inline float accelerationY = 0.0f;
+
+    // Covarianza dell'errore di stima (P) per X e Y.
+    // P riflette l'incertezza nella nostra stima. Valori più alti = maggiore incertezza.
+    static inline float P_x = 1.0f;
+    static inline float P_y = 1.0f;
+
+    // Variabile per il calcolo del tempo trascorso tra le esecuzioni del filtro.
+    static inline unsigned long lastFilterExecutionTime = 0;
+
+    // --- Costanti di Kalman (valori base) ---
+    // Questi valori sono fondamentali per il comportamento del filtro e richiedono calibrazione.
+    static constexpr float BASE_R = 2.8f; // 0.05f;  // Rumore di misurazione base (Observation Noise). Determina quanto ci fidiamo della nuova misura raw.
+    static constexpr float BASE_Q = 0.5f;  //0.001f; // Incertezza del modello base (Process Noise). Riflette quanto è incerto il nostro modello di movimento.
+
+    // --- Parametri di stabilità e reattività ---
+    static constexpr float MAX_ACCELERATION_BASE = 10000.0f; // Accelerazione massima che il filtro può stimare.
+    static constexpr float MAX_VELOCITY = 5000.0f;           // Velocità massima che il filtro può stimare.
+
+    // --- Parametri per la gestione dei movimenti bruschi volontari ---
+    // Soglia in unità di coordinate del mouse. Se il "salto" tra la misura raw e la stima
+    // supera questo valore, il filtro entra in modalità "reattiva" ai movimenti bruschi.
+    // **Questo parametro è cruciale e va calibrato in base al tuo sensore!**
+    static constexpr float BRUSQUE_MOVE_THRESHOLD = 20.0f; // Esempio: 20 unità del mouse.
+    // Ottimizzazione: pre-calcolo del quadrato della soglia per evitare la sqrt() nel confronto principale.
+    static constexpr float BRUSQUE_MOVE_THRESHOLD_SQ = BRUSQUE_MOVE_THRESHOLD * BRUSQUE_MOVE_THRESHOLD;
+
+    static constexpr float BRUSQUE_MOVE_Q_MULTIPLIER = 50.0f;  // Moltiplicatore per Q in caso di movimento brusco.
+    static constexpr float BRUSQUE_MOVE_R_MULTIPLIER = 10.0f;  // Moltiplicatore per R in caso di movimento brusco.
+
+    // Coefficienti per l'adattamento dinamico di Q e R in base alla velocità generale del mouse.
+    static constexpr float VELOCITY_Q_FACTOR = 0.01f; // Aumenta Q all'aumentare della velocità.
+    static constexpr float VELOCITY_R_FACTOR = 0.002f; // Aumenta R all'aumentare della velocità.
+
+    // Limiti per la covarianza P e per Q e R dinamici, per garantire stabilità ed evitare valori estremi.
+    static constexpr float P_MAX = 10.0f;
+    static constexpr float P_MIN = 0.001f;
+    static constexpr float Q_MAX_ADAPTIVE = BASE_Q * 100.0f;
+    static constexpr float R_MAX_ADAPTIVE = BASE_R * 50.0f; 
+    
+    #endif // CAM_SIMPLE_KALMAN_FILTER
+    // ================================ 696969 for filter ==================================
 
     // timer will set this to 1 when the IR position can update
     static inline volatile unsigned int irPosUpdateTick = 0;

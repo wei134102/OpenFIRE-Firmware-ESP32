@@ -701,9 +701,26 @@ void FW_Common::GetPosition()
                                 OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, res_y);
             }
 
+            #ifdef CAM_SIMPLE_KALMAN_FILTER
+            int aux_getX = OpenFIREper.getX();
+            int aux_getY = OpenFIREper.getY();
+            Kalman_filter(aux_getX, aux_getY);
+            mouseX = map(aux_getX, 0, res_x, (0 - OF_Prefs::profiles[OF_Prefs::currentProfile].leftOffset), (res_x + OF_Prefs::profiles[OF_Prefs::currentProfile].rightOffset));                 
+            mouseY = map(aux_getY, 0, res_y, (0 - OF_Prefs::profiles[OF_Prefs::currentProfile].topOffset), (res_y + OF_Prefs::profiles[OF_Prefs::currentProfile].bottomOffset));          
+            #else
             // Output mapped to screen resolution because offsets are measured in pixels
             mouseX = map(OpenFIREper.getX(), 0, res_x, (0 - OF_Prefs::profiles[OF_Prefs::currentProfile].leftOffset), (res_x + OF_Prefs::profiles[OF_Prefs::currentProfile].rightOffset));                 
             mouseY = map(OpenFIREper.getY(), 0, res_y, (0 - OF_Prefs::profiles[OF_Prefs::currentProfile].topOffset), (res_y + OF_Prefs::profiles[OF_Prefs::currentProfile].bottomOffset));
+            #endif // CAM_SIMPLE_KALMAN_FILTER
+
+
+            // =============== 696969 ============== filter ===============================
+            /*
+            #ifdef CAM_SIMPLE_KALMAN_FILTER
+            Kalman_filter(mouseX, mouseY);
+            #endif // CAM_SIMPLE_KALMAN_FILTER
+            */
+            // =============== 696969 ============== filter ===============================
 
             switch(runMode) {
                 case FW_Const::RunMode_Average:
@@ -725,36 +742,6 @@ void FW_Common::GetPosition()
                     mouseX = (mouseX + moveXAxisArr[0] + moveXAxisArr[1] + moveXAxisArr[2]) / 4;
                     mouseY = (mouseY + moveYAxisArr[0] + moveYAxisArr[1] + moveYAxisArr[2]) / 4;
                     break;
-                case 69: //FW_Const::RunMode_Average2:
-                    // https://github.com/denyssene/SimpleKalmanFilter                    
-                    // Calcolo del guadagno di Kalman per X e Y
-                    _kalman_gain_x = _err_estimate_x / (_err_estimate_x + _err_measure_x);
-                    _kalman_gain_y = _err_estimate_y / (_err_estimate_y + _err_measure_y);
-
-                    // Nuova stima della posizione X e Y
-                    _current_estimate_x = _last_estimate_x + _kalman_gain_x * (mouseX - _last_estimate_x);
-                    _current_estimate_y = _last_estimate_y + _kalman_gain_y * (mouseY - _last_estimate_y);
-
-                    // Rilevamento di movimenti bruschi e adattamento dei parametri
-                    if (fabsf(mouseX - _last_estimate_x) > movementThresholdX || fabsf(mouseY - _last_estimate_y) > movementThresholdY) {
-                        _err_estimate_x *= fastAdaptFactor;
-                        _err_estimate_y *= fastAdaptFactor;
-                        _q_x *= fastAdaptFactor;
-                        _q_y *= fastAdaptFactor;
-                        // po i valore di q devono essere ripristinati
-                    } else {
-                        _err_estimate_x = (1.0f - _kalman_gain_x) * _err_estimate_x + fabsf(_last_estimate_x - _current_estimate_x) * _q_x;
-                        _err_estimate_y = (1.0f - _kalman_gain_y) * _err_estimate_y + fabsf(_last_estimate_y - _current_estimate_y) * _q_y;
-                    }
-
-                    // Aggiornamento delle stime precedenti
-                    _last_estimate_x = _current_estimate_x;
-                    _last_estimate_y = _current_estimate_y;
-                    mouseX = _current_estimate_x;
-                    mouseY = _current_estimate_y;
-                    break;
-////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////
                 default:
                     break;
                 }
@@ -812,11 +799,28 @@ void FW_Common::GetPosition()
                      buttons.offScreen = true;
                 else buttons.offScreen = false;
 
+                // ============ 696969 ============================
+                /*
+                #ifdef CAM_SIMPLE_KALMAN_FILTER
+                Kalman_filter(conMoveX, conMoveY);
+                #endif // CAM_SIMPLE_KALMAN_FILTER
+                */
+                // ============ 696969 ============================               
+                
                 if(buttons.analogOutput)
                      Gamepad16.moveCam(conMoveX, conMoveY);
                 else AbsMouse5.move(conMoveX, conMoveY);
 
             } else if(gunMode == FW_Const::GunMode_Verification) {
+                
+                // ============ 696969 ============================
+                /*
+                #ifdef CAM_SIMPLE_KALMAN_FILTER
+                Kalman_filter(conMoveX, conMoveY);
+                #endif // CAM_SIMPLE_KALMAN_FILTER
+                */
+                // ============ 696969 ============================
+                
                 // Output mapped to Mouse resolution
                 conMoveX = map(conMoveX, 0, res_x, 0, 32767);
                 conMoveY = map(conMoveY, 0, res_y, 0, 32767);
@@ -892,6 +896,157 @@ void FW_Common::GetPosition()
             PrintIrError();
     } else  PrintIrError();
 }
+
+// ============== 696969 =====================================================================
+#ifdef CAM_SIMPLE_KALMAN_FILTER   
+void FW_Common::Kalman_filter(int& mouseX,int& mouseY)
+{
+// --- Blocco di codice per il filtro di Kalman ---
+// Inserisci questo blocco direttamente nel tuo loop principale, dopo aver letto
+// le variabili raw `mouseX` e `mouseY`.
+// Al termine di questo blocco, `mouseX` e `mouseY` conterranno le coordinate filtrate.
+//
+// Le variabili `mouseX` e `mouseY` devono essere dichiarate (es. `int mouseX; int mouseY;`)
+// e contenere le coordinate raw *prima* di questo blocco.
+/*
+Esempio di utilizzo (nel tuo loop principale):
+
+int mouseX = raw_x_from_sensor; // Leggi la coordinata X grezza dal sensore
+int mouseY = raw_y_from_sensor; // Leggi la coordinata Y grezza dal sensore
+
+// --- INIZIO BLOCCO FILTRO DI KALMAN ---
+*/
+unsigned long currentMillis = millis(); // Tempo attuale in millisecondi.
+float dt; // Delta tempo (tempo trascorso) in secondi.
+
+// Calcolo del delta tempo (dt). Gestisce il primo avvio per evitare un dt nullo o troppo grande.
+if (lastFilterExecutionTime == 0) {
+    dt = 0.01f; // Valore di fallback sicuro per il primo ciclo.
+} else {
+    dt = (float)(currentMillis - lastFilterExecutionTime) / 1000.0f;
+}
+lastFilterExecutionTime = currentMillis; // Aggiorna il timestamp per la prossima esecuzione.
+
+// Protezione robusta per dt: evita divisioni per zero o valori irrealistici.
+if (dt <= 0.0f || dt > 1.0f) {
+    dt = 0.01f;
+}
+
+float dt_sq = dt * dt; // Pre-calcolo di dt*dt per efficienza nei calcoli.
+
+// --- Logica di rilevamento del "movimento brusco volontario" ---
+// Calcola la "magnitudine al quadrato del salto" tra la misura raw e la posizione stimata attuale.
+float deltaX_raw_est = (float)mouseX - estimatedX;
+float deltaY_raw_est = (float)mouseY - estimatedY;
+float currentResidualMagnitudeSq = deltaX_raw_est * deltaX_raw_est + deltaY_raw_est * deltaY_raw_est;
+
+// Soluzione precedente (con sqrt()):
+// float currentResidualMagnitude = sqrt(deltaX_raw_est * deltaX_raw_est + deltaY_raw_est * deltaY_raw_est);
+
+// Inizializza i valori dinamici di R (rumore di misurazione) e Q (incertezza del modello) con i valori base.
+float current_R_val = BASE_R;
+float current_Q_val = BASE_Q;
+
+// Se il quadrato del "salto" è significativo (supera il quadrato della soglia), aumentiamo Q e R.
+// Questa ottimizzazione evita una costosa operazione sqrt() per ogni ciclo.
+if (currentResidualMagnitudeSq > BRUSQUE_MOVE_THRESHOLD_SQ) { // Confronto con il quadrato della soglia
+// Soluzione precedente (con sqrt()):
+// if (currentResidualMagnitude > BRUSQUE_MOVE_THRESHOLD) {
+    current_R_val *= BRUSQUE_MOVE_R_MULTIPLIER;
+    current_Q_val *= BRUSQUE_MOVE_Q_MULTIPLIER;
+}
+
+// --- Adattamento di Q e R in base alla velocità complessiva del mouse ---
+// Calcola la magnitudine al quadrato della velocità stimata complessiva per evitare la sqrt().
+float totalVelocityMagnitudeSq = velocityX * velocityX + velocityY * velocityY;
+// La radice quadrata è ancora necessaria qui se il fattore di adattamento dipende dalla magnitudine lineare.
+float totalVelocityMagnitude = sqrt(totalVelocityMagnitudeSq);
+
+// Soluzione precedente (calcolava sqrt() due volte se usata per la soglia):
+// float totalVelocityMagnitude = sqrt(velocityX * velocityX + velocityY * velocityY);
+
+
+// Aumenta Q e R proporzionalmente alla velocità. Ciò permette al filtro di essere più reattivo
+// durante i movimenti rapidi e più stabile quando il mouse è quasi fermo.
+current_Q_val *= (1.0f + totalVelocityMagnitude * VELOCITY_Q_FACTOR);
+current_R_val *= (1.0f + totalVelocityMagnitude * VELOCITY_R_FACTOR);
+
+// Applica limiti massimi per Q e R per prevenire instabilità o valori eccessivi.
+current_Q_val = fmin(current_Q_val, Q_MAX_ADAPTIVE);
+current_R_val = fmin(current_R_val, R_MAX_ADAPTIVE);
+
+// --- Applicazione del filtro di Kalman per l'asse X ---
+// 1. Predizione dello stato per X: stima la prossima posizione e velocità di X.
+float predictedPosX = estimatedX + (velocityX * dt) + (0.5f * accelerationX * dt_sq);
+float predictedVelX = velocityX + (accelerationX * dt);
+
+// 2. Predizione dell'incertezza (P_x): aumenta l'incertezza per il rumore del modello.
+P_x = P_x + current_Q_val;
+P_x = constrain(P_x, P_MIN, P_MAX); // Limita P_x per stabilità.
+
+// 3. Calcolo del Guadagno di Kalman (K_x): quanto ci fidiamo della misura corrente.
+float K_x = P_x / (P_x + current_R_val);
+
+// 4. Correzione con la misura per X: aggiorna le stime usando la misura raw e K_x.
+float residualX = (float)mouseX - predictedPosX;
+estimatedX = predictedPosX + K_x * residualX;
+velocityX = predictedVelX + K_x * (residualX / dt);
+
+// 5. Aggiornamento dell'accelerazione per X: adattiva per rispondere meglio ai cambi di direzione.
+float adaptiveMaxAccelerationX = MAX_ACCELERATION_BASE * (0.5f + 0.5f * (1.0f / (1.0f + constrain(fabs(velocityX), 0.0f, MAX_VELOCITY) * 0.01f)));
+accelerationX = constrain(accelerationX + (K_x * 2.0f * residualX) / dt_sq, -adaptiveMaxAccelerationX, adaptiveMaxAccelerationX);
+
+// 6. Limitazione della velocità per X: evita che la velocità stimata cresca indefinitamente.
+velocityX = constrain(velocityX, -MAX_VELOCITY, MAX_VELOCITY);
+
+// 7. Aggiornamento della covarianza (P_x): riduce l'incertezza dopo la correzione.
+P_x = P_x * (1.0f - K_x);
+P_x = constrain(P_x, P_MIN, P_MAX); // Mantiene P_x entro limiti.
+
+
+// --- Applicazione del filtro di Kalman per l'asse Y ---
+// La logica è identica a quella dell'asse X, ma applicata alle variabili Y.
+// 1. Predizione dello stato per Y
+float predictedPosY = estimatedY + (velocityY * dt) + (0.5f * accelerationY * dt_sq);
+float predictedVelY = velocityY + (accelerationY * dt);
+
+// 2. Predizione dell'incertezza (P_y)
+P_y = P_y + current_Q_val;
+P_y = constrain(P_y, P_MIN, P_MAX);
+
+// 3. Calcolo del Guadagno di Kalman (K_y)
+float K_y = P_y / (P_y + current_R_val);
+
+// 4. Correzione con la misura per Y
+float residualY = (float)mouseY - predictedPosY;
+estimatedY = predictedPosY + K_y * residualY;
+velocityY = predictedVelY + K_y * (residualY / dt);
+
+// 5. Aggiornamento dell'accelerazione per Y
+float adaptiveMaxAccelerationY = MAX_ACCELERATION_BASE * (0.5f + 0.5f * (1.0f / (1.0f + constrain(fabs(velocityY), 0.0f, MAX_VELOCITY) * 0.01f)));
+accelerationY = constrain(accelerationY + (K_y * 2.0f * residualY) / dt_sq, -adaptiveMaxAccelerationY, adaptiveMaxAccelerationY);
+
+// 6. Limitazione della velocità per Y
+velocityY = constrain(velocityY, -MAX_VELOCITY, MAX_VELOCITY);
+
+// 7. Aggiornamento della covarianza (P_y)
+P_y = P_y * (1.0f - K_y);
+P_y = constrain(P_y, P_MIN, P_MAX);
+
+// --- AGGIORNAMENTO DELLE VARIABILI mouseX E mouseY CON I VALORI FILTRATI ---
+///////////mouseX = (int)estimatedX;
+///////////mouseY = (int)estimatedY;
+/*
+// --- FINE BLOCCO FILTRO DI KALMAN ---
+*/
+
+#ifdef COMMENTO
+Serial.printf("RawX:%d RawY:%d FiltX:%.2f FiltY:%.2f VelX:%.1f VelY:%.1f AccX:%.1f AccY:%.1f Px:%.3f Py:%.3f R_eff:%.3f Q_eff:%.3f ResMagSq:%.1f TotalVelMag:%.1f\n",
+              mouseX, mouseY, estimatedX, estimatedY, velocityX, velocityY, accelerationX, accelerationY, P_x, P_y, current_R_val, current_Q_val, currentResidualMagnitudeSq, totalVelocityMagnitude);
+#endif
+}
+#endif //CAM_SIMPLE_KALMAN_FILTER   
+// ============== 696969 =====================================================================
 
 void FW_Common::PrintIrError()
 {
