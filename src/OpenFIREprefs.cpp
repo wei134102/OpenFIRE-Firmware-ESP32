@@ -80,13 +80,13 @@ int OF_Prefs::SaveProfiles()
                 if(pair.second == OF_Const::profCurrent) {
                     if(!currentProfLogged) {
                         // only write string and profile num
-                        prefsFile.write((const uint8_t*)pair.first.c_str(), pair.first.length()+1);
+                        prefsFile.write((const uint8_t*)pair.first.data(), pair.first.length()+1);
                         prefsFile.write((uint8_t)currentProfile);
                         currentProfLogged = true;
                     }
                 } else {
                     // write data type:
-                    prefsFile.write((const uint8_t*)pair.first.c_str(), pair.first.length()+1);
+                    prefsFile.write((const uint8_t*)pair.first.data(), pair.first.length()+1);
                     // Append profile number:
                     prefsFile.write((uint8_t*)&i, 1);
 
@@ -112,12 +112,12 @@ int OF_Prefs::SaveProfiles()
     } else return Error_Write;
 }
 
-int OF_Prefs::SaveToPtr(File prefsFile, void *dataPtr, const std::unordered_map<std::string, int> &mapPtr, const size_t &dataSize)
+int OF_Prefs::SaveToPtr(File prefsFile, void *dataPtr, const std::unordered_map<std::string_view, int> &mapPtr, const size_t &dataSize)
 {
     if(prefsFile) {
         for(auto &pair : mapPtr) {
             if((pair.second >= 0 && dataPtr != backupButtonDesc) || dataPtr == backupButtonDesc && pair.second >= 0 && pair.second < ButtonCount) {
-                prefsFile.write((const uint8_t*)pair.first.c_str(), pair.first.length()+1);
+                prefsFile.write((const uint8_t*)pair.first.data(), pair.first.length()+1);
                 prefsFile.write((uint8_t)dataSize);
                 prefsFile.write((uint8_t*)dataPtr + (dataSize * pair.second), dataSize);
             }
@@ -128,7 +128,7 @@ int OF_Prefs::SaveToPtr(File prefsFile, void *dataPtr, const std::unordered_map<
     } else return Error_NoData;
 }
 
-int OF_Prefs::LoadToPtr(File prefsFile, void *dataPtr, const std::unordered_map<std::string, int> &mapPtr)
+int OF_Prefs::LoadToPtr(File prefsFile, void *dataPtr, const std::unordered_map<std::string_view, int> &mapPtr)
 {
     if(prefsFile) {
         char buf[32];
