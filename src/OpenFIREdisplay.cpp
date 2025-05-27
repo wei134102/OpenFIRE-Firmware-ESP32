@@ -33,13 +33,13 @@ bool ExtDisplay::Begin()
         Wire1.setPins(OF_Prefs::pins[OF_Const::periphSDA], OF_Prefs::pins[OF_Const::periphSCL]);  // 696969 per esp32
         display = new Adafruit_SSD1306(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire1, -1);
       #else // rp2040
-      if(bitRead(OF_Prefs::pins[OF_Const::periphSCL], 1) && bitRead(OF_Prefs::pins[OF_Const::periphSDA], 1)) {
+        if(bitRead(OF_Prefs::pins[OF_Const::periphSCL], 1) && bitRead(OF_Prefs::pins[OF_Const::periphSDA], 1)) {
             // I2C1
             if(bitRead(OF_Prefs::pins[OF_Const::periphSCL], 0) && !bitRead(OF_Prefs::pins[OF_Const::periphSDA], 0)) {
                 Wire1.end();
                 // SDA/SCL are indeed on verified correct pins
-                  Wire1.setSDA(OF_Prefs::pins[OF_Const::periphSDA]);
-                  Wire1.setSCL(OF_Prefs::pins[OF_Const::periphSCL]);
+                Wire1.setSDA(OF_Prefs::pins[OF_Const::periphSDA]);
+                Wire1.setSCL(OF_Prefs::pins[OF_Const::periphSCL]);
                 display = new Adafruit_SSD1306(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire1, -1);
             } else return false;
         } else if(!bitRead(OF_Prefs::pins[OF_Const::periphSCL], 1) && !bitRead(OF_Prefs::pins[OF_Const::periphSDA], 1)) {
@@ -47,8 +47,8 @@ bool ExtDisplay::Begin()
             if(bitRead(OF_Prefs::pins[OF_Const::periphSCL], 0) && !bitRead(OF_Prefs::pins[OF_Const::periphSDA], 0)) {
                 Wire.end();
                 // SDA/SCL are indeed on verified correct pins
-                  Wire.setSDA(OF_Prefs::pins[OF_Const::periphSDA]);
-                  Wire.setSCL(OF_Prefs::pins[OF_Const::periphSCL]);
+                Wire.setSDA(OF_Prefs::pins[OF_Const::periphSDA]);
+                Wire.setSCL(OF_Prefs::pins[OF_Const::periphSCL]);
                 display = new Adafruit_SSD1306(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
             } else return false;
         } else return false;
@@ -85,7 +85,7 @@ void ExtDisplay::TopPanelUpdate(const char *textPrefix, const char *profText)
     }
 }
 
-void ExtDisplay::ScreenModeChange(int8_t screenMode, bool isAnalog)
+void ExtDisplay::ScreenModeChange(const int &screenMode, const bool &isAnalog)
 {
     if(display != nullptr) {
         idleTimeStamp = millis();
@@ -188,7 +188,7 @@ void ExtDisplay::IdleOps()
 {
     if(display != nullptr) {
         switch(screenState) {
-          case Screen_Normal:
+        case Screen_Normal:
         case Screen_Mamehook_Single:
         case Screen_Mamehook_Dual:
           #ifdef USES_TEMP
@@ -213,13 +213,13 @@ void ExtDisplay::IdleOps()
               }
           }
           #endif // USES_TEMP
-            break;
-          case Screen_Pause:
-          case Screen_Profile:
-          case Screen_Saving:
-          case Screen_Calibrating:
+          break;
+        case Screen_Pause:
+        case Screen_Profile:
+        case Screen_Saving:
+        case Screen_Calibrating:
         default:
-            break;
+          break;
         }
     }
 }
@@ -249,11 +249,11 @@ void ExtDisplay::ShowTemp()
 
 // Warning: SLOOOOW, should only be used in cali/where the mouse isn't being updated.
 // Use at your own discression.
-void ExtDisplay::DrawVisibleIR(int pointX[4], int pointY[4])
+void ExtDisplay::DrawVisibleIR(int *pointX, int *pointY)
 {
     if(display != nullptr) {
         display->fillRect(0, 16, 128, 48, BLACK);
-        for(uint i = 0; i < 4; ++i) {
+        for(int i = 0; i < 4; ++i) {
           pointX[i] = map(pointX[i], 0, 1920, 0, 128);
           pointY[i] = map(pointY[i], 0, 1080, 16, 64);
           pointY[i] = constrain(pointY[i], 16, 64);
@@ -263,10 +263,10 @@ void ExtDisplay::DrawVisibleIR(int pointX[4], int pointY[4])
     }
 }
 
-void ExtDisplay::PauseScreenShow(uint8_t currentProf, char name1[16], char name2[16], char name3[16], char name4[16])
+void ExtDisplay::PauseScreenShow(const int &currentProf, const char* name1, const char* name2, const char* name3, const char* name4)
 {
     if(display != nullptr) {
-        char* namesList[16] = { name1, name2, name3, name4 };
+        const char* namesList[] = { name1, name2, name3, name4 };
         TopPanelUpdate("Using ", namesList[currentProf]); // names are placeholder
         display->fillRect(0, 16, 128, 48, BLACK);
         display->setTextSize(1);
@@ -286,7 +286,7 @@ void ExtDisplay::PauseScreenShow(uint8_t currentProf, char name1[16], char name2
     }
 }
 
-void ExtDisplay::PauseListUpdate(uint8_t selection)
+void ExtDisplay::PauseListUpdate(const int &selection)
 {
     if(display != nullptr) {
         display->fillRect(0, 16, 128, 48, BLACK);
@@ -433,7 +433,7 @@ void ExtDisplay::PauseListUpdate(uint8_t selection)
     }
 }
 
-void ExtDisplay::PauseProfileUpdate(uint8_t selection, char name1[16], char name2[16], char name3[16], char name4[16])
+void ExtDisplay::PauseProfileUpdate(const int &selection, const char* name1, const char* name2, const char* name3, const char* name4)
 {
     if(display != nullptr) {
         display->fillRect(0, 16, 128, 48, BLACK);
@@ -490,7 +490,7 @@ void ExtDisplay::PauseProfileUpdate(uint8_t selection, char name1[16], char name
     }
 }
 
-void ExtDisplay::SaveScreen(uint8_t status)
+void ExtDisplay::SaveScreen(const int &status)
 {
     if(display != nullptr) {
         display->fillRect(0, 16, 128, 48, BLACK);
@@ -502,7 +502,7 @@ void ExtDisplay::SaveScreen(uint8_t status)
     }
 }
 
-void ExtDisplay::PrintAmmo(uint8_t ammo)
+void ExtDisplay::PrintAmmo(const uint &ammo)
 {
     if(display != nullptr) {
         currentAmmo = ammo;
@@ -511,7 +511,7 @@ void ExtDisplay::PrintAmmo(uint8_t ammo)
         uint ammoLeft = ammo / 10;
         uint ammoRight = ammo - (ammoLeft * 10);
 
-        if(!ammo) { ammoEmpty = true; } else { ammoEmpty = false; }
+        ammoEmpty = ammo ? false : true;
 
         if(screenState == Screen_Mamehook_Single) {
             display->fillRect(40, 22, (NUMBER_GLYPH_WIDTH*2)+6, NUMBER_GLYPH_HEIGHT, BLACK);
@@ -527,11 +527,11 @@ void ExtDisplay::PrintAmmo(uint8_t ammo)
     }
 }
 
-void ExtDisplay::PrintLife(uint8_t life)
+void ExtDisplay::PrintLife(const uint &life)
 {
     if(display != nullptr) {
         currentLife = life;
-        if(!life) { lifeEmpty = true; } else { lifeEmpty = false; }
+        lifeEmpty = life ? false : true;
         if(screenState == Screen_Mamehook_Single) {
             if(lifeBar) {
                 display->fillRect(14, 37, 100, 9, BLACK);

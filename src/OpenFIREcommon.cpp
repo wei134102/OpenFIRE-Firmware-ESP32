@@ -799,30 +799,12 @@ void FW_Common::GetPosition()
                      buttons.offScreen = true;
                 else buttons.offScreen = false;
 
-                // ============ 696969 ============================
-                /*
-                #ifdef CAM_SIMPLE_KALMAN_FILTER
-                Kalman_filter(conMoveX, conMoveY);
-                #endif // CAM_SIMPLE_KALMAN_FILTER
-                */
-                // ============ 696969 ============================               
-                
                 if(buttons.analogOutput)
                      Gamepad16.moveCam(conMoveX, conMoveY);
                 else AbsMouse5.move(conMoveX, conMoveY);
 
-            } else {         
-            
+            } else {
                 if(gunMode == FW_Const::GunMode_Verification) {
-                
-                    // ============ 696969 ============================
-                    /*
-                    #ifdef CAM_SIMPLE_KALMAN_FILTER
-                    Kalman_filter(conMoveX, conMoveY);
-                    #endif // CAM_SIMPLE_KALMAN_FILTER
-                    */
-                    // ============ 696969 ============================
-                
                     // Output mapped to Mouse resolution
                     conMoveX = map(conMoveX, 0, res_x, 0, 32767);
                     conMoveY = map(conMoveY, 0, res_y, 0, 32767);
@@ -830,15 +812,13 @@ void FW_Common::GetPosition()
                     AbsMouse5.move(conMoveX, conMoveY);
                     AbsMouse5.report();
                 }
-                
-                
                 if(millis() - testLastStamp > 50) {
                     testLastStamp = millis();
                     // RAW Camera Output mapped to screen res (1920x1080)
                     int rawX[4];
                     int rawY[4];
                     // RAW Output for viewing in processing sketch mapped to 1920x1080 screen resolution
-                    for (int i = 0; i < 4; i++) {
+                    for (int i = 0; i < 4; ++i) {
                         if(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout) {
                             rawX[i] = map(OpenFIREdiamond.X(i), 0, 1023 << 2, 1920, 0);
                             rawY[i] = map(OpenFIREdiamond.Y(i), 0, 768 << 2, 0, 1080);
@@ -894,7 +874,7 @@ void FW_Common::GetPosition()
                     #ifdef USES_DISPLAY
                         OLED.DrawVisibleIR(rawX, rawY);
                     #endif // USES_DISPLAY
-                }          
+                }
             }
         } else if(error != DFRobotIRPositionEx::Error_DataMismatch)
             PrintIrError();
