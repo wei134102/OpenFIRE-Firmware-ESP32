@@ -811,23 +811,27 @@ void FW_Common::GetPosition()
                      Gamepad16.moveCam(conMoveX, conMoveY);
                 else AbsMouse5.move(conMoveX, conMoveY);
 
-            } else if(gunMode == FW_Const::GunMode_Verification) {
+            } else {         
+            
+                if(gunMode == FW_Const::GunMode_Verification) {
                 
-                // ============ 696969 ============================
-                /*
-                #ifdef CAM_SIMPLE_KALMAN_FILTER
-                Kalman_filter(conMoveX, conMoveY);
-                #endif // CAM_SIMPLE_KALMAN_FILTER
-                */
-                // ============ 696969 ============================
+                    // ============ 696969 ============================
+                    /*
+                    #ifdef CAM_SIMPLE_KALMAN_FILTER
+                    Kalman_filter(conMoveX, conMoveY);
+                    #endif // CAM_SIMPLE_KALMAN_FILTER
+                    */
+                    // ============ 696969 ============================
                 
-                // Output mapped to Mouse resolution
-                conMoveX = map(conMoveX, 0, res_x, 0, 32767);
-                conMoveY = map(conMoveY, 0, res_y, 0, 32767);
+                    // Output mapped to Mouse resolution
+                    conMoveX = map(conMoveX, 0, res_x, 0, 32767);
+                    conMoveY = map(conMoveY, 0, res_y, 0, 32767);
 
-                AbsMouse5.move(conMoveX, conMoveY);
-                AbsMouse5.report();
-            } else {
+                    AbsMouse5.move(conMoveX, conMoveY);
+                    AbsMouse5.report();
+                }
+                
+                
                 if(millis() - testLastStamp > 50) {
                     testLastStamp = millis();
                     // RAW Camera Output mapped to screen res (1920x1080)
@@ -890,7 +894,7 @@ void FW_Common::GetPosition()
                     #ifdef USES_DISPLAY
                         OLED.DrawVisibleIR(rawX, rawY);
                     #endif // USES_DISPLAY
-                }
+                }          
             }
         } else if(error != DFRobotIRPositionEx::Error_DataMismatch)
             PrintIrError();
