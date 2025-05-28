@@ -2,12 +2,18 @@
 
 #include "OpenFIRE_Wireless.h"
 
-
-#if defined(DEVICE_LILYGO_T_DONGLE_S3)
-  #include <Adafruit_ST7735.h>
-  extern Adafruit_ST7735 tft;
-#endif // DEVICE_LILYGO_T_DONGLE_S3
-
+#ifdef DONGLE
+  #ifdef USES_DISPLAY
+    #ifdef USE_LOVYAN_GFX
+      #include <LovyanGFX.hpp>
+      #include "..\..\src\LGFX_096_ST7735S_80x160.hpp"
+      extern LGFX tft;
+    #else
+      #include <Adafruit_ST7735.h>
+      extern Adafruit_ST7735 tft;
+    #endif // USE_LOVYAN_GFX
+  #endif // USES_DISPLAY
+#endif // DONGLE
 
 
 #define ESPNOW_WIFI_CHANNEL_DEFAULT 12
@@ -468,11 +474,15 @@ bool SerialWireless_::connection_dongle() {
   memcpy(&aux_buffer_tx[1], SerialWireless.mac_esp_inteface, 6);
   memcpy(&aux_buffer_tx[7], peerAddress, 6);
   
-  #if defined(DEVICE_LILYGO_T_DONGLE_S3)
-    tft.fillRect(95,60,50,20,0/*BLACK*/);
-    tft.setCursor(95, 60);  
-    tft.printf("%2d", channel);   
-  #endif // DEVICE_LILYGO_T_DONGLE_S3
+  
+  #ifdef DONGLE
+    #ifdef USES_DISPLAY
+      tft.fillRect(95,60,50,20,0/*BLACK*/);
+      tft.setCursor(95, 60);  
+      tft.printf("%2d", channel);
+    #endif //USES_DISPLAY
+  #endif //DONGLE
+  
   
   while (stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED) {
     if (stato_connessione_wireless == CONNECTION_STATE::NONE_CONNECTION) {
@@ -481,11 +491,13 @@ bool SerialWireless_::connection_dongle() {
         channel++;
         if (channel >13) channel = 1;
         
-        #if defined(DEVICE_LILYGO_T_DONGLE_S3)
-          tft.fillRect(95,60,50,20,0/*BLACK*/);  
-          tft.setCursor(95, 60);
-          tft.printf("%2d", channel);   
-        #endif // DEVICE_LILYGO_T_DONGLE_S3        
+        #ifdef DONGLE
+          #ifdef USES_DISPLAY
+            tft.fillRect(95,60,50,20,0/*BLACK*/);  
+            tft.setCursor(95, 60);
+            tft.printf("%2d", channel);   
+          #endif //USES_DISPLAY
+        #endif //DONGLE
         
         if (esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE) != ESP_OK) {
           //Serial.printf("DONGLE - esp_wifi_set_channel failed!");
