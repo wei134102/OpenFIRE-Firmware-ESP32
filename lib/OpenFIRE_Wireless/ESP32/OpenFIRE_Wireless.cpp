@@ -377,17 +377,17 @@ void SerialWireless_::begin() {
 
   esp_err_t err = esp_wifi_get_mac(WIFI_IF_STA, mac_esp_inteface);
   if (err != ESP_OK) {
-    Serial.println("Failed to read MAC address");
+    //Serial.println("Failed to read MAC address");
   }
   
   err = esp_wifi_set_channel(espnow_wifi_channel, WIFI_SECOND_CHAN_NONE);
   if (err != ESP_OK) {
-    Serial.printf("esp_wifi_set_channel failed! 0x%x", err);
+    //Serial.printf("esp_wifi_set_channel failed! 0x%x", err);
   }
   
   err = esp_wifi_set_max_tx_power(espnow_wifi_power); // tra 8 e 84 corrispondenti a 2dbm a 20 dbm);
   if (err != ESP_OK) {
-    Serial.printf("esp_wifi_set_max_tx_power failed! 0x%x", err);
+    //Serial.printf("esp_wifi_set_max_tx_power failed! 0x%x", err);
   }
 
   WiFi.disconnect();  // ???
@@ -396,7 +396,7 @@ void SerialWireless_::begin() {
     
   err = esp_now_init();
   if (err != ESP_OK) {
-    Serial.printf("esp_now_init failed! 0x%x", err);
+    //Serial.printf("esp_now_init failed! 0x%x", err);
   }
 
   if (lastDongleSave) {
@@ -411,17 +411,17 @@ void SerialWireless_::begin() {
   peerInfo.channel = espnow_wifi_channel;
   peerInfo.encrypt = false;
   if (esp_now_add_peer(&peerInfo) != ESP_OK) {
-    Serial.println("Errore nell'aggiunta del peer");
+    //Serial.println("Errore nell'aggiunta del peer");
   }
 
   err = esp_now_register_recv_cb(_esp_now_rx_cb);
   if (err != ESP_OK) {
-    Serial.printf("esp_now_register_recv_cb failed! 0x%x", err);
+    //Serial.printf("esp_now_register_recv_cb failed! 0x%x", err);
   }
 
   err = esp_now_register_send_cb(_esp_now_tx_cb);
   if (err != ESP_OK) {
-    Serial.printf("esp_now_register_send_cb failed! 0x%x", err);
+    //Serial.printf("esp_now_register_send_cb failed! 0x%x", err);
   }
 
   myConfig.port         = &Serial; // questo andrà tolta - rimasta solo per contabilità =========================================
@@ -443,7 +443,7 @@ bool SerialWireless_::end() {
   esp_now_del_peer(peerAddress);
   esp_err_t err = esp_now_deinit();
   if (err != ESP_OK) {
-    Serial.printf("esp_now_deinit failed! 0x%x", err);
+    //Serial.printf("esp_now_deinit failed! 0x%x", err);
     return false;
   }
   WiFi.disconnect(true);
@@ -618,6 +618,7 @@ void packet_callback_read_dongle() {
   switch (SerialWireless.packet.currentPacketID()) {
     case PACKET_TX::SERIAL_TX:
       Serial.write(&SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead);
+      Serial.flush(); // ????
       break;
     case PACKET_TX::MOUSE_TX :
       usbHid.sendReport(HID_RID_e::HID_RID_MOUSE, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead);  

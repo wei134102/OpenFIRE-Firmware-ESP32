@@ -10,7 +10,13 @@
 #define SSD1306_NO_SPLASH
 
 #include <Arduino.h>
-#include <Adafruit_GFX.h>
+
+#ifdef LOVYAN_GFX
+  // nulla ???
+#else
+  #include <Adafruit_GFX.h>
+#endif
+
 #include <Wire.h>
 #include <TinyUSB_Devices.h>
 
@@ -31,7 +37,11 @@ bool ExtDisplay::Begin()
     if(OF_Prefs::pins[OF_Const::periphSCL] >= 0 && OF_Prefs::pins[OF_Const::periphSDA] >= 0) {
       #ifdef ARDUINO_ARCH_ESP32
         Wire1.setPins(OF_Prefs::pins[OF_Const::periphSDA], OF_Prefs::pins[OF_Const::periphSCL]);  // 696969 per esp32
+        #ifdef LOVYAN_GFX
+        display = new LGFX_SSD1306(1/*i2c_port wire_1*/,OF_Prefs::pins[OF_Const::periphSDA], OF_Prefs::pins[OF_Const::periphSCL], OF_Prefs::toggles[OF_Const::i2cOLEDaltAddr] ? 0x3D : 0x3C);
+        #else
         display = new Adafruit_SSD1306(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire1, -1);
+        #endif
       #else // rp2040
         if(bitRead(OF_Prefs::pins[OF_Const::periphSCL], 1) && bitRead(OF_Prefs::pins[OF_Const::periphSDA], 1)) {
             // I2C1
@@ -55,7 +65,11 @@ bool ExtDisplay::Begin()
       #endif
     } else return false;
 
+    #ifdef LOVYAN_GFX
+    if(display->init()) {
+    #else
     if(display->begin(SSD1306_SWITCHCAPVCC, OF_Prefs::toggles[OF_Const::i2cOLEDaltAddr] ? 0x3D : 0x3C)) {
+    #endif    
         display->clearDisplay();
         ScreenModeChange(Screen_None);
         return true;

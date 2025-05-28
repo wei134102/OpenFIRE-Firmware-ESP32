@@ -10,12 +10,48 @@
 #define _OPENFIREDISPLAY_H_
 
 #include <stdint.h>
-#include <Adafruit_SSD1306.h>
+
+#ifdef LOVYAN_GFX
+    #include <LovyanGFX.hpp>
+#else
+    #include <Adafruit_SSD1306.h>
+#endif
 
 #include "OpenFIREDefines.h"
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
+
+#ifdef LOVYAN_GFX
+
+#define BLACK TFT_BLACK   ///< Draw 'off' pixels
+#define WHITE TFT_WHITE   ///< Draw 'on' pixels
+
+class LGFX_SSD1306 : public lgfx::LGFX_Device
+{
+  lgfx::Panel_SSD1306 _panel_instance; // Pannello SSD1306
+  lgfx::Bus_I2C _bus_instance;         // Bus I2C
+
+public:
+  LGFX_SSD1306(int i2c_port, int sda, int scl, uint8_t i2c_addr) //, int width, int height) IN AUTOMATICO DAL PANNELLO 128X64
+  {
+    auto cfg = _bus_instance.config();
+    cfg.i2c_port = i2c_port;  // Porta I2C (0 o 1)
+    cfg.pin_sda = sda;        // Pin SDA dinamico
+    cfg.pin_scl = scl;        // Pin SCL dinamico
+    cfg.i2c_addr = i2c_addr;  // Indirizzo del display (es. 0x3C o 0x3D)
+
+    _bus_instance.config(cfg);
+    _panel_instance.setBus(&_bus_instance);
+    //_panel_instance.setPanelSize(width, height);
+    _panel_instance.setRotation(2); // 2 = 180 GRADI
+    _panel_instance.setBrightness(255);
+
+    setPanel(&_panel_instance); // Associa il pannello alla classe
+  }
+};
+
+#endif //LOVYAN_GFX
 
 class ExtDisplay {
 public:
@@ -94,7 +130,11 @@ public:
         ScreenSerial_Both
     };
 
-    Adafruit_SSD1306 *display = nullptr;
+    #ifdef LOVYAN_GFX
+        LGFX_SSD1306 *display = nullptr;
+    #else
+        Adafruit_SSD1306 *display = nullptr;
+    #endif
 
     /// @brief Whether life updates are in lifebar or life glyphs form
     bool lifeBar = false;
