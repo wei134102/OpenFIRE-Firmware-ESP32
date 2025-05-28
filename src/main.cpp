@@ -240,7 +240,7 @@ void setup() {
 #ifdef USE_TINYUSB
         #if defined(ARDUINO_RASPBERRY_PI_PICO_W) && defined(ENABLE_CLASSIC)
         // is VBUS (USB voltage) detected?
-        if(digitalRead(34)) {
+        if(digitalRead(34) || true) { // digitalRead(34) non funziona e non è il metodo corretto
             // If so, we're connected via USB, so initializing the USB devices chunk.
             TinyUSBDevices.begin(POLL_RATE); // 696969 inserito questo al posto di quello sotto
             // TUSBDeviceSetup.begin(1); // 696969 tolto ancora non fatta completa transizione
