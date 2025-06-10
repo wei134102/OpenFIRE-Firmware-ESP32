@@ -14,17 +14,12 @@
 #define _OPENFIREBOARD_H_
 
 //// COMPATIBILIY FLAGS
-#if defined(ARDUINO_ARCH_RP2040)
+#if defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_ESP32)
     // DFRobot IR camera IIC clock
     // even with cheap clips and the full length IR cam cable 1MHz is fine
     #define DFROBOT_IR_IIC_CLOCK 1000000
 
     // software button anti-glitch
-    #define BTN_AG_MASK 0xFFFFFFFF
-    #define BTN_AG_MASK2 0xFFFFFFFF
-#elif defined(ARDUINO_ARCH_ESP32)
-    #define DFROBOT_IR_IIC_CLOCK 1000000
-    //#define SAMCO_EEPROM_ENABLE 1
     #define BTN_AG_MASK 0xFFFFFFFF
     #define BTN_AG_MASK2 0xFFFFFFFF
 #else
