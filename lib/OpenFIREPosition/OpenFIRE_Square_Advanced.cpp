@@ -224,14 +224,6 @@ void OpenFIRE_Square::Kalman_filter() {
 #define C 2
 #define D 3
 #include <climits>
-// --- Funzione Ausiliaria ---
-// Calcola la distanza al quadrato tra due punti per evitare l'uso di 'sqrt'
-// e prevenire overflow usando 'long long'.
-long long distance_squared(int x1, int y1, int x2, int y2) {
-    long long dx = x1 - x2;
-    long long dy = y1 - y2;
-    return dx * dx + dy * dy;
-}
 
 void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {  
 
@@ -266,67 +258,10 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
     
     /// ===== CODICE MIO PER 2 SENSORI VISTI ==========================================
     #ifdef COMMENTO
-    {
+    
   // controlla se siamo nel lato corto o nel lato lungo
 
   // All'interno di if (num_points_seen == 2)
-
-
-// inizio gemini
-  // Si usa int32_t come richiesto. Con un range di +/- 5000 per le coordinate, è sicuro.
-int32_t dx = (int32_t)positionXX[0] - positionXX[1];
-int32_t dy = (int32_t)positionYY[0] - positionYY[1];
-int32_t current_dist_sq = dx * dx + dy * dy;
-
-// --- Calcolo dimensioni precedenti ---
-dx = (int32_t)FinalX[A] - FinalX[B];
-dy = (int32_t)FinalY[A] - FinalY[B];
-int32_t last_side_AB_sq = dx * dx + dy * dy;
-
-dx = (int32_t)FinalX[C] - FinalX[D];
-dy = (int32_t)FinalY[C] - FinalY[D];
-int32_t last_side_CD_sq = dx * dx + dy * dy;
-
-dx = (int32_t)FinalX[A] - FinalX[C];
-dy = (int32_t)FinalY[A] - FinalY[C];
-int32_t last_side_AC_sq = dx * dx + dy * dy;
-
-dx = (int32_t)FinalX[B] - FinalX[D];
-dy = (int32_t)FinalY[B] - FinalY[D];
-int32_t last_side_BD_sq = dx * dx + dy * dy;
-
-int32_t last_avg_width_sq = (last_side_AB_sq + last_side_CD_sq) / 2;
-int32_t last_avg_height_sq = (last_side_AC_sq + last_side_BD_sq) / 2;
-
-int32_t last_short_side_sq;
-int32_t last_long_side_sq;
-if (last_avg_width_sq < last_avg_height_sq) {
-    last_short_side_sq = last_avg_width_sq;
-    last_long_side_sq = last_avg_height_sq;
-} else {
-    last_short_side_sq = last_avg_height_sq;
-    last_long_side_sq = last_avg_width_sq;
-}
-
-// --- Calcolo diagonale media ---
-dx = (int32_t)FinalX[A] - FinalX[D];
-dy = (int32_t)FinalY[A] - FinalY[D];
-int32_t last_diag_AD_sq = dx * dx + dy * dy;
-
-dx = (int32_t)FinalX[B] - FinalX[C];
-dy = (int32_t)FinalY[B] - FinalY[C];
-int32_t last_diag_BC_sq = dx * dx + dy * dy;
-
-int32_t last_avg_diag_sq = (last_diag_AD_sq + last_diag_BC_sq) / 2;
-
-// --- Confronto ---
-int32_t diff_as_short = abs(current_dist_sq - last_short_side_sq);
-int32_t diff_as_long = abs(current_dist_sq - last_long_side_sq);
-int32_t diff_as_diag = abs(current_dist_sq - last_avg_diag_sq);
-
-// fine gemini  
-
-
 
   // 1. Calcola i componenti dei vettori CA e CB (risultati interi)
   int32_t vec_CA_x = positionXX[0] - medianX;
@@ -438,15 +373,78 @@ int32_t diff_as_diag = abs(current_dist_sq - last_avg_diag_sq);
 }
 
 #endif // COMMENTO
+//fine codice mio
 
-
-
-// All'interno di if (num_points_seen == 2)
+// codice gemini
+#ifndef COMMENTO
 
 // 1. Calcola la distanza al quadrato del segmento VISIBILE ORA.
 int32_t dx = (int32_t)positionXX[0] - positionXX[1];
 int32_t dy = (int32_t)positionYY[0] - positionYY[1];
 int32_t current_dist_sq = dx * dx + dy * dy;
+
+////////////////////////// aggiunta per vertici opposti ////////////////////////////////////////
+
+// 1b. Calcola le dimensioni di riferimento (lati e diagonale) dall'ultimo frame valido (FinalX/Y)
+dx = (int32_t)FinalX[A] - FinalX[B]; dy = (int32_t)FinalY[A] - FinalY[B];
+int32_t last_avg_width_sq = dx * dx + dy * dy; // Riferimento per il lato "larghezza"
+
+dx = (int32_t)FinalX[A] - FinalX[C]; dy = (int32_t)FinalY[A] - FinalY[C];
+int32_t last_avg_height_sq = dx * dx + dy * dy; // Riferimento per il lato "altezza"
+
+// Calcolo la diagonale al quadrato con Pitagora
+int32_t last_diagonal_sq = last_avg_width_sq + last_avg_height_sq;
+
+// 1c. Confronta la distanza attuale con i 3 riferimenti per decidere il caso
+int32_t diff_as_width = abs(current_dist_sq - last_avg_width_sq);
+int32_t diff_as_height = abs(current_dist_sq - last_avg_height_sq);
+int32_t diff_as_diag = abs(current_dist_sq - last_diagonal_sq);
+
+// --- Parte 2: Esecuzione della Logica Corretta in base al caso ---
+
+if (diff_as_diag < diff_as_width && diff_as_diag < diff_as_height)
+{
+    // CASO 1: I PUNTI VISTI SONO UNA DIAGONALE (VERTICI OPPOSTI)
+    // Eseguiamo la ricostruzione geometrica (assumendo un quadrato per semplicità e robustezza)
+    // Questa logica è stateless e corregge ogni errore di drift accumulato.
+
+    const int32_t p1_x = positionXX[0];
+    const int32_t p1_y = positionYY[0];
+    const int32_t p2_x = positionXX[1];
+    const int32_t p2_y = positionYY[1];
+
+    // 1. Trova il centro della diagonale
+    const int32_t center_x = (p1_x + p2_x) / 2;
+    const int32_t center_y = (p1_y + p2_y) / 2;
+
+    // 2. Calcola il vettore dal centro a p1
+    const int32_t vec_x = p1_x - center_x;
+    const int32_t vec_y = p1_y - center_y;
+
+    // 3. Ruota il vettore di 90 gradi
+    const int32_t rotated_vec_x = -vec_y;
+    const int32_t rotated_vec_y = vec_x;
+
+    // 4. Calcola i due punti mancanti
+    const int32_t p3_x = center_x + rotated_vec_x;
+    const int32_t p3_y = center_y + rotated_vec_y;
+    const int32_t p4_x = center_x - rotated_vec_x;
+    const int32_t p4_y = center_y - rotated_vec_y;
+    
+    // 5. Aggiorna TUTTI e 4 i punti.
+    // L'assegnamento corretto agli indici A,B,C,D richiederebbe un ulteriore
+    // passaggio di "matching" con le posizioni precedenti (FinalX/Y).
+    // Per ora, questo codice popola i 4 slot con una stima geometricamente perfetta
+    // e con un ordinamento coerente (es. orario).
+    positionXX[0] = p1_x; positionYY[0] = p1_y;
+    positionXX[1] = p3_x; positionYY[1] = p3_y;
+    positionXX[2] = p2_x; positionYY[2] = p2_y;
+    positionXX[3] = p4_x; positionYY[3] = p4_y;
+
+}
+else 
+{
+////////////////////////////////////////////////////////////////////////////////////////////////
 
 // 2. CALCOLA ON-DEMAND le dimensioni medie dei lati al quadrato dall'ultimo frame valido.
 dx = (int32_t)FinalX[A] - FinalX[B]; dy = (int32_t)FinalY[A] - FinalY[B];
@@ -633,155 +631,12 @@ if (diff_as_short < diff_as_long) {
 // Qui inizia il resto della logica di stima dei punti mancanti,
 // usando P1 e P2 appena determinati...
 
-
-
-
-
-////////////////////////////////////
-
-
-#ifdef COMMENTO
-
-// 4. Prendi la decisione e usa la logica 'sum' per i dettagli.
-if (diff_as_short < diff_as_long) {
-// È un LATO CORTO (AB o CD).
-    // ORA, scopriamo quale dei due è, confrontando la sua posizione
-    // con la posizione dei lati corti del frame precedente.
-
-    // a) Calcola il punto medio del lato che vediamo ORA.
-    int32_t mid_now_x = (positionXX[0] + positionXX[1]) / 2;
-    int32_t mid_now_y = (positionYY[0] + positionYY[1]) / 2;
-
-    // b) Calcola il punto medio del lato AB del frame PRECEDENTE.
-    int32_t mid_AB_x = (FinalX[A] + FinalX[B]) / 2;
-    int32_t mid_AB_y = (FinalY[A] + FinalY[B]) / 2;
-
-    // c) Calcola il punto medio del lato CD del frame PRECEDENTE.
-    int32_t mid_CD_x = (FinalX[C] + FinalX[D]) / 2;
-    int32_t mid_CD_y = (FinalY[C] + FinalY[D]) / 2;
-
-    // d) Calcola la distanza (al quadrato) dal punto medio attuale ai due vecchi.
-    dx = mid_now_x - mid_AB_x; dy = mid_now_y - mid_AB_y;
-    int32_t dist_to_AB_sq = dx * dx + dy * dy;
-
-    dx = mid_now_x - mid_CD_x; dy = mid_now_y - mid_CD_y;
-    int32_t dist_to_CD_sq = dx * dx + dy * dy;
-
-     // e) Il lato attuale è quello a cui è più vicino.
-    if (dist_to_AB_sq < dist_to_CD_sq) {
-        // Il lato attuale è AB.
-        // ... La tua logica per assegnare P1=A, P2=B e ordinare i punti ...
-    // trattasi di AB
-    // FARE CONTROLLO SU COORDINATA 'X' PER CAPIRE L'ORDINE DI A B
-    P1 = 0, P2 = 1;
-    if (P1x < P2x) {
-        positionXX[P1] = P1x;
-        positionYY[P1] = P1y;
-        positionXX[P2] = P2x;
-        positionYY[P2] = P2y;
-    } else {
-        positionXX[P1] = P2x;
-        positionYY[P1] = P2y;
-        positionXX[P2] = P1x;
-        positionYY[P2] = P1y;
-    }
-
-    } else {
-        // Il lato attuale è CD.
-        // ... La tua logica per assegnare P1=C, P2=D e ordinare i punti ...
-            // trattasi di CD
-    // FARE CONTROLLO SU COORDINATA 'X' PER CAPIRE L'ORDINE DI C D
-    P1 = 2, P2 = 3;
-    if (P1x < P2x) {
-        positionXX[P1] = P1x;
-        positionYY[P1] = P1y;
-        positionXX[P2] = P2x;
-        positionYY[P2] = P2y;
-    } else {
-        positionXX[P1] = P2x;
-        positionYY[P1] = P2y;
-        positionXX[P2] = P1x;
-        positionYY[P2] = P1y;
-    }
-
-    } } else {
-    // È un LATO LUNGO (AC o BD). Applichiamo la stessa logica.
-
-    // a) Punto medio del lato attuale.
-    int32_t mid_now_x = (positionXX[0] + positionXX[1]) / 2;
-    int32_t mid_now_y = (positionYY[0] + positionYY[1]) / 2;
-
-    // b) Punto medio del vecchio lato AC.
-    int32_t mid_AC_x = (FinalX[A] + FinalX[C]) / 2;
-    int32_t mid_AC_y = (FinalY[A] + FinalY[C]) / 2;
-
-    // c) Punto medio del vecchio lato BD.
-    int32_t mid_BD_x = (FinalX[B] + FinalX[D]) / 2;
-    int32_t mid_BD_y = (FinalY[B] + FinalY[D]) / 2;
-    
-    // d) Distanze al quadrato.
-    dx = mid_now_x - mid_AC_x; dy = mid_now_y - mid_AC_y;
-    int32_t dist_to_AC_sq = dx * dx + dy * dy;
-
-    dx = mid_now_x - mid_BD_x; dy = mid_now_y - mid_BD_y;
-    int32_t dist_to_BD_sq = dx * dx + dy * dy;
-
-    // e) Decisione.
-    if (dist_to_AC_sq < dist_to_BD_sq) {
-        // Il lato attuale è AC.
-        // ... La tua logica per assegnare P1=A, P2=C e ordinare i punti ...
-        // trattasi di AC
-        // FARE CONTROLLO SU ALTEZZA 'Y' PER CAPIRE L'ORDINE DI A C
- 
-        P1 = 0, P2 = 2;
-    if (P1y < P2y) {
-        positionXX[P1] = P1x;
-        positionYY[P1] = P1y;
-        positionXX[P2] = P2x;
-        positionYY[P2] = P2y;
-    } else {
-        positionXX[P1] = P2x;
-        positionYY[P1] = P2y;
-        positionXX[P2] = P1x;
-        positionYY[P2] = P1y;
-    }        
-    } else {
-        // Il lato attuale è BD.
-        // ... La tua logica per assegnare P1=B, P2=D e ordinare i punti ...
-        // trattasi di BD
-        // FARE CONTROLLO SU ALTEZZA 'Y' PER CAPIRE L'ORDINE DI B D
-        P1 = 1, P2 = 3;
-    if (P1y < P2y) {
-        positionXX[P1] = P1x;
-        positionYY[P1] = P1y;
-        positionXX[P2] = P2x;
-        positionYY[P2] = P2y;
-    } else {
-        positionXX[P1] = P2x;
-        positionYY[P1] = P2y;
-        positionXX[P2] = P1x;
-        positionYY[P2] = P1y;
-    }
-
-    }
-}
-  
-  
+//} // messa per blocco if ipotesi vertici opposti
 #endif // COMMENTO
 
-
-
-
-
-
+////////////////////////////////////////////////////////////////////////////
 
 // ... Il resto della logica di stima dei punti mancanti prosegue da qui ...
-
-
-
-
-
-
 
     // stima i due vertici mancanti
 
@@ -864,17 +719,17 @@ if (diff_as_short < diff_as_long) {
     }
 
     // non ci dovrebbe essere bisogno idi ordinare logicamente positionXX e YY perchè dovrebbe essere già a posto
-
-
-
-
-
+} // messa per blocco if ipotesi vertici opposti
   
     } // FINE SOLO 2 PUNTI VISIBILI
         
     ////////// IN CASO DI SOLI 3 PUNTI ////// CALCOLA IL QUARTO ////////////////////////
     if (num_points_seen == 3)  // 3 PUNTII VISIBILI, BISOGNA STIMARNE 1
     {
+
+
+
+#ifdef COMMENTO
     // --- FASE 1: Identificazione della diagonale ---
     // Le differenze possono essere int
     int32_t dx, dy;
@@ -911,7 +766,56 @@ if (diff_as_short < diff_as_long) {
         positionXX[3] = positionXX[0] + positionXX[1] - positionXX[2];
         positionYY[3] = positionYY[0] + positionYY[1] - positionYY[2];
     }
-    }
+    #endif //COMMENTO
+
+    #ifndef COMMENTO
+// Inizio del blocco di codice.
+
+// --- 1. Calcola le lunghezze al quadrato con interi a 32 bit ---
+int32_t dx01 = positionXX[0] - positionXX[1];
+int32_t dy01 = positionYY[0] - positionYY[1];
+int32_t d01_sq = dx01 * dx01 + dy01 * dy01;
+
+int32_t dx12 = positionXX[1] - positionXX[2];
+int32_t dy12 = positionYY[1] - positionYY[2];
+int32_t d12_sq = dx12 * dx12 + dy12 * dy12;
+
+int32_t dx02 = positionXX[0] - positionXX[2];
+int32_t dy02 = positionYY[0] - positionYY[2];
+int32_t d02_sq = dx02 * dx02 + dy02 * dy02;
+
+
+// --- 2. Identifica gli indici dei punti A, B, C ---
+// Il perno B è il vertice opposto al lato più lungo del triangolo.
+int32_t a_idx, c_idx, b_idx;
+
+if (d01_sq >= d12_sq && d01_sq >= d02_sq) {
+    // Il lato più lungo è tra 0 e 1. Il perno (B) è il punto 2.
+    a_idx = 0;
+    c_idx = 1;
+    b_idx = 2;
+} else if (d12_sq >= d02_sq) {
+    // Il lato più lungo è tra 1 e 2. Il perno (B) è il punto 0.
+    a_idx = 1;
+    c_idx = 2;
+    b_idx = 0;
+} else {
+    // Il lato più lungo è tra 0 e 2. Il perno (B) è il punto 1.
+    a_idx = 0;
+    c_idx = 2;
+    b_idx = 1;
+}
+
+// --- 3. Applica la stima e salva il risultato direttamente ---
+positionXX[3] = positionXX[a_idx] + positionXX[c_idx] - positionXX[b_idx];
+positionYY[3] = positionYY[a_idx] + positionYY[c_idx] - positionYY[b_idx];
+
+// Fine del blocco di codice.
+
+    #endif //COMMENTO
+
+
+}
  
     ///////////// FINE 3 SENSORI VISTI ///////////////////////
     
