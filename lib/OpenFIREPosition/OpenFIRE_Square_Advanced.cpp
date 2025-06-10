@@ -213,539 +213,348 @@ void OpenFIRE_Square::Kalman_filter() {
     } // Fine del ciclo for point_idx
 }
 
-
-////////////////////////////////////////////////////////////////////////////////////
-/////////// roba mia funzionante finoa a 3 punti ///////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////
-
 // Definizione degli indici per chiarezza
 #define A 0
 #define B 1
 #define C 2
 #define D 3
-#include <climits>
 
-void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {  
+void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
 
+    // --- FASE 0: Inizializzazione e Controllo di Visibilità ---
+    
     seenFlags = seen;
 
-    // Verifica che tutti i sensori siano visibili
-    if (seenFlags == 0x0F) {
+    // Il sistema richiede di vedere tutti e 4 i sensori almeno una volta per inizializzarsi.
+    if (seenFlags == 0x0F) { // 0x0F in binario è 1111, tutti i sensori visti.
         start = 0xFF;
     } else if (!start) {
-        return;  // Esci se non tutti i sensori sono stati visti
+        return; // Esci se non siamo ancora stati inizializzati.
     }
 
+    // --- FASE 1: Estrazione e Pre-elaborazione dei Punti Visti ---
 
-    //if (seenFlags == 0x0F) {
+    int num_points_seen = 0;
+    int32_t positionXX[4]; // Usiamo int32_t per coerenza con i calcoli
+    int32_t positionYY[4];
 
-
-     int num_points_seen = 0;
-
-      // Estrai i punti visti e applica lo shift
+    // Estrae i punti visibili, li mette negli array di lavoro e applica la trasformazione.
     for (int i = 0; i < 4; ++i) {
-        if ((seen >> i) & 0x01) { // Usa il parametro 'seen' qui
+        if ((seen >> i) & 0x01) {
             positionXX[num_points_seen] = (CamMaxX - px[i]) << CamToMouseShift;
             positionYY[num_points_seen] = py[i] << CamToMouseShift;
             num_points_seen++;
         }
     }
 
+    // Procede solo se abbiamo abbastanza dati per lavorare (almeno 2 punti).
     if (num_points_seen > 1) {
     
-    if (num_points_seen == 2) { // SOLO 2 PUNTI VISIBILI, BISOGNA STIMARNE 2
-// --- INIZIO BLOCCO FINALE GESTIONE 2 SENSORI (IBRIDO E OTTIMIZZATO) ---
-// OBIETTIVO:
-// 1. Capire se i due punti visti sono adiacenti (un lato) o opposti (una diagonale).
-// 2. Se sono una diagonale, usare una ricostruzione geometrica "stateless" per resettare l'errore.
-// 3. Se sono un lato, usare una logica di tracking "temporale" ottimizzata per stimare i punti mancanti.
+        // Dichiarazione di tutte le variabili locali usate nei vari blocchi logici.
+        // Questo risolve gli errori di "scope" (variabile non dichiarata).
+        int32_t dx, dy;
+        int a, b, c, d;
+        int P1, P2;
 
-// --- FASE 1: Discriminatore a 3 Vie (Larghezza vs Altezza vs Diagonale) ---
+        // --- FASE 2: Stima dei Punti Mancanti (se necessario) ---
 
-// 1a. Calcola la distanza al quadrato del segmento che vediamo ora.
-int32_t dx = positionXX[0] - positionXX[1];
-int32_t dy = positionYY[0] - positionYY[1];
-int32_t current_dist_sq = dx * dx + dy * dy;
+        if (num_points_seen == 2) {
+            // Se vediamo solo 2 punti, eseguiamo la logica ibrida.
+            
+            // 2a. Discriminatore Robusto (Tuo Metodo Originale)
+            int32_t current_dist_sq = (positionXX[0] - positionXX[1])*(positionXX[0] - positionXX[1]) + (positionYY[0] - positionYY[1])*(positionYY[0] - positionYY[1]);
+            
+            dx = FinalX[A] - FinalX[B]; dy = FinalY[A] - FinalY[B]; int32_t last_width1_sq = dx*dx+dy*dy;
+            dx = FinalX[C] - FinalX[D]; dy = FinalY[C] - FinalY[D]; int32_t last_width2_sq = dx*dx+dy*dy;
+            int32_t last_avg_width_sq = (last_width1_sq + last_width2_sq) / 2;
 
-// 1b. Calcola le dimensioni di riferimento dall'ultimo frame valido (FinalX/Y).
-dx = FinalX[A] - FinalX[B]; dy = FinalY[A] - FinalY[B];
-int32_t last_avg_width_sq = dx * dx + dy * dy;
+            dx = FinalX[A] - FinalX[C]; dy = FinalY[A] - FinalY[C]; int32_t last_height1_sq = dx*dx+dy*dy;
+            dx = FinalX[B] - FinalX[D]; dy = FinalY[B] - FinalY[D]; int32_t last_height2_sq = dx*dx+dy*dy;
+            int32_t last_avg_height_sq = (last_height1_sq + last_height2_sq) / 2;
 
-dx = FinalX[A] - FinalX[C]; dy = FinalY[A] - FinalY[C];
-int32_t last_avg_height_sq = dx * dx + dy * dy;
+            dx = FinalX[A] - FinalX[D]; dy = FinalY[A] - FinalY[D]; int32_t last_diag1_sq = dx*dx+dy*dy;
+            dx = FinalX[B] - FinalX[C]; dy = FinalY[B] - FinalY[C]; int32_t last_diag2_sq = dx*dx+dy*dy;
+            int32_t last_avg_diagonal_sq = (last_diag1_sq + last_diag2_sq) / 2;
+            
+            int32_t diff_as_width = abs(current_dist_sq - last_avg_width_sq);
+            int32_t diff_as_height = abs(current_dist_sq - last_avg_height_sq);
+            int32_t diff_as_diag = abs(current_dist_sq - last_avg_diagonal_sq);
 
-// Calcolo la diagonale al quadrato con Pitagora.
-int32_t last_diagonal_sq = last_avg_width_sq + last_avg_height_sq;
+            // 2b. Esecuzione della logica corretta
+            if (diff_as_diag < diff_as_width && diff_as_diag < diff_as_height)
+            {
+                // CASO 1: VISTA DIAGONALE (Logica Adattiva con Controllo di Orientamento)
+                int P3_adj;
+                int32_t mid_now_x = (positionXX[0] + positionXX[1]) / 2;
+                int32_t mid_now_y = (positionYY[0] + positionYY[1]) / 2;
+                int32_t mid_AD_x = (FinalX[A] + FinalX[D]) / 2;
+                int32_t mid_AD_y = (FinalY[A] + FinalY[D]) / 2;
+                int32_t mid_BC_x = (FinalX[B] + FinalX[C]) / 2;
+                int32_t mid_BC_y = (FinalY[B] + FinalY[C]) / 2;
+                int32_t dist_to_AD_sq = (mid_now_x - mid_AD_x)*(mid_now_x - mid_AD_x) + (mid_now_y - mid_AD_y)*(mid_now_y - mid_AD_y);
+                int32_t dist_to_BC_sq = (mid_now_x - mid_BC_x)*(mid_now_x - mid_BC_x) + (mid_now_y - mid_BC_y)*(mid_now_y - mid_BC_y);
 
-// 1c. Confronta la distanza attuale con i 3 riferimenti.
-int32_t diff_as_width = abs(current_dist_sq - last_avg_width_sq);
-int32_t diff_as_height = abs(current_dist_sq - last_avg_height_sq);
-int32_t diff_as_diag = abs(current_dist_sq - last_diagonal_sq);
+                if (dist_to_AD_sq < dist_to_BC_sq) { P1 = A; P2 = D; P3_adj = B; }
+                else { P1 = B; P2 = C; P3_adj = A; }
 
+                int32_t new_p1x, new_p1y, new_p2x, new_p2y;
+                dx = positionXX[0] - FinalX[P1]; dy = positionYY[0] - FinalY[P1]; int32_t dist_sq_0_p1 = dx*dx + dy*dy;
+                dx = positionXX[0] - FinalX[P2]; dy = positionYY[0] - FinalY[P2]; int32_t dist_sq_0_p2 = dx*dx + dy*dy;
 
-// --- FASE 2: Esecuzione della Logica Corretta in base al caso ---
+                if(dist_sq_0_p1 < dist_sq_0_p2) {
+                    new_p1x = positionXX[0]; new_p1y = positionYY[0]; new_p2x = positionXX[1]; new_p2y = positionYY[1];
+                } else {
+                    new_p1x = positionXX[1]; new_p1y = positionYY[1]; new_p2x = positionXX[0]; new_p2y = positionYY[0];
+                }
 
-if (diff_as_diag < diff_as_width && diff_as_diag < diff_as_height)
-{
-   // === CASO 1: I PUNTI VISTI SONO UNA DIAGONALE (LOGICA ADATTIVA E ROBUSTA) ===
-    // Questa logica "impara" la forma del rettangolo dall'ultimo frame valido
-    // e applica la trasformazione attuale (scala+rotazione) per stimare i punti mancanti.
+                int32_t old_p1x = FinalX[P1], old_p1y = FinalY[P1];
+                int32_t old_p2x = FinalX[P2], old_p2y = FinalY[P2];
+                int32_t old_p3x = FinalX[P3_adj], old_p3y = FinalY[P3_adj];
+                int32_t vec_diag_orig_x = old_p2x - old_p1x, vec_diag_orig_y = old_p2y - old_p1y;
+                int32_t vec_diag_new_x = new_p2x - new_p1x, vec_diag_new_y = new_p2y - new_p1y;
+                int32_t vec_adj_orig_x = old_p3x - old_p1x, vec_adj_orig_y = old_p3y - old_p1y;
 
-    // --- Sotto-Fase A: Identificazione della diagonale e dei punti visti ---
-    int P1, P2; // Indici dei vertici della diagonale (es. A e C, oppure B e D)
-    int P3_adj; // Indice di un punto adiacente al primo punto della diagonale
-    
-    // Identifichiamo QUALE diagonale stiamo vedendo (AC o BD) tramite prossimità del punto medio
-    int32_t mid_now_x = (positionXX[0] + positionXX[1]) / 2;
-    int32_t mid_now_y = (positionYY[0] + positionYY[1]) / 2;
-    int32_t mid_AC_x = (FinalX[A] + FinalX[C]) / 2;
-    int32_t mid_AC_y = (FinalY[A] + FinalY[C]) / 2;
-    int32_t mid_BD_x = (FinalX[B] + FinalX[D]) / 2;
-    int32_t mid_BD_y = (FinalY[B] + FinalY[D]) / 2;
-    int32_t dist_to_AC_sq = (mid_now_x - mid_AC_x)*(mid_now_x - mid_AC_x) + (mid_now_y - mid_AC_y)*(mid_now_y - mid_AC_y);
-    int32_t dist_to_BD_sq = (mid_now_x - mid_BD_x)*(mid_now_x - mid_BD_x) + (mid_now_y - mid_BD_y)*(mid_now_y - mid_BD_y);
+                float len_sq_orig = (float)vec_diag_orig_x * vec_diag_orig_x + (float)vec_diag_orig_y * vec_diag_orig_y;
+                float est_a = 1.0f, est_b = 0.0f;
 
-    if (dist_to_AC_sq < dist_to_BD_sq) {
-        // Stiamo vedendo la diagonale A-C
-        P1 = A; P2 = C; P3_adj = B; // Un vicino di A è B
-    } else {
-        // Stiamo vedendo la diagonale B-D
-        P1 = B; P2 = D; P3_adj = A; // Un vicino di B è A
-    }
+                if (len_sq_orig > 1e-5f) {
+                    float dot_product = (float)vec_diag_new_x * vec_diag_orig_x + (float)vec_diag_new_y * vec_diag_orig_y;
+                    float cross_product = (float)vec_diag_new_y * vec_diag_orig_x - (float)vec_diag_new_x * vec_diag_orig_y;
+                    est_a = dot_product / len_sq_orig;
+                    est_b = cross_product / len_sq_orig;
+                }
 
-    // Ora associamo i punti visti (0 e 1) ai loro indici corretti (es. A e C)
-    int32_t new_p1x, new_p1y, new_p2x, new_p2y;
-    int32_t dist_0_p1 = abs(positionXX[0] - FinalX[P1]);
-    int32_t dist_0_p2 = abs(positionXX[0] - FinalX[P2]);
-    if(dist_0_p1 < dist_0_p2) {
-        new_p1x = positionXX[0]; new_p1y = positionYY[0]; // position[0] è P1
-        new_p2x = positionXX[1]; new_p2y = positionYY[1]; // position[1] è P2
-    } else {
-        new_p1x = positionXX[1]; new_p1y = positionYY[1]; // position[1] è P1
-        new_p2x = positionXX[0]; new_p2y = positionYY[0]; // position[0] è P2
-    }
+                float vec_adj_new_x = est_a * (float)vec_adj_orig_x - est_b * (float)vec_adj_orig_y;
+                float vec_adj_new_y = est_b * (float)vec_adj_orig_x + est_a * (float)vec_adj_orig_y;
+                
+                int64_t old_orientation_sign = (int64_t)vec_diag_orig_x * vec_adj_orig_y - (int64_t)vec_diag_orig_y * vec_adj_orig_x;
+                int64_t new_orientation_sign = (int64_t)vec_diag_new_x * (int64_t)vec_adj_new_y - (int64_t)vec_diag_new_y * (int64_t)vec_adj_new_x;
 
-    // --- Sotto-Fase B: Stima tramite trasformazione vettoriale ---
-    int32_t old_p1x = FinalX[P1];
-    int32_t old_p1y = FinalY[P1];
-    int32_t old_p2x = FinalX[P2];
-    int32_t old_p2y = FinalY[P2];
-    int32_t old_p3x = FinalX[P3_adj];
-    int32_t old_p3y = FinalY[P3_adj];
-    
-    // Vettore della diagonale (vecchio e nuovo)
-    int32_t vec_diag_orig_x = old_p2x - old_p1x;
-    int32_t vec_diag_orig_y = old_p2y - old_p1y;
-    int32_t vec_diag_new_x = new_p2x - new_p1x;
-    int32_t vec_diag_new_y = new_p2y - new_p1y;
+                if ((old_orientation_sign > 0 && new_orientation_sign < 0) || (old_orientation_sign < 0 && new_orientation_sign > 0)) {
+                    vec_adj_new_x = -vec_adj_new_x; vec_adj_new_y = -vec_adj_new_y;
+                }
+                
+                int32_t estimated_p3x = (int32_t)(new_p1x + vec_adj_new_x + 0.5f);
+                int32_t estimated_p3y = (int32_t)(new_p1y + vec_adj_new_y + 0.5f);
+                int P4_idx = A + B + C + D - (P1 + P2 + P3_adj);
+                int32_t estimated_p4x = new_p1x + new_p2x - estimated_p3x;
+                int32_t estimated_p4y = new_p1y + new_p2y - estimated_p3y;
 
-    // Vettore di un lato adiacente (vecchio)
-    int32_t vec_adj_orig_x = old_p3x - old_p1x;
-    int32_t vec_adj_orig_y = old_p3y - old_p1y;
+                positionXX[P1] = new_p1x;       positionYY[P1] = new_p1y;
+                positionXX[P2] = new_p2x;       positionYY[P2] = new_p2y;
+                positionXX[P3_adj] = estimated_p3x; positionYY[P3_adj] = estimated_p3y;
+                positionXX[P4_idx] = estimated_p4x; positionYY[P4_idx] = estimated_p4y;
+            }
+            else 
+            {
+                // CASO 2: VISTA LATO ADIACENTE (Tua Logica Temporale Originale, più stabile)
+                const int32_t P1x = positionXX[0], P1y = positionYY[0];
+                const int32_t P2x = positionXX[1], P2y = positionYY[1];
+                const int32_t mid_now_x = (P1x + P2x) / 2;
+                const int32_t mid_now_y = (P1y + P2y) / 2;
 
-    // Calcola la trasformazione (scala+rotazione) dalla vecchia alla nuova diagonale
-    float len_sq_orig = (float)vec_diag_orig_x * vec_diag_orig_x + (float)vec_diag_orig_y * vec_diag_orig_y;
-    float a = 1.0f, b = 0.0f;
+                if (diff_as_width < diff_as_height) {
+                    // È un lato "larghezza" (orizzontale)
+                    bool is_AB_by_centroid = ((P1y - medianY) + (P2y - medianY)) < 0;
+                    int32_t mid_AB_x = (FinalX[A]+FinalX[B])/2, mid_AB_y = (FinalY[A]+FinalY[B])/2;
+                    int32_t mid_CD_x = (FinalX[C]+FinalX[D])/2, mid_CD_y = (FinalY[C]+FinalY[D])/2;
+                    int32_t dist_to_AB_sq = (mid_now_x-mid_AB_x)*(mid_now_x-mid_AB_x) + (mid_now_y-mid_AB_y)*(mid_now_y-mid_AB_y);
+                    int32_t dist_to_CD_sq = (mid_now_x-mid_CD_x)*(mid_now_x-mid_CD_x) + (mid_now_y-mid_CD_y)*(mid_now_y-mid_CD_y);
+                    bool is_AB_by_proximity = (dist_to_AB_sq < dist_to_CD_sq);
 
-    if (len_sq_orig > 1e-5f) {
-        float dot_product = (float)vec_diag_new_x * vec_diag_orig_x + (float)vec_diag_new_y * vec_diag_orig_y;
-        float cross_product = (float)vec_diag_new_y * vec_diag_orig_x - (float)vec_diag_new_x * vec_diag_orig_y;
-        a = dot_product / len_sq_orig;
-        b = cross_product / len_sq_orig;
-    }
+                    if (is_AB_by_centroid != is_AB_by_proximity) return; 
 
-    // Applica la stessa trasformazione al vettore del lato adiacente
-    float vec_adj_new_x = a * (float)vec_adj_orig_x - b * (float)vec_adj_orig_y;
-    float vec_adj_new_y = b * (float)vec_adj_orig_x + a * (float)vec_adj_orig_y;
-    
-    // Calcola le posizioni dei due punti mancanti
-    int32_t estimated_p3x = (int32_t)(new_p1x + vec_adj_new_x + 0.5f);
-    int32_t estimated_p3y = (int32_t)(new_p1y + vec_adj_new_y + 0.5f);
+                    if (is_AB_by_centroid) {
+                        P1 = A; P2 = B;
+                        if (P1x < P2x) { positionXX[P1] = P1x; positionYY[P1] = P1y; positionXX[P2] = P2x; positionYY[P2] = P2y; } 
+                        else { positionXX[P1] = P2x; positionYY[P1] = P2y; positionXX[P2] = P1x; positionYY[P2] = P1y; }
+                    } else {
+                        P1 = C; P2 = D;
+                        if (P1x < P2x) { positionXX[P1] = P1x; positionYY[P1] = P1y; positionXX[P2] = P2x; positionYY[P2] = P2y; } 
+                        else { positionXX[P1] = P2x; positionYY[P1] = P2y; positionXX[P2] = P1x; positionYY[P2] = P1y; }
+                    }
+                } else {
+                    // È un lato "altezza" (verticale)
+                    bool is_AC_by_centroid = ((P1x - medianX) + (P2x - medianX)) < 0;
+                    int32_t mid_AC_x = (FinalX[A]+FinalX[C])/2, mid_AC_y = (FinalY[A]+FinalY[C])/2;
+                    int32_t mid_BD_x = (FinalX[B]+FinalX[D])/2, mid_BD_y = (FinalY[B]+FinalY[D])/2;
+                    int32_t dist_to_AC_sq = (mid_now_x-mid_AC_x)*(mid_now_x-mid_AC_x) + (mid_now_y-mid_AC_y)*(mid_now_y-mid_AC_y);
+                    int32_t dist_to_BD_sq = (mid_now_x-mid_BD_x)*(mid_now_x-mid_BD_x) + (mid_now_y-mid_BD_y)*(mid_now_y-mid_BD_y);
+                    bool is_AC_by_proximity = (dist_to_AC_sq < dist_to_BD_sq);
 
-    // L'ultimo punto si trova con la regola del parallelogramma (D = A + C - B)
-    // Se P1=A, P2=C, P3_adj=B, allora il punto mancante D = A+C-B
-    int P4_idx = A + C + D - (P1 + P2 + P3_adj); // Trova l'indice del 4o punto
-    int32_t estimated_p4x = new_p1x + new_p2x - estimated_p3x;
-    int32_t estimated_p4y = new_p1y + new_p2y - estimated_p3y;
+                    if (is_AC_by_centroid != is_AC_by_proximity) return; 
 
-    // Aggiorna i 4 punti nell'array positionXX/YY
-    positionXX[P1] = new_p1x; positionYY[P1] = new_p1y;
-    positionXX[P2] = new_p2x; positionYY[P2] = new_p2y;
-    positionXX[P3_adj] = estimated_p3x; positionYY[P3_adj] = estimated_p3y;
-    positionXX[P4_idx] = estimated_p4x; positionYY[P4_idx] = estimated_p4y;
-}
-else 
-{
-    // === CASO 2: I PUNTI VISTI SONO ADIACENTI (UN LATO) ===
-    // Si esegue la logica di tracking temporale, ora con la stima ottimizzata.
-    
-    int P1, P2; // Indici target (A,B,C,D) per i due punti visti
-    const int32_t P1x = positionXX[0]; 
-    const int32_t P1y = positionYY[0];
-    const int32_t P2x = positionXX[1]; 
-    const int32_t P2y = positionYY[1];
+                    if (is_AC_by_centroid) {
+                        P1 = A; P2 = C;
+                        if (P1y < P2y) { positionXX[P1] = P1x; positionYY[P1] = P1y; positionXX[P2] = P2x; positionYY[P2] = P2y; } 
+                        else { positionXX[P1] = P2x; positionYY[P1] = P2y; positionXX[P2] = P1x; positionYY[P2] = P1y; }
+                    } else {
+                        P1 = B; P2 = D;
+                        if (P1y < P2y) { positionXX[P1] = P1x; positionYY[P1] = P1y; positionXX[P2] = P2x; positionYY[P2] = P2y; }
+                        else { positionXX[P1] = P2x; positionYY[P1] = P2y; positionXX[P2] = P1x; positionYY[P2] = P1y; }
+                    }
+                }
+                
+                int32_t old_p1x = FinalX[P1], old_p1y = FinalY[P1];
+                int32_t old_p2x = FinalX[P2], old_p2y = FinalY[P2];
+                int32_t new_p1x = positionXX[P1], new_p1y = positionYY[P1];
+                int32_t new_p2x = positionXX[P2], new_p2y = positionYY[P2];
 
-    // --- Sotto-Fase A: Identificazione del Lato Specifico ---
-    
-    // Ottimizzazione: calcolo il punto medio una sola volta qui.
-    const int32_t mid_now_x = (P1x + P2x) / 2;
-    const int32_t mid_now_y = (P1y + P2y) / 2;
+                int P3_idx = -1;
+                if (P1 == A) { P3_idx = (P2 == B) ? C : B; }
+                else if (P1 == B) { P3_idx = (P2 == A) ? D : A; }
+                else if (P1 == C) { P3_idx = (P2 == A) ? D : A; }
+                else if (P1 == D) { P3_idx = (P2 == B) ? C : B; }
 
-    if (diff_as_width < diff_as_height) {
-        // È più probabile che sia un lato "larghezza" (orizzontale)
-        bool is_AB_by_centroid = ((positionYY[0] - medianY) + (positionYY[1] - medianY)) < 0;
-        int32_t mid_AB_x = (FinalX[A] + FinalX[B]) / 2;
-        int32_t mid_AB_y = (FinalY[A] + FinalY[B]) / 2;
-        int32_t mid_CD_x = (FinalX[C] + FinalX[D]) / 2;
-        int32_t mid_CD_y = (FinalY[C] + FinalY[D]) / 2;
-        int32_t dist_to_AB_sq = (mid_now_x - mid_AB_x)*(mid_now_x - mid_AB_x) + (mid_now_y - mid_AB_y)*(mid_now_y - mid_AB_y);
-        int32_t dist_to_CD_sq = (mid_now_x - mid_CD_x)*(mid_now_x - mid_CD_x) + (mid_now_y - mid_CD_y)*(mid_now_y - mid_CD_y);
-        bool is_AB_by_proximity = (dist_to_AB_sq < dist_to_CD_sq);
+                int32_t old_p3x = FinalX[P3_idx], old_p3y = FinalY[P3_idx];
+                int32_t vec_side_orig_x = old_p2x - old_p1x, vec_side_orig_y = old_p2y - old_p1y;
+                int32_t vec_adj_orig_x = old_p3x - old_p1x, vec_adj_orig_y = old_p3y - old_p1y;
+                int32_t vec_side_new_x = new_p2x - new_p1x, vec_side_new_y = new_p2y - new_p1y;
+                
+                float len_side_orig = sqrtf((float)vec_side_orig_x * vec_side_orig_x + (float)vec_side_orig_y * vec_side_orig_y);
+                float len_side_new = sqrtf((float)vec_side_new_x * vec_side_new_x + (float)vec_side_new_y * vec_side_new_y);
+                float scale = (len_side_orig > 1e-5f) ? (len_side_new / len_side_orig) : 1.0f;
+                float angle_side_orig = atan2f((float)vec_side_orig_y, (float)vec_side_orig_x);
+                float angle_side_new = atan2f((float)vec_side_new_y, (float)vec_side_new_x);
+                float rotation_delta = angle_side_new - angle_side_orig;
 
-        if (is_AB_by_centroid != is_AB_by_proximity) return; 
+                float cos_rot = cosf(rotation_delta);
+                float sin_rot = sinf(rotation_delta);
+                float vec_adj_new_x = ((float)vec_adj_orig_x * cos_rot - (float)vec_adj_orig_y * sin_rot) * scale;
+                float vec_adj_new_y = ((float)vec_adj_orig_x * sin_rot + (float)vec_adj_orig_y * cos_rot) * scale;
 
-        if (is_AB_by_centroid) {
-            P1 = A; P2 = B;
-            if (P1x < P2x) { positionXX[P1] = P1x; positionYY[P1] = P1y; positionXX[P2] = P2x; positionYY[P2] = P2y; } 
-            else { positionXX[P1] = P2x; positionYY[P1] = P2y; positionXX[P2] = P1x; positionYY[P2] = P1y; }
-        } else {
-            P1 = C; P2 = D;
-            if (P1x < P2x) { positionXX[P1] = P1x; positionYY[P1] = P1y; positionXX[P2] = P2x; positionYY[P2] = P2y; } 
-            else { positionXX[P1] = P2x; positionYY[P1] = P2y; positionXX[P2] = P1x; positionYY[P2] = P1y; }
+                int32_t estimated_p3x = (int32_t)(new_p1x + vec_adj_new_x + 0.5f);
+                int32_t estimated_p3y = (int32_t)(new_p1y + vec_adj_new_y + 0.5f);
+                int32_t estimated_p4x = (int32_t)(new_p2x + vec_adj_new_x + 0.5f);
+                int32_t estimated_p4y = (int32_t)(new_p2y + vec_adj_new_y + 0.5f);
+                
+                int P4_idx = A + B + C + D - (P1 + P2 + P3_idx);
+                for (int i = 0; i < 4; ++i) {
+                    if (i != P1 && i != P2) {
+                        if (i == P3_idx) { positionXX[i] = estimated_p3x; positionYY[i] = estimated_p3y; }
+                        else { positionXX[i] = estimated_p4x; positionYY[i] = estimated_p4y; }
+                    }
+                }
+            }
+        } 
+        else if (num_points_seen == 3)
+        {
+            // Se vediamo 3 punti, eseguiamo la stima semplice e veloce del quarto punto.
+            int32_t d01_sq, d12_sq, d02_sq;
+            
+            dx = positionXX[0] - positionXX[1]; dy = positionYY[0] - positionYY[1];
+            d01_sq = dx * dx + dy * dy;
+
+            dx = positionXX[1] - positionXX[2]; dy = positionYY[1] - positionYY[2];
+            d12_sq = dx * dx + dy * dy;
+
+            dx = positionXX[0] - positionXX[2]; dy = positionYY[0] - positionYY[2];
+            d02_sq = dx * dx + dy * dy;
+
+            int a_idx, b_idx, c_idx;
+
+            if (d01_sq >= d12_sq && d01_sq >= d02_sq) {
+                a_idx = 0; c_idx = 1; b_idx = 2;
+            }
+            else if (d12_sq >= d02_sq) {
+                a_idx = 1; c_idx = 2; b_idx = 0;
+            }
+            else {
+                a_idx = 0; c_idx = 2; b_idx = 1;
+            }
+            
+            positionXX[3] = positionXX[a_idx] + positionXX[c_idx] - positionXX[b_idx];
+            positionYY[3] = positionYY[a_idx] + positionYY[c_idx] - positionYY[b_idx];
         }
-    } else {
-        // È più probabile che sia un lato "altezza" (verticale)
-        bool is_AC_by_centroid = ((positionXX[0] - medianX) + (positionXX[1] - medianX)) < 0;
-        int32_t mid_AC_x = (FinalX[A] + FinalX[C]) / 2;
-        int32_t mid_AC_y = (FinalY[A] + FinalY[C]) / 2;
-        int32_t mid_BD_x = (FinalX[B] + FinalX[D]) / 2;
-        int32_t mid_BD_y = (FinalY[B] + FinalY[D]) / 2;
-        int32_t dist_to_AC_sq = (mid_now_x - mid_AC_x)*(mid_now_x - mid_AC_x) + (mid_now_y - mid_AC_y)*(mid_now_y - mid_AC_y);
-        int32_t dist_to_BD_sq = (mid_now_x - mid_BD_x)*(mid_now_x - mid_BD_x) + (mid_now_y - mid_BD_y)*(mid_now_y - mid_BD_y);
-        bool is_AC_by_proximity = (dist_to_AC_sq < dist_to_BD_sq);
 
-        if (is_AC_by_centroid != is_AC_by_proximity) return; 
+        // --- FASE 3: Ordinamento Finale dei 4 Punti ---
+        // Questa sezione viene eseguita sempre, per garantire che FinalX/Y
+        // abbiano sempre un ordine coerente A,B,C,D.
+        
+        int orderX[4] = {0, 1, 2, 3};
+        int orderY[4] = {0, 1, 2, 3};
 
-        if (is_AC_by_centroid) {
-            P1 = A; P2 = C;
-            if (P1y < P2y) { positionXX[P1] = P1x; positionYY[P1] = P1y; positionXX[P2] = P2x; positionYY[P2] = P2y; } 
-            else { positionXX[P1] = P2x; positionYY[P1] = P2y; positionXX[P2] = P1x; positionYY[P2] = P1y; }
-        } else {
-            P1 = B; P2 = D;
-            if (P1y < P2y) { positionXX[P1] = P1x; positionYY[P1] = P1y; positionXX[P2] = P2x; positionYY[P2] = P2y; }
-            else { positionXX[P1] = P2x; positionYY[P1] = P2y; positionXX[P2] = P1x; positionYY[P2] = P1y; }
+        // Ordinamento degli indici in base alla coordinata X (sorting network ottimizzato)
+        {
+            int tmp;
+            if (positionXX[orderX[0]] > positionXX[orderX[1]]) { tmp = orderX[0]; orderX[0] = orderX[1]; orderX[1] = tmp; }
+            if (positionXX[orderX[2]] > positionXX[orderX[3]]) { tmp = orderX[2]; orderX[2] = orderX[3]; orderX[3] = tmp; }
+            if (positionXX[orderX[0]] > positionXX[orderX[2]]) { tmp = orderX[0]; orderX[0] = orderX[2]; orderX[2] = tmp; }
+            if (positionXX[orderX[1]] > positionXX[orderX[3]]) { tmp = orderX[1]; orderX[1] = orderX[3]; orderX[3] = tmp; }
+            if (positionXX[orderX[1]] > positionXX[orderX[2]]) { tmp = orderX[1]; orderX[1] = orderX[2]; orderX[2] = tmp; }
         }
-    }
-    
-    // --- Sotto-Fase B: Stima Temporale Ottimizzata (Senza Trigonometria) ---
-    
-    int32_t old_p1x = FinalX[P1];
-    int32_t old_p1y = FinalY[P1];
-    int32_t old_p2x = FinalX[P2];
-    int32_t old_p2y = FinalY[P2];
 
-    int32_t new_p1x = positionXX[P1];
-    int32_t new_p1y = positionYY[P1];
-    int32_t new_p2x = positionXX[P2];
-    int32_t new_p2y = positionYY[P2];
+        // Ordinamento degli indici in base alla coordinata Y (sorting network ottimizzato)
+        {
+            int tmp;
+            if (positionYY[orderY[0]] > positionYY[orderY[1]]) { tmp = orderY[0]; orderY[0] = orderY[1]; orderY[1] = tmp; }
+            if (positionYY[orderY[2]] > positionYY[orderY[3]]) { tmp = orderY[2]; orderY[2] = orderY[3]; orderY[3] = tmp; }
+            if (positionYY[orderY[0]] > positionYY[orderY[2]]) { tmp = orderY[0]; orderY[0] = orderY[2]; orderY[2] = tmp; }
+            if (positionYY[orderY[1]] > positionYY[orderY[3]]) { tmp = orderY[1]; orderY[1] = orderY[3]; orderY[3] = tmp; }
+            if (positionYY[orderY[1]] > positionYY[orderY[2]]) { tmp = orderY[1]; orderY[1] = orderY[2]; orderY[2] = tmp; }
+        }
 
-    int P3_idx = -1;
-    if (P1 == A)      { P3_idx = (P2 == B) ? C : B; }
-    else if (P1 == B) { P3_idx = (P2 == A) ? D : A; }
-    else if (P1 == C) { P3_idx = (P2 == A) ? D : A; }
-    else if (P1 == D) { P3_idx = (P2 == B) ? C : B; }
+        // Assegnazione dei vertici A,B,C,D tramite euristiche
+        int32_t dist_sq1, dist_sq2;
 
-    int32_t old_p3x = FinalX[P3_idx];
-    int32_t old_p3y = FinalY[P3_idx];
+        dx = positionXX[orderY[0]] - positionXX[orderX[0]];
+        dy = positionYY[orderY[0]] - positionYY[orderX[0]];
+        dist_sq1 = (dx * dx) + (dy * dy);
 
-    int32_t vec_side_orig_x = old_p2x - old_p1x;
-    int32_t vec_side_orig_y = old_p2y - old_p1y;
-    int32_t vec_adj_orig_x = old_p3x - old_p1x;
-    int32_t vec_adj_orig_y = old_p3y - old_p1y;
+        dx = positionXX[orderY[3]] - positionXX[orderX[0]];
+        dy = positionYY[orderY[3]] - positionYY[orderX[0]];
+        dist_sq2 = (dx * dx) + (dy * dy);
+        
+        const int CRITICAL_ZONE = (30 * CamToMouseMult);
 
-    int32_t vec_side_new_x = new_p2x - new_p1x;
-    int32_t vec_side_new_y = new_p2y - new_p1y;
-    
-    float len_sq_orig = (float)vec_side_orig_x * vec_side_orig_x + (float)vec_side_orig_y * vec_side_orig_y;
-
-    float a = 1.0f; // Componente a = (scala * cos)
-    float b = 0.0f; // Componente b = (scala * sin)
-
-    if (len_sq_orig > 1e-5f) {
-        float dot_product = (float)vec_side_new_x * vec_side_orig_x + (float)vec_side_new_y * vec_side_orig_y;
-        float cross_product = (float)vec_side_new_y * vec_side_orig_x - (float)vec_side_new_x * vec_side_orig_y; // Versione corretta
-        a = dot_product / len_sq_orig;
-        b = cross_product / len_sq_orig;
-    }
-
-    float vec_adj_new_x = a * (float)vec_adj_orig_x - b * (float)vec_adj_orig_y;
-    float vec_adj_new_y = b * (float)vec_adj_orig_x + a * (float)vec_adj_orig_y;
-
-    int32_t estimated_p3x = (int32_t)(new_p1x + vec_adj_new_x + 0.5f);
-    int32_t estimated_p3y = (int32_t)(new_p1y + vec_adj_new_y + 0.5f);
-
-    int32_t estimated_p4x = (int32_t)(new_p2x + vec_adj_new_x + 0.5f);
-    int32_t estimated_p4y = (int32_t)(new_p2y + vec_adj_new_y + 0.5f);
-    
-    for (int i = 0; i < 4; ++i) {
-        if (i != P1 && i != P2) {
-            if (i == P3_idx) {
-                positionXX[i] = estimated_p3x;
-                positionYY[i] = estimated_p3y;
+        if ((positionYY[orderY[1]] - positionYY[orderY[0]]) > CRITICAL_ZONE)
+        {
+            // Caso Normale
+            if (dist_sq1 < dist_sq2) {
+                a = orderX[0]; d = orderX[3];
+                if (orderX[1] == orderY[3]) { c = orderX[1]; b = orderX[2]; }
+                else { b = orderX[1]; c = orderX[2]; }
             } else {
-                positionXX[i] = estimated_p4x;
-                positionYY[i] = estimated_p4y;
+                c = orderX[0]; b = orderX[3];
+                if (orderX[1] == orderY[3]) { d = orderX[1]; a = orderX[2]; }
+                else { a = orderX[1]; d = orderX[2]; }
             }
         }
-    }
-}
-
-
-
-
-    } // FINE SOLO 2 PUNTI VISIBILI
-
-    
-
-    
-    ////////// IN CASO DI SOLI 3 PUNTI ////// CALCOLA IL QUARTO ////////////////////////
-    if (num_points_seen == 3)  // 3 PUNTII VISIBILI, BISOGNA STIMARNE 1
-    {
-// --- Inizio Blocco di Stima per 3 Sensori Visti ---
-// OBIETTIVO: Stimare la posizione del quarto punto (salvato in positionXX[3])
-//            quando solo tre punti (in positionXX[0], [1], [2]) sono visibili.
-// METODO: Si assume che i 3 punti visibili formino un triangolo. Il vertice
-//         opposto al lato più lungo di questo triangolo è il "perno" (B).
-//         Gli altri due sono gli estremi (A, C). Si applica la regola del
-//         parallelogramma: PuntoMancante = A + C - B.
-
-// --- 1. Calcolo delle distanze al quadrato tra tutte le coppie di punti ---
-//    Si usa l'aritmetica intera e le distanze al quadrato per massima velocità,
-//    evitando l'uso di lenti calcoli in virgola mobile o radici quadrate.
-
-// Distanza al quadrato tra il punto 0 e il punto 1
-int32_t dx01 = positionXX[0] - positionXX[1];
-int32_t dy01 = positionYY[0] - positionYY[1];
-int32_t d01_sq = dx01 * dx01 + dy01 * dy01;
-
-// Distanza al quadrato tra il punto 1 e il punto 2
-int32_t dx12 = positionXX[1] - positionXX[2];
-int32_t dy12 = positionYY[1] - positionYY[2];
-int32_t d12_sq = dx12 * dx12 + dy12 * dy12;
-
-// Distanza al quadrato tra il punto 0 e il punto 2
-int32_t dx02 = positionXX[0] - positionXX[2];
-int32_t dy02 = positionYY[0] - positionYY[2];
-int32_t d02_sq = dx02 * dx02 + dy02 * dy02;
-
-
-// --- 2. Identificazione del perno (B) e degli estremi (A, C) ---
-//    Si determina quale dei tre lati è il più lungo per identificare
-//    correttamente i ruoli di ogni punto nella formula finale.
-int32_t a_idx, b_idx, c_idx;
-
-// Caso 1: Il lato più lungo è quello tra il punto 0 e il punto 1.
-if (d01_sq >= d12_sq && d01_sq >= d02_sq) {
-    // I punti 0 e 1 sono gli estremi A e C.
-    a_idx = 0;
-    c_idx = 1;
-    // Il punto rimanente (2) è il perno B.
-    b_idx = 2;
-}
-// Caso 2: Il lato più lungo è quello tra il punto 1 e il punto 2.
-else if (d12_sq >= d02_sq) {
-    // I punti 1 e 2 sono gli estremi A e C.
-    a_idx = 1;
-    c_idx = 2;
-    // Il punto rimanente (0) è il perno B.
-    b_idx = 0;
-}
-// Caso 3: Il lato più lungo è quello tra il punto 0 e il punto 2.
-else {
-    // I punti 0 e 2 sono gli estremi A e C.
-    a_idx = 0;
-    c_idx = 2;
-    // Il punto rimanente (1) è il perno B.
-    b_idx = 1;
-}
-
-// --- 3. Stima del punto mancante e salvataggio del risultato ---
-//    Applica la regola del parallelogramma (D = A + C - B) usando gli indici
-//    determinati nella fase precedente per calcolare il quarto punto.
-positionXX[3] = positionXX[a_idx] + positionXX[c_idx] - positionXX[b_idx];
-positionYY[3] = positionYY[a_idx] + positionYY[c_idx] - positionYY[b_idx];
-
-// --- Fine Blocco di Stima ---
-
-    }
-
-    ///////////// FINE 3 SENSORI VISTI ///////////////////////
-    
-    ///// DA QUI IN POI SI ESEGUE SEMPRE, UTILIZZA LE COORDINATE NON ORDINATE DI 4 SENSORI VISTI
-
-    //// tutti 4 sensori visti
-// --- INIZIO BLOCCO ORDINAMENTO E GESTIONE 4 PUNTI ---
-// OBIETTIVO:
-// 1. Ordinare gli indici dei 4 punti in base alle loro coordinate X e Y.
-// 2. Applicare una serie di euristiche per assegnare correttamente gli indici
-//    ai vertici A, B, C, D del rettangolo, anche in presenza di rotazione.
-// 3. Copiare le coordinate ordinate nell'array di stato finale (FinalX/Y).
-
-int a, b, c, d; // Indici finali per A, B, C, D (tipo 'int' come da originale)
-int orderX[4] = {0, 1, 2, 3};
-int orderY[4] = {0, 1, 2, 3};
-
-// --- FASE 1: Ordinamento degli Indici ---
-// Utilizza un "sorting network" hardcodato, un metodo molto veloce per ordinare
-// un numero fisso e piccolo di elementi (in questo caso 4). È più performante
-// di un algoritmo di ordinamento generico come il bubble sort.
-
-// Ordinamento degli indici in base alla coordinata X
-{
-    int tmp;
-    // La sequenza di 5 confronti garantisce l'ordinamento completo
-    if (positionXX[orderX[0]] > positionXX[orderX[1]]) { tmp = orderX[0]; orderX[0] = orderX[1]; orderX[1] = tmp; }
-    if (positionXX[orderX[2]] > positionXX[orderX[3]]) { tmp = orderX[2]; orderX[2] = orderX[3]; orderX[3] = tmp; }
-    if (positionXX[orderX[0]] > positionXX[orderX[2]]) { tmp = orderX[0]; orderX[0] = orderX[2]; orderX[2] = tmp; }
-    if (positionXX[orderX[1]] > positionXX[orderX[3]]) { tmp = orderX[1]; orderX[1] = orderX[3]; orderX[3] = tmp; }
-    if (positionXX[orderX[1]] > positionXX[orderX[2]]) { tmp = orderX[1]; orderX[1] = orderX[2]; orderX[2] = tmp; }
-}
-
-// Ordinamento degli indici in base alla coordinata Y
-{
-    int tmp;
-    if (positionYY[orderY[0]] > positionYY[orderY[1]]) { tmp = orderY[0]; orderY[0] = orderY[1]; orderY[1] = tmp; }
-    if (positionYY[orderY[2]] > positionYY[orderY[3]]) { tmp = orderY[2]; orderY[2] = orderY[3]; orderY[3] = tmp; }
-    if (positionYY[orderY[0]] > positionYY[orderY[2]]) { tmp = orderY[0]; orderY[0] = orderY[2]; orderY[2] = tmp; }
-    if (positionYY[orderY[1]] > positionYY[orderY[3]]) { tmp = orderY[1]; orderY[1] = orderY[3]; orderY[3] = tmp; }
-    if (positionYY[orderY[1]] > positionYY[orderY[2]]) { tmp = orderY[1]; orderY[1] = orderY[2]; orderY[2] = tmp; }
-}
-
-
-// --- FASE 2: Assegnazione dei Vertici A,B,C,D tramite Euristiche ---
-
-// orderX[0] è l'indice del punto più a SINISTRA.
-// orderY[0] è l'indice del punto più in ALTO.
-// orderY[3] è l'indice del punto più in BASSO.
-
-// Calcolo di due distanze chiave per determinare l'orientamento della rotazione.
-int32_t dx;
-int32_t dy;
-int32_t dist_sq1;
-int32_t dist_sq2;
-
-// Distanza tra il punto più in alto e il punto più a sinistra
-dx = positionXX[orderY[0]] - positionXX[orderX[0]];
-dy = positionYY[orderY[0]] - positionYY[orderX[0]];
-dist_sq1 = (dx * dx) + (dy * dy);
-
-// Distanza tra il punto più in basso e il punto più a sinistra
-dx = positionXX[orderY[3]] - positionXX[orderX[0]];
-dy = positionYY[orderY[3]] - positionYY[orderX[0]];
-dist_sq2 = (dx * dx) + (dy * dy);
-
-// Definisce una soglia per rilevare quando il rettangolo è quasi verticale.
-// Se la differenza di altezza tra i due punti più alti è troppo grande,
-// siamo in una rotazione "normale", altrimenti entriamo nella "zona critica".
-const int CRITICAL_ZONE = (30 * CamToMouseMult);
-
-if ((positionYY[orderY[1]] - positionYY[orderY[0]]) > CRITICAL_ZONE)
-{
-    // CASO NORMALE: Il rettangolo non è quasi verticale.
-    // L'euristica si basa su quale angolo (in alto a sx o in basso a sx)
-    // è più "stretto", per dedurre la direzione della rotazione.
-    if (dist_sq1 < dist_sq2)
-    {
-        // Il vertice A è il più vicino all'angolo in alto a sinistra dello schermo.
-        // Tipico di una rotazione ANTI-ORARIA.
-        a = orderX[0];
-        d = orderX[3];
-        if (orderX[1] == orderY[3]) {
-            c = orderX[1];
-            b = orderX[2];
-        } else {
-            b = orderX[1];
-            c = orderX[2];
+        else
+        {
+            // Caso Zona Critica (rettangolo quasi verticale)
+            a = orderY[0]; b = orderY[1];
+            c = orderY[2]; d = orderY[3];
         }
-    }
-    else
-    {
-        // Il vertice C è il più vicino all'angolo in alto a sinistra dello schermo.
-        // Tipico di una rotazione ORARIA.
-        c = orderX[0];
-        b = orderX[3];
-        if (orderX[1] == orderY[3]) {
-            d = orderX[1];
-            a = orderX[2];
-        } else {
-            a = orderX[1];
-            d = orderX[2];
-        }
-    }
-}
-else
-{
-    // CASO ZONA CRITICA: Il rettangolo è quasi verticale.
-    // L'euristica precedente fallisce, quindi si usa un'assegnazione
-    // più semplice basata solo sull'ordinamento verticale.
-    a = orderY[0];
-    b = orderY[1];
-    c = orderY[2];
-    d = orderY[3];
-}
 
-// --- FASE 3: Correzione Finale dell'Ordinamento ---
-// Questo blocco di swap garantisce che, indipendentemente dall'euristica usata,
-// l'assegnazione finale rispetti la convenzione desiderata
-// (es. A e B sopra a C e D; A e C a sinistra di B e D).
+        // Correzione finale per garantire la convenzione (A=TL, B=TR, C=BL, D=BR)
+        if (positionYY[a] > positionYY[c]) { int aux_swap = a; a = c; c = aux_swap; }
+        if (positionYY[b] > positionYY[d]) { int aux_swap = b; b = d; d = aux_swap; }
+        if (positionXX[a] > positionXX[b]) { int aux_swap = a; a = b; b = aux_swap; }
+        if (positionXX[c] > positionXX[d]) { int aux_swap = c; c = d; d = aux_swap; }
+        
+        // --- FASE 4: Assegnazione Finale e Calcoli Derivati ---
+        FinalX[A] = positionXX[a]; FinalY[A] = positionYY[a];
+        FinalX[B] = positionXX[b]; FinalY[B] = positionYY[b];
+        FinalX[C] = positionXX[c]; FinalY[C] = positionYY[c];
+        FinalX[D] = positionXX[d]; FinalY[D] = positionYY[d];
+        
+        // Calcolo del centroide con arrotondamento
+        medianX = (FinalX[A] + FinalX[B] + FinalX[C] + FinalX[D] + 2) / 4;
+        medianY = (FinalY[A] + FinalY[B] + FinalY[C] + FinalY[D] + 2) / 4;
 
-// Assicura che A sia sopra C e B sia sopra D
-if (positionYY[a] > positionYY[c]) { int aux_swap = a; a = c; c = aux_swap; }
-if (positionYY[b] > positionYY[d]) { int aux_swap = b; b = d; d = aux_swap; }
-
-// Assicura che A sia a sinistra di B e C sia a sinistra di D
-if (positionXX[a] > positionXX[b]) { int aux_swap = a; a = b; b = aux_swap; }
-if (positionXX[c] > positionXX[d]) { int aux_swap = c; c = d; d = aux_swap; }
-
-
-// --- FASE 4: Assegnazione Finale e Calcoli ---
-
-// Copia le coordinate ordinate negli array di stato finali, usando gli indici
-// a, b, c, d appena determinati per mappare la posizione corretta.
-FinalX[0] = positionXX[a]; // Assegna il punto A all'indice 0
-FinalY[0] = positionYY[a];
-FinalX[1] = positionXX[b]; // Assegna il punto B all'indice 1
-FinalY[1] = positionYY[b];
-FinalX[2] = positionXX[c]; // Assegna il punto C all'indice 2
-FinalY[2] = positionYY[c];
-FinalX[3] = positionXX[d]; // Assegna il punto D all'indice 3
-FinalY[3] = positionYY[d];
-
-// Calcolo del centroide (o punto mediano) del quadrilatero finale.
-// L'aggiunta di 2 prima di dividere per 4 è un trucco per ottenere
-// l'arrotondamento matematico invece del troncamento con interi.
-medianX = (FinalX[0] + FinalX[1] + FinalX[2] + FinalX[3] + 2) / 4;
-medianY = (FinalY[0] + FinalY[1] + FinalY[2] + FinalY[3] + 2) / 4;
-
-// Calcolo di height, width, e angle, mantenuti come richiesto per altre parti del codice.
-// NOTA: La funzione hypotf calcola la radice quadrata di (x^2 + y^2), richiede <math.h>
-float yDistLeft = hypotf((float)FinalY[0] - FinalY[2], (float)FinalX[0] - FinalX[2]);
-float yDistRight = hypotf((float)FinalY[3] - FinalY[1], (float)FinalX[3] - FinalX[1]);
-float xDistTop = hypotf((float)FinalY[0] - FinalY[1], (float)FinalX[0] - FinalX[1]);
-float xDistBottom = hypotf((float)FinalY[2] - FinalY[3], (float)FinalX[2] - FinalX[3]);
-height = (yDistLeft + yDistRight) / 2.0f;
-width = (xDistTop + xDistBottom) / 2.0f;
-
-// Calcola l'angolo medio dei due lati orizzontali.
-angle = (atan2f((float)FinalY[0] - FinalY[1], (float)FinalX[1] - FinalX[0]) + atan2f((float)FinalY[2] - FinalY[3], (float)FinalX[3] - FinalX[2])) / 2.0f;
-
-
+        // Calcoli finali mantenuti per compatibilità
+        float yDistLeft = hypotf((float)FinalY[A] - FinalY[C], (float)FinalX[A] - FinalX[C]);
+        float yDistRight = hypotf((float)FinalY[B] - FinalY[D], (float)FinalX[B] - FinalX[D]);
+        float xDistTop = hypotf((float)FinalY[A] - FinalY[B], (float)FinalX[A] - FinalX[B]);
+        float xDistBottom = hypotf((float)FinalY[C] - FinalY[D], (float)FinalX[C] - FinalX[D]);
+        height = (yDistLeft + yDistRight) / 2.0f;
+        width = (xDistTop + xDistBottom) / 2.0f;
+        
+        angle = (atan2f((float)FinalY[A] - FinalY[B], (float)FinalX[B] - FinalX[A]) + atan2f((float)FinalY[C] - FinalY[D], (float)FinalX[D] - FinalX[C])) / 2.0f;
+        
+        Kalman_filter();
     }
 }
-
-////////////////////////////////////////////////////////////////////////////////////
-/////////// roba mia funzionante finoa a 2 punti ///////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////
-
 
 #endif //USE_SQUARE_ADVANCED

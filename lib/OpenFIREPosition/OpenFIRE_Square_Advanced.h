@@ -18,7 +18,7 @@
 #include <stdint.h>
 #include "OpenFIREConst.h"
 
-
+#ifdef COMMENTO
 class OpenFIRE_Square {
 public:
     // ---- STATI PER LA QUALITÀ DEL TRACCIAMENTO ----
@@ -258,6 +258,8 @@ public:
     unsigned int seen() const { return seenFlags; }
     TrackingQuality getCurrentTrackingState() const { return current_tracking_state_; }
 };
+#endif //COMMENTO
+
 
 #endif // _OpenFIRE_Square_Advanced_h_
 #endif //USE_SQUARE_ADVANCED
