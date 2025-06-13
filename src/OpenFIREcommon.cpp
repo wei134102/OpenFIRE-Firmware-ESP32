@@ -679,30 +679,10 @@ void FW_Common::GetPosition()
     if(dfrIRPos != nullptr) {
         int error = dfrIRPos->basicAtomic(DFRobotIRPositionEx::Retry_2);
         if(error == DFRobotIRPositionEx::Error_Success) {
-            
-            // ====== 696969 ========== inserire qua filtro di KALMAN sui dati grezzi raw ======================
-            #ifdef CAM_SIMPLE_KALMAN_FILTER
-                memcpy(positionX,dfrIRPos->xPositions(), sizeof(positionX));
-                memcpy(positionY,dfrIRPos->yPositions(), sizeof(positionY));
-                seenFlags = dfrIRPos->seen();
-                /*
-                if(seenFlags == 0x0F) { // lo esegue solo se vede tutti e 4 i punti -> valutare di farlo se anche ne vede meno
-                    // esegue il filtro su tutti i punti
-                    for (uint8_t i = 0; i < 4; i++) {
-                        Kalman_filter(i, positionX[i], positionY[i]);
-                    }
-                }
-                */
-            #endif // CAM_SIMPLE_KALMAN_FILTER
-            // ======= 696969 ==================================================================================
-
+           
             // if diamond layout, or square
             if(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout) { // layoutDiamond = 1
-                #ifdef CAM_SIMPLE_KALMAN_FILTER
-                    OpenFIREdiamond.begin(positionX, positionY, seenFlags);
-                #else              
-                    OpenFIREdiamond.begin(dfrIRPos->xPositions(), dfrIRPos->yPositions(), dfrIRPos->seen());
-                #endif // CAM_SIMPLE_KALMAN_FILTER             
+                OpenFIREdiamond.begin(dfrIRPos->xPositions(), dfrIRPos->yPositions(), dfrIRPos->seen());
 
                 OpenFIREper.warp(OpenFIREdiamond.X(0), OpenFIREdiamond.Y(0),
                                 OpenFIREdiamond.X(1), OpenFIREdiamond.Y(1),
@@ -712,11 +692,7 @@ void FW_Common::GetPosition()
                                 res_y / 2, res_x / 2,
                                 res_y, res_x, res_y / 2);
             } else { // layoutSquare = 0
-                #ifdef CAM_SIMPLE_KALMAN_FILTER
-                    OpenFIREsquare.begin(positionX, positionY, seenFlags);
-                #else              
-                    OpenFIREsquare.begin(dfrIRPos->xPositions(), dfrIRPos->yPositions(), dfrIRPos->seen());
-                #endif // CAM_SIMPLE_KALMAN_FILTER
+                OpenFIREsquare.begin(dfrIRPos->xPositions(), dfrIRPos->yPositions(), dfrIRPos->seen());
                 
                 #ifdef TEST_CAM
                 positionX[0] = OpenFIREsquare.X(0);
@@ -729,22 +705,6 @@ void FW_Common::GetPosition()
                 positionY[3] = OpenFIREsquare.Y(3);
                 #endif //TESTCAM
 
-                #ifdef CAM_SIMPLE_KALMAN_FILTER
-                for (uint8_t i = 0; i < 4; i++) {
-                    Kalman_filter(i, positionX[i], positionY[i]);
-                }
-                #endif //CAM_SIMPLE_KALMAN_FILTER
-
-                #ifdef CAM_SIMPLE_KALMAN_FILTER
-                OpenFIREper.warp(positionX[0], positionY[0],
-                                positionX[1], positionY[1],
-                                positionX[2], positionY[2],
-                                positionX[3], positionY[3],
-                                OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, 0,
-                                OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, 0,
-                                OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, res_y,
-                                OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, res_y);                
-                #else
                 OpenFIREper.warp(OpenFIREsquare.X(0), OpenFIREsquare.Y(0),
                                 OpenFIREsquare.X(1), OpenFIREsquare.Y(1),
                                 OpenFIREsquare.X(2), OpenFIREsquare.Y(2),
@@ -753,20 +713,40 @@ void FW_Common::GetPosition()
                                 OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, 0,
                                 OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, res_y,
                                 OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, res_y);
-                #endif // CAM_SIMPLE_KALMAN_FILTER
             }
 
-            #ifdef CAM_SIMPLE_KALMAN_FILTER_______________________X
-            int aux_getX = OpenFIREper.getX();
-            int aux_getY = OpenFIREper.getY();
-            Kalman_filter(aux_getX, aux_getY);
-            mouseX = map(aux_getX, 0, res_x, (0 - OF_Prefs::profiles[OF_Prefs::currentProfile].leftOffset), (res_x + OF_Prefs::profiles[OF_Prefs::currentProfile].rightOffset));                 
-            mouseY = map(aux_getY, 0, res_y, (0 - OF_Prefs::profiles[OF_Prefs::currentProfile].topOffset), (res_y + OF_Prefs::profiles[OF_Prefs::currentProfile].bottomOffset));          
-            #endif    
-            #ifdef USE_POS_KALMAN_FILTER   
-                X_Kalman = OpenFIREper.getX();
-                Y_Kalman = OpenFIREper.getY();
-                kf.Kalman_Filter(X_Kalman, Y_Kalman);
+            
+            #ifdef USE_POS_ONE_EURO_FILTER
+                X_One_Euro = OpenFIREper.getX();
+                Y_One_Euro = OpenFIREper.getY();
+                //int aux_X = X_One_Euro; //
+                //int aux_Y = Y_One_Euro; //
+                oef.One_Euro_Filter(X_One_Euro, Y_One_Euro);
+                #ifndef USE_POS_KALMAN_FILTER
+                    mouseX = map(X_One_Euro, 0, res_x, (0 - OF_Prefs::profiles[OF_Prefs::currentProfile].leftOffset), (res_x + OF_Prefs::profiles[OF_Prefs::currentProfile].rightOffset));                 
+                    mouseY = map(Y_One_Euro, 0, res_y, (0 - OF_Prefs::profiles[OF_Prefs::currentProfile].topOffset), (res_y + OF_Prefs::profiles[OF_Prefs::currentProfile].bottomOffset));
+                #endif 
+            #endif
+            #ifdef USE_POS_KALMAN_FILTER
+                #ifdef USE_POS_ONE_EURO_FILTER
+                    X_Kalman = X_One_Euro;
+                    Y_Kalman = Y_One_Euro;
+                #else
+                    X_Kalman = OpenFIREper.getX();
+                    Y_Kalman = OpenFIREper.getY();
+                #endif
+                //int aux_X = X_Kalman; //
+                //int aux_Y = Y_Kalman; //
+                int aux_seen = dfrIRPos->seen() & 0xF;
+                if ((aux_seen & (aux_seen - 1)) != 0) {
+                    kf.Kalman_Filter(X_Kalman, Y_Kalman); // chiama il Kalman_filter solo se vede almeno 2 sensori
+                }
+                /*
+                if(millis() - testLastStamp > 30) {
+                    testLastStamp = millis();
+                    Serial.printf("X(%5d)-Y(%5d) -> Kalman: X(%5d)-Y(%5d)\n", aux_X, aux_Y,X_Kalman, Y_Kalman);
+                }
+                */
                 mouseX = map(X_Kalman, 0, res_x, (0 - OF_Prefs::profiles[OF_Prefs::currentProfile].leftOffset), (res_x + OF_Prefs::profiles[OF_Prefs::currentProfile].rightOffset));                 
                 mouseY = map(Y_Kalman, 0, res_y, (0 - OF_Prefs::profiles[OF_Prefs::currentProfile].topOffset), (res_y + OF_Prefs::profiles[OF_Prefs::currentProfile].bottomOffset));
             #else
@@ -774,15 +754,6 @@ void FW_Common::GetPosition()
             mouseX = map(OpenFIREper.getX(), 0, res_x, (0 - OF_Prefs::profiles[OF_Prefs::currentProfile].leftOffset), (res_x + OF_Prefs::profiles[OF_Prefs::currentProfile].rightOffset));                 
             mouseY = map(OpenFIREper.getY(), 0, res_y, (0 - OF_Prefs::profiles[OF_Prefs::currentProfile].topOffset), (res_y + OF_Prefs::profiles[OF_Prefs::currentProfile].bottomOffset));
             #endif // USE_POS_KALMAN_FILTER
-
-
-            // =============== 696969 ============== filter ===============================
-            /*
-            #ifdef CAM_SIMPLE_KALMAN_FILTER
-            Kalman_filter(mouseX, mouseY);
-            #endif // CAM_SIMPLE_KALMAN_FILTER
-            */
-            // =============== 696969 ============== filter ===============================
 
             switch(runMode) {
                 case FW_Const::RunMode_Average:
@@ -962,16 +933,6 @@ void FW_Common::GetPosition()
             PrintIrError();
     } else  PrintIrError();
 }
-
-////////////////////////////////////////////////////////////////////////////////////////////////
-// ============== 696969 =====================================================================//
-////////////////////////////////////////////////////////////////////////////////////////////////
-#ifdef CAM_SIMPLE_KALMAN_FILTER   
-
-#endif //CAM_SIMPLE_KALMAN_FILTER   
-////////////////////////////////////////////////////////////////////////////////////////////////
-// ============== 696969 =====================================================================//
-////////////////////////////////////////////////////////////////////////////////////////////////
 
 void FW_Common::PrintIrError()
 {

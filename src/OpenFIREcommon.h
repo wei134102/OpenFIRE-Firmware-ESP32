@@ -20,8 +20,11 @@
 
 #ifdef USE_POS_KALMAN_FILTER
     #include <OpenFIRE_Kalman_Filter.h>
-#endif // USE_SQUARE_ADVANCED
+#endif // USE_POS_KALMAN_FILTER
 
+#ifdef USE_POS_ONE_EURO_FILTER
+    #include <OpenFIRE_One_Euro_Filter.h>
+#endif // USE_POS_ONE_EURO_FILTER
 
 #include <OpenFIRE_Diamond.h>
 #include <OpenFIRE_Perspective.h>
@@ -159,7 +162,6 @@ public:
     // ================================ 696969 for filter ==================================//
     //////////////////////////////////////////////////////////////////////////////////////////
     #ifdef TEST_CAM   
-   
     static inline int positionX[4] = {0};
     static inline int positionY[4] = {0};
     #endif // TEST_CAM
@@ -169,6 +171,14 @@ public:
         static inline int Y_Kalman;
         static inline OpenFIRE_Kalman_Filter kf;
     #endif // USE_POS_KALMAN_FILTER
+
+    #ifdef USE_POS_ONE_EURO_FILTER   
+        static inline int X_One_Euro;
+        static inline int Y_One_Euro;
+        static inline OpenFIRE_One_Euro_Filter oef;
+    #endif // USE_POS_KALMAN_FILTER
+
+
     //////////////////////////////////////////////////////////////////////////////////////////
     // ================================ 696969 for filter ==================================//
     //////////////////////////////////////////////////////////////////////////////////////////
