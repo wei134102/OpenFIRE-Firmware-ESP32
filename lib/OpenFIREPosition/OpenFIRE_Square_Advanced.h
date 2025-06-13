@@ -1,9 +1,16 @@
 #ifdef USE_SQUARE_ADVANCED
 /*!
- * @file OpenFIRE_SquareAdvanced_.h
+ * @file OpenFIRE_Square_Advanced.h
  * @brief Light Gun library for 4 LED setup
  * @n CPP file for Samco Light Gun 4 LED setup
  *
+ * @copyright alessandro-satanassi, https://github.com/alessandro-satanassi, 2025
+ * @copyright GNU Lesser General Public License
+ *
+ * @author [Alessandro Satanassi](alessandro@cittini.it)
+ * @version V1.0
+ * @date 2025
+ * da un progetto di:
  * @copyright Samco, https://github.com/samuelballantyne, 2024
  * @copyright GNU Lesser General Public License
  *
