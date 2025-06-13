@@ -10,7 +10,9 @@
  * @author [Alessandro Satanassi](alessandro@cittini.it)
  * @version V1.0
  * @date 2025
- * da un progetto di:
+ *
+ * I thank you for producing the first original code:
+ * 
  * @copyright Samco, https://github.com/samuelballantyne, 2024
  * @copyright GNU Lesser General Public License
  *
@@ -23,32 +25,6 @@
 #include "OpenFIRE_Square_Advanced.h"
 
 
-// === Implementazione del Costruttore ===
-OpenFIRE_Square::OpenFIRE_Square() :
-    medianY(MouseMaxY / 2),
-    medianX(MouseMaxX / 2),
-    xDistTop(0.0f), xDistBottom(0.0f), yDistLeft(0.0f), yDistRight(0.0f),
-    angleTop(0.0f), angleBottom(0.0f), angleLeft(0.0f), angleRight(0.0f),
-    angle(0.0f), height(0.0f), width(0.0f),
-    initialization_complete_flag_(false), // Se questo flag serve per altre logiche, lascialo.
-    seenFlags_cam(0)
-{
-    for (int i = 0; i < 4; ++i) {
-        angleOffset[i] = 0.0f;
-        see[i] = 0; 
-        // FinalX/Y ora usano x_filt/y_filt che sono inizializzati nel .h
-        // FinalX[i] = static_cast<int>(roundf(OpenFIRE_Square::x_filt[i])); // Lascia queste rimosse se non sono usate dal tuo altro Kalman
-        // FinalY[i] = static_cast<int>(roundf(OpenFIRE_Square::y_filt[i])); // Lascia queste rimosse se non sono usate dal tuo altro Kalman
-        current_input_for_kf_x_[i] = static_cast<float>(FinalX[i]); // Queste inizializzazioni potrebbero causare warning
-        current_input_for_kf_y_[i] = static_cast<float>(FinalY[i]); // se FinalX/Y non sono inizializzati prima.
-                                                                  // Valuta se sono effettivamente necessarie qui.
-    }
-    // Rimuovi completamente il blocco commentato di inizializzazioni qui sotto
-    // che duplicava quelle statiche.
-}
-
-////////////////////////////////////////////////////////////////////////////////
-#ifndef COMMENTO
 // Definizione degli indici per chiarezza
 #define A 0
 #define B 1
@@ -447,9 +423,9 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
 
     }
 }
-#endif // COMMENTO
+
 //////////////////////////////////////////////////////////////////////////////////////////
-#ifndef COMMENTO
+
 
 //////////////////////////////////////// Versione 18 – Inizializzazioni ////////////////////////////////////////
 
@@ -606,124 +582,6 @@ void OpenFIRE_Square::Kalman_filter_base() {
 }
 
 //////////////////////////////////////// Versione 18 – fine  ////////////////////////////////////////
-#endif // COMMENTO
 
-#ifdef COMMENTO
-////////////////////////////////////////// inizio versione 18 ///////////////////////////////////////////////////////
-float OpenFIRE_Square::base_kf_x_state[4][2] = {{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}};
-float OpenFIRE_Square::base_kf_y_state[4][2] = {{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}};
-
-float OpenFIRE_Square::base_kf_p_x_00[4] = {0.0f, 0.0f, 0.0f, 0.0f}; float OpenFIRE_Square::base_kf_p_x_01[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-float OpenFIRE_Square::base_kf_p_x_10[4] = {0.0f, 0.0f, 0.0f, 0.0f}; float OpenFIRE_Square::base_kf_p_x_11[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-
-float OpenFIRE_Square::base_kf_p_y_00[4] = {0.0f, 0.0f, 0.0f, 0.0f}; float OpenFIRE_Square::base_kf_p_y_01[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-float OpenFIRE_Square::base_kf_p_y_10[4] = {0.0f, 0.0f, 0.0f, 0.0f}; float OpenFIRE_Square::base_kf_p_y_11[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-
-float OpenFIRE_Square::base_kf_last_measured_x[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-float OpenFIRE_Square::base_kf_last_measured_y[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-float OpenFIRE_Square::base_kf_last_vx_raw[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-float OpenFIRE_Square::base_kf_last_vy_raw[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-
-bool OpenFIRE_Square::base_kf_is_initialized_all_points = false;
-
-void OpenFIRE_Square::Kalman_filter_base() {
-    // Inline helper per prestazioni
-    auto inline_constrain   = [](float v, float lo, float hi) { return std::max(lo, std::min(v, hi)); };
-    auto inline_smoothstep  = [&](float e0, float e1, float x) {
-        x = inline_constrain((x - e0) / (e1 - e0), 0.0f, 1.0f);
-        return x*x*(3.0f - 2.0f*x);
-    };
-    auto inline_lerp        = [](float a, float b, float t) { return a + (b - a)*t; };
-
-    for (int i = 0; i < 4; ++i) {
-        float mx = (float)FinalX[i];
-        float my = (float)FinalY[i];
-
-        // 0) Inizializzazione
-        if (!base_kf_is_initialized_all_points) {
-            base_kf_x_state[i][0] = mx; base_kf_x_state[i][1] = 0.0f;
-            base_kf_y_state[i][0] = my; base_kf_y_state[i][1] = 0.0f;
-            base_kf_p_x_00[i] = base_kf_INITIAL_P_POS_VALUE; base_kf_p_x_11[i] = base_kf_INITIAL_P_VEL_VALUE;
-            base_kf_p_y_00[i] = base_kf_INITIAL_P_POS_VALUE; base_kf_p_y_11[i] = base_kf_INITIAL_P_VEL_VALUE;
-            base_kf_last_measured_x[i] = mx; base_kf_last_measured_y[i] = my;
-            base_kf_last_vx_raw[i] = base_kf_last_vy_raw[i] = 0.0f;
-            FinalX[i] = (int)mx; FinalY[i] = (int)my;
-            if (i == 3) base_kf_is_initialized_all_points = true;
-            continue;
-        }
-
-        // 1) Velocità & accelerazione grezze
-        float vx = mx - base_kf_last_measured_x[i];
-        float vy = my - base_kf_last_measured_y[i];
-        float ax = vx - base_kf_last_vx_raw[i];
-        float ay = vy - base_kf_last_vy_raw[i];
-        float mag = fabsf(vx) + fabsf(vy) + fabsf(ax) + fabsf(ay);
-
-        // 2) Modulazione Q/R
-        float qf = inline_smoothstep(base_kf_ACCEL_Q_THRESH_START, base_kf_ACCEL_Q_THRESH_END, mag);
-        qf *= qf;
-        float Q = inline_lerp(base_kf_Q_MIN_PROCESS, base_kf_Q_MAX_PROCESS, qf);
-
-        float rf = inline_smoothstep(base_kf_ACCEL_R_THRESH_START, base_kf_ACCEL_R_THRESH_END, mag);
-        rf = rf*rf*rf;
-        float Rb = inline_lerp(base_kf_R_MAX, base_kf_R_MIN, rf);
-
-        float dx = (base_kf_x_state[i][0] - base_kf_X_CENTER) / base_kf_HALF_WIDTH;
-        float dy = (base_kf_y_state[i][0] - base_kf_Y_CENTER) / base_kf_HALF_HEIGHT;
-        float fx = inline_smoothstep(base_kf_R_X_EDGE_SMOOTH_START, base_kf_R_X_EDGE_SMOOTH_END, fabsf(dx));
-        float fy = inline_smoothstep(base_kf_R_Y_EDGE_SMOOTH_START, base_kf_R_Y_EDGE_SMOOTH_END, fabsf(dy));
-
-        float Rx = inline_lerp(Rb, base_kf_R_AT_X_EDGE, fx);
-        Rx = inline_lerp(Rx, base_kf_R_AT_Y_EDGE_FOR_X, fy * base_kf_R_CROSS_AXIS_INFLUENCE_X);
-        Rx = inline_constrain(Rx, base_kf_MIN_COVARIANCE_VALUE, base_kf_R_MAX * 5.0f);
-
-        float Ry = inline_lerp(Rb, base_kf_R_AT_Y_EDGE, fy);
-        Ry = inline_lerp(Ry, base_kf_R_AT_X_EDGE_FOR_Y, fx * base_kf_R_CROSS_AXIS_INFLUENCE_Y);
-        Ry = inline_constrain(Ry, base_kf_MIN_COVARIANCE_VALUE, base_kf_R_MAX * 5.0f);
-
-        // 3) Kalman X
-        base_kf_x_state[i][0] += base_kf_x_state[i][1];
-        float q00 = Q * 0.25f, q01 = Q * 0.5f, q11 = Q;
-        float p00 = base_kf_p_x_00[i] + (base_kf_p_x_01[i] + base_kf_p_x_10[i]) + base_kf_p_x_11[i] + q00;
-        float p01 = base_kf_p_x_01[i] + base_kf_p_x_11[i] + q01;
-        float p11 = base_kf_p_x_11[i] + q11;
-        p00 = inline_constrain(p00, base_kf_MIN_COVARIANCE_VALUE, base_kf_MAX_P_VALUE);
-        p11 = inline_constrain(p11, base_kf_MIN_COVARIANCE_VALUE, base_kf_MAX_P_VALUE);
-        float K0 = p00 / (p00 + Rx), K1 = p01 / (p00 + Rx);
-        float inx = mx - base_kf_x_state[i][0];
-        base_kf_x_state[i][0] += K0 * inx;
-        base_kf_x_state[i][1] += K1 * inx;
-        base_kf_p_x_00[i] = p00 - K0 * p00;
-        base_kf_p_x_01[i] = p01 - K0 * p01;
-        base_kf_p_x_10[i] = base_kf_p_x_01[i];
-        base_kf_p_x_11[i] = p11 - K1 * p01;
-        base_kf_last_measured_x[i] = mx;
-        base_kf_last_vx_raw[i] = vx;
-
-        // 4) Kalman Y (speculare)
-        base_kf_y_state[i][0] += base_kf_y_state[i][1];
-        float py00 = base_kf_p_y_00[i] + (base_kf_p_y_01[i] + base_kf_p_y_10[i]) + base_kf_p_y_11[i] + q00;
-        float py01 = base_kf_p_y_01[i] + base_kf_p_y_11[i] + q01;
-        float py11 = base_kf_p_y_11[i] + q11;
-        py00 = inline_constrain(py00, base_kf_MIN_COVARIANCE_VALUE, base_kf_MAX_P_VALUE);
-        py11 = inline_constrain(py11, base_kf_MIN_COVARIANCE_VALUE, base_kf_MAX_P_VALUE);
-        float L0 = py00 / (py00 + Ry), L1 = py01 / (py00 + Ry);
-        float iny = my - base_kf_y_state[i][0];
-        base_kf_y_state[i][0] += L0 * iny;
-        base_kf_y_state[i][1] += L1 * iny;
-        base_kf_p_y_00[i] = py00 - L0 * py00;
-        base_kf_p_y_01[i] = py01 - L0 * py01;
-        base_kf_p_y_10[i] = base_kf_p_y_01[i];
-        base_kf_p_y_11[i] = py11 - L1 * py01;
-        base_kf_last_measured_y[i] = my;
-        base_kf_last_vy_raw[i] = vy;
-
-        // 5) Output
-        FinalX[i] = (int)base_kf_x_state[i][0];
-        FinalY[i] = (int)base_kf_y_state[i][0];
-    }
-}
-////////////////////////////////////// fine 18 ////////////////////////////////////////////////////
-#endif // COMMENTO
 
 #endif //USE_SQUARE_ADVANCED
