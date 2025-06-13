@@ -410,7 +410,7 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
                 FinalY[i] = FinalY[i] + MouseMaxY;
             }
 
-            Kalman_filter_base();
+            //Kalman_filter_base();
 
             for (int i = 0; i < 4; i++)
             {
