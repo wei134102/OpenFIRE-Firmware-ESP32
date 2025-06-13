@@ -1000,7 +1000,7 @@ static inline float smoothstep_custom(float edge0, float edge1, float x) {
 // All'interno della tua classe FW_Common:
 // void FW_Common::Kalman_filter(uint8_t i, int& mouse_input_x, int& mouse_input_y) { ... }
 
-void FW_Common::Kalman_filter(uint8_t i, int& mouse_input_x, int& mouse_input_y) {
+void FW_Common::Kalman_filter_OLD(uint8_t i, int& mouse_input_x, int& mouse_input_y) {
 
 // --- 0. Conversione Input, Validazione e Gestione Dati Errati/Persi ---
     float potential_x = static_cast<float>(mouse_input_x);

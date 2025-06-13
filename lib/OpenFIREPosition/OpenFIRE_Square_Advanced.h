@@ -18,19 +18,456 @@
 #include <stdint.h>
 #include "OpenFIREConst.h"
 
-#ifdef COMMENTO
+// Dichiarazioni esterne per costanti globali definite altrove
+// Assicurati che questi nomi corrispondano esattamente a quelli nel tuo file di costanti.
+extern const int MouseMaxX;
+extern const int MouseMaxY;
+// extern const int CamResX; // Se usate direttamente qui per calcoli
+// extern const int CamResY; // Se usate direttamente qui per calcoli
+
 class OpenFIRE_Square {
 public:
-    // ---- STATI PER LA QUALITÀ DEL TRACCIAMENTO ----
+    //================================================================
+    // ENUM PUBBLICO E API
+    //================================================================
+
     enum class TrackingQuality {
         AWAITING_INITIALIZATION,
         TRACKING_OK,
         TRACKING_PARTIAL,
-        TRACKING_LOST_OR_POOR,
+        TRACK_LOST_OR_POOR, // Era TRACKING_LOST_OR_POOR
         AWAITING_REACQUISITION
     };
 
-    // ---- COSTANTI PUBBLICHE DEL SISTEMA E DEL FILTRO ----
+    // Costruttore
+    OpenFIRE_Square();
+
+    // Metodo principale di elaborazione
+    void begin(const int* px, const int* py, unsigned int seen);
+    
+    // Metodi 'Getter' per l'accesso allo stato finale
+    int X(int index) const { return FinalX[index]; }
+    int Y(int index) const { return FinalY[index]; }
+    unsigned int testSee(int index) const { return see[index]; }
+    int testMedianX() const { return medianX; }
+    int testMedianY() const { return medianY; }
+    float H() const { return height; }
+    float W() const { return width; }
+    float Ang() const { return angle; }
+    unsigned int seen() const { return seenFlags; }
+    TrackingQuality getCurrentTrackingState() const { return current_tracking_state_; }
+
+private:
+/////////////////// nuovo non funzionante bene ////////////////////
+#ifdef COMMENTO 
+//================================================================
+// COSTANTI DI TUNING DEL FILTRO DI KALMAN (BASE - Pos/Vel)
+//================================================================
+// Limiti dello schermo per il filtro (QUESTO È L'UNICO SPAZIO OPERATIVO)
+static constexpr float base_kf_X_MIN = 0.0f;
+static constexpr float base_kf_X_MAX = static_cast<float>(MouseMaxX) * 3.0f; 
+static constexpr float base_kf_Y_MIN = 0.0f;
+static constexpr float base_kf_Y_MAX = static_cast<float>(MouseMaxY) * 3.0f; 
+
+// Shift per convertire le misurazioni IR originali (che sono 0-MouseMaxX/Y)
+// nel sistema di coordinate [0, 3*MouseMaxX/Y] del filtro.
+// NOTA: Questo shift è solo per l'input/output, il filtro opera su tutto il range [MIN, MAX].
+static constexpr float base_kf_SHIFT_X = static_cast<float>(MouseMaxX);
+static constexpr float base_kf_SHIFT_Y = static_cast<float>(MouseMaxY);
+
+// Centro e metà larghezza dell'UNICO spazio operativo del filtro.
+// Usati per calcolare la distanza normalizzata dai bordi di QUESTO spazio.
+static constexpr float base_kf_X_CENTER = (base_kf_X_MAX + base_kf_X_MIN) / 2.0f;
+static constexpr float base_kf_Y_CENTER = (base_kf_Y_MAX + base_kf_Y_MIN) / 2.0f;
+static constexpr float base_kf_HALF_WIDTH = (base_kf_X_MAX - base_kf_X_MIN) / 2.0f;
+static constexpr float base_kf_HALF_HEIGHT = (base_kf_Y_MAX - base_kf_Y_MIN) / 2.0f;
+
+
+// Inizializzazione della covarianza dell'errore P per ogni stato (Posizione, Velocità)
+static constexpr float base_kf_INITIAL_P_POS_VALUE = 100.0f;
+static constexpr float base_kf_INITIAL_P_VEL_VALUE = 10.0f;
+
+static constexpr float base_kf_MIN_COVARIANCE_VALUE = 1e-6f; // Valore minimo per P e R
+static constexpr float base_kf_MAX_P_VALUE = 1e6f; // Limite superiore per P
+
+// Range di Q (Covarianza del Processo - rumore del modello di velocità costante)
+static constexpr float base_kf_Q_MIN_PROCESS = 0.5f;
+static constexpr float base_kf_Q_MAX_PROCESS = 10.0f; // Manteniamo questo valore per la reattività
+
+// Parametri per la modulazione di Q in base all'accelerazione calcolata esternamente
+static constexpr float base_kf_ACCEL_Q_THRESH_START = 10.0f;
+static constexpr float base_kf_ACCEL_Q_THRESH_END = 80.0f;
+static constexpr float base_kf_Q_ACCEL_EXPONENT = 2.0f;
+
+// Range di R (Covarianza della Misura)
+static constexpr float base_kf_R_MIN = 0.1f;
+static constexpr float base_kf_R_MAX = 2000.0f;
+
+// Parametri per la modulazione di R in base all'accelerazione calcolata esternamente
+static constexpr float base_kf_ACCEL_R_THRESH_START = 10.0f;
+static constexpr float base_kf_ACCEL_R_THRESH_END = 50.0f;
+static constexpr float base_kf_R_ACCEL_EXPONENT = 1.0f;
+
+// Parametri per la modulazione asimmetrica di R ai bordi dello schermo operativo UNICO.
+// Queste soglie si riferiscono al dist_norm che va da 0 (centro) a 1.0 (bordi estremi 0 o 3*MouseMaxX).
+// L'effetto deve iniziare solo quando ci si avvicina ai VERI bordi dello spazio operativo del filtro (0 o 3*MouseMaxX).
+// I valori 0.3333 (corrispondenti a MouseMaxX e 2*MouseMaxX nello spazio del filtro) sono le "vecchie zone di instabilità".
+// Settando START a 0.60f, l'effetto inizia ben oltre queste zone, verso i bordi estremi.
+static constexpr float base_kf_R_X_EDGE_SMOOTH_START = 0.60f; // <--- VALORE CORRETTO
+static constexpr float base_kf_R_X_EDGE_SMOOTH_END = 0.90f;   // <--- VALORE CORRETTO
+static constexpr float base_kf_R_Y_EDGE_SMOOTH_START = 0.60f; // <--- VALORE CORRETTO
+static constexpr float base_kf_R_Y_EDGE_SMOOTH_END = 0.90f;   // <--- VALORE CORRETTO
+
+// Questi valori sono la covarianza R che si raggiunge QUANDO si è ai bordi estremi dello spazio operativo.
+// Devono essere alti per "frenare" il puntatore in quelle zone e impedirgli di andare troppo fuori.
+static constexpr float base_kf_R_AT_X_EDGE = 1000.0f; // <--- VALORE CORRETTO
+static constexpr float base_kf_R_AT_Y_EDGE = 1000.0f; // <--- VALORE CORRETTO
+static constexpr float base_kf_R_AT_X_EDGE_FOR_Y = 5000.0f; // <--- VALORE CORRETTO (influenza incrociata, molto forte)
+static constexpr float base_kf_R_AT_Y_EDGE_FOR_X = 5000.0f; // <--- VALORE CORRETTO (influenza incrociata, molto forte)
+
+static constexpr float base_kf_R_CROSS_AXIS_INFLUENCE_X = 1.0f;
+static constexpr float base_kf_R_CROSS_AXIS_INFLUENCE_Y = 1.0f;
+
+static constexpr float base_kf_R_X_EDGE_EXPONENT = 4.0f;
+static constexpr float base_kf_R_Y_EDGE_EXPONENT = 4.0f;
+
+static constexpr float base_kf_MAX_EDGE_R_INFLUENCE_FACTOR = 2.0f;
+#endif
+
+///////////////////////// inizio 17 ter ////////////////////
+#ifdef COMMENTO
+//================================================================
+// COSTANTI DI TUNING DEL FILTRO DI KALMAN (BASE - Pos/Vel) - VERSIONE 17BIS CONSOLIDATA E FINALIZZATA
+//================================================================
+// Limiti dello schermo per il filtro. QUESTO È L'UNICO SPAZIO OPERATIVO del filtro.
+// Il filtro opera su questo range senza distinzioni di "reale" o "esteso".
+static constexpr float base_kf_X_MIN = 0.0f;
+static constexpr float base_kf_X_MAX = static_cast<float>(MouseMaxX * 3); // VALORE = 4095 * 3 = 12285.0f
+static constexpr float base_kf_Y_MIN = 0.0f;
+static constexpr float base_kf_Y_MAX = static_cast<float>(MouseMaxY * 3); // VALORE = 3071 * 3 = 9213.0f
+
+// Centro e metà larghezza dell'UNICO spazio operativo del filtro.
+// Questi sono calcolati correttamente in base a base_kf_X/Y_MAX e MIN.
+static constexpr float base_kf_X_CENTER = (base_kf_X_MAX + base_kf_X_MIN) / 2.0f; // 6142.5f
+static constexpr float base_kf_Y_CENTER = (base_kf_Y_MAX + base_kf_Y_MIN) / 2.0f; // 4606.5f
+static constexpr float base_kf_HALF_WIDTH = (base_kf_X_MAX - base_kf_X_MIN) / 2.0f; // 6142.5f
+static constexpr float base_kf_HALF_HEIGHT = (base_kf_Y_MAX - base_kf_Y_MIN) / 2.0f; // 4606.5f
+
+// Inizializzazione della covarianza dell'errore P per ogni stato (Posizione, Velocità)
+static constexpr float base_kf_INITIAL_P_POS_VALUE = 100.0f; 
+static constexpr float base_kf_INITIAL_P_VEL_VALUE = 10.0f;
+
+static constexpr float base_kf_MIN_COVARIANCE_VALUE = 1e-6f; // Valore minimo per P e R
+static constexpr float base_kf_MAX_P_VALUE = 1e6f; // Limite superiore per P
+
+// Range di Q (Covarianza del Processo - rumore del modello di velocità costante)
+// Valori come forniti nella tua versione 17bis.
+static constexpr float base_kf_Q_MIN_PROCESS = 0.5f; 
+static constexpr float base_kf_Q_MAX_PROCESS = 5.0f;
+
+// Parametri per la modulazione di Q in base all'accelerazione calcolata esternamente
+// Valori come forniti nella tua versione 17bis.
+static constexpr float base_kf_ACCEL_Q_THRESH_START = 10.0f; 
+static constexpr float base_kf_ACCEL_Q_THRESH_END = 80.0f;
+static constexpr float base_kf_Q_ACCEL_EXPONENT = 2.0f; 
+
+// Range di R (Covarianza della Misura)
+// Valori come forniti nella tua versione 17bis.
+static constexpr float base_kf_R_MIN = 0.1f;
+static constexpr float base_kf_R_MAX = 2000.0f; 
+
+// Parametri per la modulazione di R in base all'accelerazione calcolata esternamente
+// Valori come forniti nella tua versione 17bis.
+static constexpr float base_kf_ACCEL_R_THRESH_START = 100.0f; 
+static constexpr float base_kf_ACCEL_R_THRESH_END = 300.0f;
+static constexpr float base_kf_R_ACCEL_EXPONENT = 3.0f; 
+
+// Parametri per la modulazione asimmetrica di R ai bordi dello schermo operativo unico.
+// Valori come forniti nella tua versione 17bis.
+static constexpr float base_kf_R_X_EDGE_SMOOTH_START = 0.3f; 
+static constexpr float base_kf_R_X_EDGE_SMOOTH_END = 0.98f; 
+static constexpr float base_kf_R_Y_EDGE_SMOOTH_START = 0.5f; 
+static constexpr float base_kf_R_Y_EDGE_SMOOTH_END = 0.98f; 
+
+static constexpr float base_kf_R_AT_X_EDGE = 1.0f; 
+static constexpr float base_kf_R_AT_Y_EDGE = 1.0f; 
+static constexpr float base_kf_R_AT_X_EDGE_FOR_Y = 5000.0f; 
+static constexpr float base_kf_R_AT_Y_EDGE_FOR_X = 1000.0f; 
+
+static constexpr float base_kf_R_CROSS_AXIS_INFLUENCE_X = 1.0f; 
+static constexpr float base_kf_R_CROSS_AXIS_INFLUENCE_Y = 1.0f; 
+
+static constexpr float base_kf_R_X_EDGE_EXPONENT = 4.0f; 
+static constexpr float base_kf_R_Y_EDGE_EXPONENT = 4.0f;
+
+#endif
+//////////////////////// fine 17 ter //////////////////////
+
+
+//////////////////////// inizio 17 bis //////////////////////////////////////////
+#ifndef COMMENTO // debug 17 - miglior risultato
+    //================================================================
+    // COSTANTI DI TUNING DEL FILTRO DI KALMAN (BASE - Pos/Vel) - DEBUG 17
+    //================================================================
+    // Limiti dello schermo per il filtro (usati per la modulazione R ai bordi)
+    static constexpr float base_kf_X_MIN = 0.0f;
+    static constexpr float base_kf_X_MAX = static_cast<float>(MouseMaxX*3);
+    static constexpr float base_kf_Y_MIN = 0.0f;
+    static constexpr float base_kf_Y_MAX = static_cast<float>(MouseMaxY*3);
+
+    static constexpr float base_kf_X_CENTER = (base_kf_X_MAX + base_kf_X_MIN) / 2.0f;
+    static constexpr float base_kf_Y_CENTER = (base_kf_Y_MAX + base_kf_Y_MIN) / 2.0f;
+    static constexpr float base_kf_HALF_WIDTH = (base_kf_X_MAX - base_kf_X_MIN) / 2.0f;
+    static constexpr float base_kf_HALF_HEIGHT = (base_kf_Y_MAX - base_kf_Y_MIN) / 2.0f;
+
+    // Inizializzazione della covarianza dell'errore P per ogni stato (Posizione, Velocità)
+    static constexpr float base_kf_INITIAL_P_POS_VALUE = 100.0f; 
+    static constexpr float base_kf_INITIAL_P_VEL_VALUE = 10.0f;  
+
+    static constexpr float base_kf_MIN_COVARIANCE_VALUE = 1e-6f; // Valore minimo per P e R
+    static constexpr float base_kf_MAX_P_VALUE = 1e6f; // Limite superiore per P
+
+    // Range di Q (Covarianza del Processo - rumore del modello di velocità costante)
+    static constexpr float base_kf_Q_MIN_PROCESS = 0.5f; // Come in valori_12.txt
+    static constexpr float base_kf_Q_MAX_PROCESS = 5.0f;   
+    
+    // Parametri per la modulazione di Q in base all'accelerazione calcolata esternamente
+    static constexpr float base_kf_ACCEL_Q_THRESH_START = 10.0f; // Come in valori_12.txt
+    static constexpr float base_kf_ACCEL_Q_THRESH_END = 80.0f;   // Come in valori_12.txt
+    static constexpr float base_kf_Q_ACCEL_EXPONENT = 2.0f; // Come in valori_12.txt
+
+    // Range di R (Covarianza della Misura)
+    static constexpr float base_kf_R_MIN = 0.1f;   // Come in valori_12.txt
+    static constexpr float base_kf_R_MAX = 2000.0f; // << RIPRISTINATO come in valori_12.txt
+    
+    // Parametri per la modulazione di R in base all'accelerazione calcolata esternamente
+    // --- RIPRISTINATI I VALORI CHE FUNZIONAVANO PER R_base IN VALORI_12.TXT ---
+    static constexpr float base_kf_ACCEL_R_THRESH_START = 100.0f; // << RIPRISTINATO come in valori_12.txt
+    static constexpr float base_kf_ACCEL_R_THRESH_END = 300.0f;   // << RIPRISTINATO come in valori_12.txt
+    static constexpr float base_kf_R_ACCEL_EXPONENT = 3.0f; // << RIPRISTINATO come in valori_12.txt
+
+    // Parametri per la modulazione asimmetrica di R ai bordi dello schermo (per ridurre il "balletto")
+    static constexpr float base_kf_R_X_EDGE_SMOOTH_START = 0.3f; // Mantenuto, per attivare l'effetto prima.
+    static constexpr float base_kf_R_X_EDGE_SMOOTH_END = 0.98f; // Mantenuto, per concentrare l'effetto.
+    static constexpr float base_kf_R_Y_EDGE_SMOOTH_START = 0.5f; // Mantenuto, per attivare l'effetto prima.
+    static constexpr float base_kf_R_Y_EDGE_SMOOTH_END = 0.98f; // Mantenuto, per concentrare l'effetto.
+
+    static constexpr float base_kf_R_AT_X_EDGE = 1.0f; 
+    static constexpr float base_kf_R_AT_Y_EDGE = 1.0f; 
+    static constexpr float base_kf_R_AT_X_EDGE_FOR_Y = 5000.0f; // << AUMENTATO (da 1000) drasticamente per i LATI VERTICALI (asse Y ai bordi X)
+    static constexpr float base_kf_R_AT_Y_EDGE_FOR_X = 1000.0f; // Mantenuto, come in valori_12.txt
+
+    static constexpr float base_kf_R_CROSS_AXIS_INFLUENCE_X = 1.0f; 
+    static constexpr float base_kf_R_CROSS_AXIS_INFLUENCE_Y = 1.0f; 
+
+    static constexpr float base_kf_R_X_EDGE_EXPONENT = 4.0f; 
+    static constexpr float base_kf_R_Y_EDGE_EXPONENT = 4.0f; 
+    #endif // debug 17
+    //////////////////////////////////// fine 17 bis ///////////////////////////////////////////////////// 
+
+    //================================================================
+    // STATO INTERNO DEL FILTRO DI KALMAN (BASE - Pos/Vel, dt Implicito)
+    //================================================================
+    static float base_kf_x_state[4][2]; 
+    static float base_kf_y_state[4][2]; 
+
+    static float base_kf_p_x_00[4], base_kf_p_x_01[4];
+    static float base_kf_p_x_10[4], base_kf_p_x_11[4];
+
+    static float base_kf_p_y_00[4], base_kf_p_y_01[4];
+    static float base_kf_p_y_10[4], base_kf_p_y_11[4];
+
+    static float base_kf_last_measured_x[4]; 
+    static float base_kf_last_measured_y[4]; 
+    static float base_kf_last_vx_raw[4]; 
+    static float base_kf_last_vy_raw[4]; 
+
+    static bool base_kf_is_initialized_all_points; 
+
+    // Non abbiamo più bisogno di una variabile per il dt autonomo qui, dato che dt è implicito a 1.0f
+    // static unsigned long base_kf_last_millis; // RIMOSSA
+
+    //================================================================
+    // COSTANTI DI TUNING DEL FILTRO DI KALMAN (POINTS - Pos/Vel/Acc)
+    //================================================================
+    // Limiti dello schermo per il filtro, derivati dalle tue costanti esistenti
+    static constexpr float points_kf_X_MIN = 0.0f;
+    static constexpr float points_kf_X_MAX = static_cast<float>(MouseMaxX);
+    static constexpr float points_kf_Y_MIN = 0.0f;
+    static constexpr float points_kf_Y_MAX = static_cast<float>(MouseMaxY);
+
+    // Dati calcolati dai limiti, usati nella logica del filtro
+    // Questi sono calcolati dal centro dello schermo per la modulazione R dei bordi
+    static constexpr float points_kf_X_CENTER = (points_kf_X_MAX + points_kf_X_MIN) / 2.0f;
+    static constexpr float points_kf_Y_CENTER = (points_kf_Y_MAX + points_kf_Y_MIN) / 2.0f;
+    static constexpr float points_kf_HALF_WIDTH = (points_kf_X_MAX - points_kf_X_MIN) / 2.0f;
+    static constexpr float points_kf_HALF_HEIGHT = (points_kf_Y_MAX - points_kf_Y_MIN) / 2.0f;
+
+    // Inizializzazione della covarianza dell'errore P per ogni stato (Pos/Vel/Acc)
+    static constexpr float points_kf_INITIAL_P_POS_VALUE = 100.0f; 
+    static constexpr float points_kf_INITIAL_P_VEL_VALUE = 10.0f;  
+    static constexpr float points_kf_INITIAL_P_ACC_VALUE = 1.0f;   
+
+    // Valore minimo e massimo per le covarianze (per stabilità numerica e clamping)
+    static constexpr float points_kf_MIN_COVARIANCE_VALUE = 1e-6f;
+    static constexpr float points_kf_MAX_P_VALUE = 1e6f; // Limite superiore per P, evita divergenze estreme
+
+    // Range di Q (Covarianza del Processo - rumore del modello, spesso sul jerk)
+    static constexpr float points_kf_Q_MIN_JERK = 0.001f; // Valore minimo di Q per il jerk (movimenti lenti/fermi)
+    static constexpr float points_kf_Q_MAX_JERK = 1.0f;   // Valore massimo di Q per il jerk (movimenti bruschi/veloci)
+    
+    // Parametri per la modulazione di Q in base all'accelerazione filtrata
+    static constexpr float points_kf_ACCEL_Q_THRESH_START = 0.1f; // Accelerazione (filtrata) dove Q inizia ad aumentare
+    static constexpr float points_kf_ACCEL_Q_THRESH_END = 5.0f;   // Accelerazione (filtrata) dove Q raggiunge points_kf_Q_MAX_JERK
+    static constexpr float points_kf_Q_ACCEL_EXPONENT = 2.0f; // Esponente per la curva di Q (sintonizzare)
+
+    // Range di R (Covarianza della Misura)
+    static constexpr float points_kf_R_MIN = 0.1f;   // Valore minimo di R (movimenti bruschi/veloci)
+    static constexpr float points_kf_R_MAX = 1000.0f; // Valore massimo di R (movimenti lenti/fermi)
+    
+    // Parametri per la modulazione di R in base all'accelerazione filtrata
+    static constexpr float points_kf_ACCEL_R_THRESH_START = 0.05f; // Accelerazione (filtrata) dove R inizia a diminuire da points_kf_R_MAX
+    static constexpr float points_kf_ACCEL_R_THRESH_END = 2.0f;    // Accelerazione (filtrata) dove R raggiunge points_kf_R_MIN
+    static constexpr float points_kf_R_ACCEL_EXPONENT = 2.0f; // Esponente per la curva di R (sintonizzare)
+
+    // Parametri per la modulazione asimmetrica di R ai bordi dello schermo (per ridurre il "balletto")
+    static constexpr float points_kf_R_X_EDGE_SMOOTH_START = 0.7f;
+    static constexpr float points_kf_R_X_EDGE_SMOOTH_END = 0.95f;
+    static constexpr float points_kf_R_Y_EDGE_SMOOTH_START = 0.7f;
+    static constexpr float points_kf_R_Y_EDGE_SMOOTH_END = 0.95f;
+
+    static constexpr float points_kf_R_AT_X_EDGE = 1.0f; // R per X quando ai bordi X (per X stesso)
+    static constexpr float points_kf_R_AT_Y_EDGE = 1.0f; // R per Y quando ai bordi Y (per Y stesso)
+    static constexpr float points_kf_R_AT_X_EDGE_FOR_Y = 5.0f; // R per Y quando ai bordi X (per balletto verticale)
+    static constexpr float points_kf_R_AT_Y_EDGE_FOR_X = 5.0f; // R per X quando ai bordi Y (per balletto orizzontale)
+
+    static constexpr float points_kf_R_CROSS_AXIS_INFLUENCE_X = 1.0f; // Influenza dei bordi Y su R_x
+    static constexpr float points_kf_R_CROSS_AXIS_INFLUENCE_Y = 1.0f; // Influenza dei bordi X su R_y
+
+    static constexpr float points_kf_R_X_EDGE_EXPONENT = 2.0f; // Esponente per l'influenza dei bordi X su R_x
+    static constexpr float points_kf_R_Y_EDGE_EXPONENT = 2.0f; // Esponente per l'influenza dei bordi Y su R_y
+
+    // BASE DT per la normalizzazione:
+    // Se Q e R sono stati sintonizzati assumendo che "dt=1.0f" corrisponda a 5ms.
+    static constexpr float points_kf_BASE_DT_MS = 5.0f; 
+    // Clamp per il dt misurato (evita dt estremi in caso di lag o spike)
+    static constexpr float points_kf_MIN_MEASURED_DT_FACTOR = 0.1f; // Minimum dt factor (e.g. 0.5ms if base is 5ms)
+    static constexpr float points_kf_MAX_MEASURED_DT_FACTOR = 5.0f;  // Maximum dt factor (e.g. 25ms if base is 5ms)
+
+    //================================================================
+    // STATO INTERNO DEL FILTRO DI KALMAN (POINTS)
+    //================================================================
+    // Stati per ciascuno dei 4 punti (Posizione, Velocità, Accelerazione per X e Y)
+    static float points_kf_x_state[4][3]; // points_kf_x_state[point_idx][state_idx]
+    static float points_kf_y_state[4][3]; // points_kf_y_state[point_idx][state_idx]
+
+    // Matrici di covarianza dell'errore P (3x3 per ogni punto e per ogni asse)
+    // Usiamo array per ogni componente della matrice P
+    static float points_kf_p_x_00[4], points_kf_p_x_01[4], points_kf_p_x_02[4];
+    static float points_kf_p_x_10[4], points_kf_p_x_11[4], points_kf_p_x_12[4];
+    static float points_kf_p_x_20[4], points_kf_p_x_21[4], points_kf_p_x_22[4];
+
+    static float points_kf_p_y_00[4], points_kf_p_y_01[4], points_kf_p_y_02[4];
+    static float points_kf_p_y_10[4], points_kf_p_y_11[4], points_kf_p_y_12[4];
+    static float points_kf_p_y_20[4], points_kf_p_y_21[4], points_kf_p_y_22[4];
+
+    // Flag per l'inizializzazione *complessiva* del filtro (per tutti i 4 punti)
+    static bool points_kf_is_initialized_all_points; // Sostituisce l'array di bool
+
+    // Variabile per il calcolo autonomo del dt
+    static unsigned long points_kf_last_millis; // AGGIUNTA QUESTA RIGA
+
+    /*
+    // Stato del tracking generale (non specifico del KF)
+    TrackingQuality current_tracking_state_;
+    unsigned int seenFlags; // per mantenere il tuo 'seenFlags' originale
+    */
+
+    //================================================================
+    // COSTANTI DI TUNING DEL FILTRO DI KALMAN (CORE - Pos/Vel/Acc)
+    //================================================================
+    // Limiti dello schermo per il filtro, derivati dalle tue costanti esistenti
+    static constexpr float core_kf_X_MIN = 0.0f;
+    static constexpr float core_kf_X_MAX = static_cast<float>(MouseMaxX);
+    static constexpr float core_kf_Y_MIN = 0.0f;
+    static constexpr float core_kf_Y_MAX = static_cast<float>(MouseMaxY);
+
+    // Dati calcolati dai limiti, usati nella logica del filtro
+    static constexpr float core_kf_X_CENTER = (core_kf_X_MAX + core_kf_X_MIN) / 2.0f;
+    static constexpr float core_kf_Y_CENTER = (core_kf_Y_MAX + core_kf_Y_MIN) / 2.0f;
+    static constexpr float core_kf_HALF_WIDTH = (core_kf_X_MAX - core_kf_X_MIN) / 2.0f;
+    static constexpr float core_kf_HALF_HEIGHT = (core_kf_Y_MAX - core_kf_Y_MIN) / 2.0f;
+
+    // Inizializzazione della covarianza dell'errore P
+    static constexpr float core_kf_INITIAL_P_POS_VALUE = 100.0f; // Inizializzazione per la posizione
+    static constexpr float core_kf_INITIAL_P_VEL_VALUE = 10.0f;  // Inizializzazione per la velocità
+    static constexpr float core_kf_INITIAL_P_ACC_VALUE = 1.0f;   // Inizializzazione per l'accelerazione
+
+    // Valore minimo per le covarianze (per stabilità numerica)
+    static constexpr float core_kf_MIN_COVARIANCE_VALUE = 1e-6f;
+
+    // Range di Q (Covarianza del Processo - rumore del modello, spesso sul jerk)
+    static constexpr float core_kf_Q_MIN_JERK = 0.001f; // Valore minimo di Q per il jerk (movimenti lenti/fermi)
+    static constexpr float core_kf_Q_MAX_JERK = 1.0f;   // Valore massimo di Q per il jerk (movimenti bruschi/veloci)
+    
+    // Parametri per la modulazione di Q in base all'accelerazione filtrata
+    static constexpr float core_kf_ACCEL_Q_THRESH_START = 0.1f; // Accelerazione (filtrata) dove Q inizia ad aumentare
+    static constexpr float core_kf_ACCEL_Q_THRESH_END = 5.0f;   // Accelerazione (filtrata) dove Q raggiunge core_kf_Q_MAX_JERK
+    static constexpr float core_kf_Q_ACCEL_EXPONENT = 2.0f; // Esponente per la curva di Q (sintonizzare)
+
+    // Range di R (Covarianza della Misura)
+    static constexpr float core_kf_R_MIN = 0.1f;   // Valore minimo di R (movimenti bruschi/veloci)
+    static constexpr float core_kf_R_MAX = 1000.0f; // Valore massimo di R (movimenti lenti/fermi)
+    
+    // Parametri per la modulazione di R in base all'accelerazione filtrata
+    static constexpr float core_kf_ACCEL_R_THRESH_START = 0.05f; // Accelerazione (filtrata) dove R inizia a diminuire da core_kf_R_MAX
+    static constexpr float core_kf_ACCEL_R_THRESH_END = 2.0f;    // Accelerazione (filtrata) dove R raggiunge core_kf_R_MIN
+    static constexpr float core_kf_R_ACCEL_EXPONENT = 2.0f; // Esponente per la curva di R (sintonizzare)
+
+    // Parametri per la modulazione asimmetrica di R ai bordi dello schermo
+    static constexpr float core_kf_R_X_EDGE_SMOOTH_START = 0.7f;
+    static constexpr float core_kf_R_X_EDGE_SMOOTH_END = 0.95f;
+    static constexpr float core_kf_R_Y_EDGE_SMOOTH_START = 0.7f;
+    static constexpr float core_kf_R_Y_EDGE_SMOOTH_END = 0.95f;
+
+    static constexpr float core_kf_R_AT_X_EDGE = 1.0f; // R per X quando ai bordi X (per X stesso)
+    static constexpr float core_kf_R_AT_Y_EDGE = 1.0f; // R per Y quando ai bordi Y (per Y stesso)
+    static constexpr float core_kf_R_AT_X_EDGE_FOR_Y = 5.0f; // R per Y quando ai bordi X (per balletto verticale)
+    static constexpr float core_kf_R_AT_Y_EDGE_FOR_X = 5.0f; // R per X quando ai bordi Y (per balletto orizzontale)
+
+    static constexpr float core_kf_R_CROSS_AXIS_INFLUENCE_X = 1.0f; // Influenza dei bordi Y su R_x
+    static constexpr float core_kf_R_CROSS_AXIS_INFLUENCE_Y = 1.0f; // Influenza dei bordi X su R_y
+
+    static constexpr float core_kf_R_X_EDGE_EXPONENT = 2.0f; // Esponente per l'influenza dei bordi X su R_x
+    static constexpr float core_kf_R_Y_EDGE_EXPONENT = 2.0f; // Esponente per l'influenza dei bordi Y su R_y
+
+    //================================================================
+    // STATO INTERNO DEL FILTRO DI KALMAN (CORE)
+    //================================================================
+    static float core_kf_x_state[3]; // core_kf_x_state[0]=pos_x, core_kf_x_state[1]=vel_x, core_kf_x_state[2]=acc_x
+    static float core_kf_y_state[3]; // core_kf_y_state[0]=pos_y, core_kf_y_state[1]=vel_y, core_kf_y_state[2]=acc_y
+
+    // Matrici di covarianza dell'errore P (3x3 per ogni asse)
+    static float core_kf_p_x_00, core_kf_p_x_01, core_kf_p_x_02;
+    static float core_kf_p_x_10, core_kf_p_x_11, core_kf_p_x_12;
+    static float core_kf_p_x_20, core_kf_p_x_21, core_kf_p_x_22;
+
+    static float core_kf_p_y_00, core_kf_p_y_01, core_kf_p_y_02;
+    static float core_kf_p_y_10, core_kf_p_y_11, core_kf_p_y_12;
+    static float core_kf_p_y_20, core_kf_p_y_21, core_kf_p_y_22;
+
+    // Variabili per l'inizializzazione del filtro
+    static float core_kf_last_measured_x;
+    static float core_kf_last_measured_y;
+    static bool core_kf_is_initialized; // Flag per l'inizializzazione al primo frame
+
+    ///// Stato del tracking generale (non specifico del KF)
+    ///TrackingQuality current_tracking_state_;
+
+
+    //================================================================
+    // COSTANTI DI TUNING (COMUNI A ENTRAMBI I FILTRI O GENERALI)
+    //================================================================
     static constexpr int Actual_X_MIN = 0;
     static constexpr int Actual_X_MAX = MouseMaxX;
     static constexpr int Actual_Y_MIN = 0;
@@ -49,43 +486,92 @@ public:
     static constexpr float KF_HALF_WIDTH = KF_WIDTH / 2.0f;
     static constexpr float KF_HALF_HEIGHT = KF_HEIGHT / 2.0f;
 
-    static constexpr float MAX_ASSOCIATION_DISTANCE_SQ = (KF_WIDTH * 0.25f) * (KF_WIDTH * 0.25f); // ESEMPIO! VALORE DA AFFINARE!
-
-    static constexpr float Q_MAX = KF_WIDTH / 4096.0f; // KF_WIDTH / 65536.0f; // KF_WIDTH / 4096.0f;     // VALORE DA AFFINARE!
-    static constexpr float R_BASE = KF_HEIGHT / 8192.0f;   // VALORE DA AFFINARE!
-
-    // Nuove costanti per la sintonizzazione dinamica di R (Covarianza di Misura)
-    // MIN_COVARIANCE_AND_R: Valore minimo assoluto per covarianze per evitare instabilità numerica.
     static constexpr float MIN_COVARIANCE_AND_R = 1e-9f;
 
-    // R_DYNAMIC_SLOW_MOTION: Valore di R quando il movimento è lento/stabile (più smoothing, filtro si fida MENO della misura)
-    // R_DYNAMIC_VERY_FAST_MOTION: Valore di R quando il movimento è molto veloce/brusco (più reattività, filtro si fida PIÙ della misura)
-    // Questi valori sono un punto di partenza e DEVONO ESSERE SINTONIZZATI per il tuo caso d'uso!
-    static constexpr float R_DYNAMIC_SLOW_MOTION      = OpenFIRE_Square::R_BASE * 5.0f;  // 5.0 Esempio: 5 volte R_BASE
-    static constexpr float R_DYNAMIC_VERY_FAST_MOTION = OpenFIRE_Square::R_BASE * 0.1f;  // 0.1 Esempio: 10% di R_BASE
-    // Puoi aggiungere un static_assert per un controllo di compile-time se lo desideri:
-    // static_assert(R_DYNAMIC_VERY_FAST_MOTION >= MIN_COVARIANCE_AND_R, "R_DYNAMIC_VERY_FAST_MOTION must be >= MIN_COVARIANCE_AND_R");
+    static constexpr float SPEED_LOW_THRESHOLD = 1.5f;
+    static constexpr float SPEED_HIGH_THRESHOLD = KF_WIDTH * 0.03f;
+    static constexpr float DAMPING_AT_HIGH_SPEED = 1.0f; 
 
-    // Nuove costanti per moltiplicatori di R_BASE
-    static constexpr float R_MULT_ESTIMATED_GEOMETRIC = 20.0f; // VALORE DA AFFINARE! (usato implicitamente prima)
-    static constexpr float R_MULT_LAST_KNOWN_GOOD = 7.0f;     // VALORE DA AFFINARE! (usato come 7.0f nel cpp)
+    // Dead-Zone (Potenzialmente usate da entrambi, verificare in Kalman_filter())
+    static constexpr float DEAD_ZONE_X = KF_WIDTH * 0.0005f; 
+    static constexpr float DEAD_ZONE_Y = KF_HEIGHT * 0.0005f; 
+    static constexpr float STATIONARY_THRESHOLD_CENTER_COUNT = 10.0f; 
 
-    static constexpr float DEAD_ZONE_X = KF_WIDTH * 0.002f;    // VALORE DA AFFINARE!
-    static constexpr float DEAD_ZONE_Y = KF_HEIGHT * 0.002f; // VALORE DA AFFINARE!
-    static constexpr float DEAD_ZONE_MULTIPLIER_EDGE = 1.5f;   // VALORE DA AFFINARE!
-    static constexpr float DEAD_ZONE_MULTIPLIER_CENTER = 1.2f; // VALORE DA AFFINARE!
-    static constexpr float STATIONARY_THRESHOLD_EDGE_COUNT = 75.0f; // VALORE DA AFFINARE!
-    static constexpr float STATIONARY_THRESHOLD_CENTER_COUNT = 50.0f; // VALORE DA AFFINARE!
+    //================================================================
+    // COSTANTI SPECIFICHE PER Kalman_filter_All() (Centro di Massa)
+    //================================================================
+    static constexpr float INITIAL_P_VALUE = 100.0f; // Per l'inizializzazione di P
 
-    static constexpr float EDGE_SMOOTHING = 1.5f;             // VALORE DA AFFINARE!
-    static constexpr float MIN_PRECISION_FACTOR = 0.90f;      // VALORE DA AFFINARE!
-    static constexpr float CORNER_SMOOTHING_EXPONENT_X = 2.5f;  // VALORE DA AFFINARE!
-    static constexpr float CORNER_SMOOTHING_EXPONENT_Y = 3.0f;  // VALORE DA AFFINARE!
-    static constexpr float EDGE_TRANSITION_THRESHOLD = 0.22f; // VALORE DA AFFINARE!
-    static constexpr float EXP_SMOOTHNESS_FACTOR = 2.5f;      // VALORE DA AFFINARE!
+    // Parametri per la modulazione di Q in Kalman_filter_All
+    static constexpr float Q_MAX = KF_WIDTH / 2048.0f; // Max Q per Kalman_filter_All
+    static constexpr float ACCEL_Q_THRESH_LOWER = KF_WIDTH * 0.0016f;
+    static constexpr float ACCEL_Q_THRESH_UPPER = KF_WIDTH * 0.0024f;
+    static constexpr float JERK_Q_THRESH_LOWER  = KF_WIDTH * 0.0008f;
+    static constexpr float JERK_Q_THRESH_UPPER  = KF_WIDTH * 0.0012f;
 
-    static constexpr float ACCEL_NORMALIZATION_FACTOR = KF_WIDTH * 0.01f; // VALORE DA AFFINARE!
+    // Parametri di Smorzamento per Kalman_filter_All
+    static constexpr float DAMPING_AT_LOW_SPEED_X = 0.92f; // Base damping per X in Kalman_filter_All
+    static constexpr float DAMPING_AT_LOW_SPEED_Y = 0.92f; // Base damping per Y in Kalman_filter_All
+    static constexpr float DAMPING_AT_LOW_SPEED_Y_AT_X_EDGE = 0.80f; // Damping specifico per Y ai bordi X
 
+    // Parametri R per Kalman_filter_All (Logica Asimmetrica)
+    static constexpr float R_BASE_CENTER_X = 0.1f;
+    static constexpr float R_BASE_CENTER_Y = 0.1f;
+    static constexpr float R_AT_X_EDGE = 1.0f;
+    static constexpr float R_AT_Y_EDGE = 1.0f;
+    static constexpr float R_AT_X_EDGE_FOR_Y = 5.0f; // CRITICO per il traballamento verticale
+
+    static constexpr float R_CROSS_AXIS_INFLUENCE = 0.5f;
+    static constexpr float R_CROSS_AXIS_INFLUENCE_Y = 1.5f;
+
+    // smoothstep ranges for Kalman_filter_All
+    static constexpr float X_EDGE_PROXIMITY_SMOOTH_START = 0.6f; 
+    static constexpr float X_EDGE_PROXIMITY_SMOOTH_END = 0.95f; 
+    static constexpr float R_X_EDGE_SMOOTH_START = 0.7f;
+    static constexpr float R_X_EDGE_SMOOTH_END = 0.95f;
+    static constexpr float R_Y_EDGE_SMOOTH_START = 0.7f;
+    static constexpr float R_Y_EDGE_SMOOTH_END = 0.95f;
+
+    // Generali per Kalman_filter_All (non più usate nel dettaglio ma le mantengo per coerenza)
+    static constexpr float EDGE_SMOOTHING_EXP = 1.5f; // Usata in Kalman_filter_All
+
+    // Nuovi parametri per la modulazione esponenziale/potenza di Q
+    static constexpr float Q_EXPONENT = 2.0f; // Sintonizza questo: >1 per reattività più concentrata ad alti movimenti, <1 per più rapida ai bassi
+
+    // Nuovi parametri per la modulazione esponenziale/potenza di R (specie per Y ai bordi X)
+    static constexpr float R_Y_EDGE_EXPONENT = 3.0f; // Sintonizza questo: >1 per effetto concentrato sul bordo estremo
+
+    // Nuovi parametri per la "spinta" a bassa velocità (se scegli di implementarla)
+    // static constexpr float R_PUSH_AT_VERY_LOW_MOTION = 10.0f; // Esempio: valore da aggiungere a R a basse velocità
+    // static constexpr float LOW_MOTION_THRESH_VELOCITY = 0.5f; // Esempio: soglia di velocità per bassa motion
+    // static constexpr float LOW_MOTION_THRESH_ACCEL = 0.1f; // Esempio: soglia di accelerazione per bassa motion
+
+    // Parametri per la "spinta" di R a bassa velocità/accelerazione
+    static constexpr float R_PUSH_AT_VERY_LOW_MOTION = 50.0f; // Valore da aggiungere a R a basse velocità (aumentalo se serve)
+    static constexpr float LOW_MOTION_THRESH_MAGNITUDE_START = 0.5f; // Soglia di motion_magnitude dove la spinta inizia
+    static constexpr float LOW_MOTION_THRESH_MAGNITUDE_END = 1.5f; // Soglia di motion_magnitude dove la spinta finisce
+
+    // Valore di R per l'asse X quando si è ai bordi Y (superiore/inferiore)
+    static constexpr float R_AT_Y_EDGE_FOR_X = 5.0f; // Sintonizza questo valore (es. 5.0f, 8.0f, 10.0f)
+
+    // Esponente per l'influenza dei bordi Y su R_x
+    static constexpr float R_X_EDGE_EXPONENT = 3.0f; // Sintonizza questo (es. 2.0f, 3.0f, 4.0f)
+
+    // Influenza dei bordi Y su R_x (simile a R_CROSS_AXIS_INFLUENCE_Y)
+    static constexpr float R_CROSS_AXIS_INFLUENCE_X = 1.5f; // Sintonizza questo (es. 1.0f, 1.5f, 2.0f)
+
+    //================================================================
+    // COSTANTI SPECIFICHE PER Kalman_filter() (Singoli Punti) - REINSERITE
+    //================================================================
+    // Queste costanti sono state reintrodotte per permettere a Kalman_filter() di compilare.
+    // I loro valori potrebbero richiedere una sintonizzazione se questa funzione è ancora in uso attivo.
+    static constexpr float R_BASE = KF_HEIGHT / 16384.0f; // Questa era già nel tuo codice originale
+    static constexpr float R_DYNAMIC_SLOW_MOTION = R_BASE * 120.0f; 
+    static constexpr float R_DYNAMIC_VERY_FAST_MOTION = R_BASE * 0.01f; 
+
+    static constexpr float DAMPING_AT_LOW_SPEED = 0.92f; // Vecchio damping unificato
+    
+    // Vecchie soglie Q per singoli punti (X e Y differenziate)
     static constexpr float ACCEL_Q_THRESH_X_BASE = KF_WIDTH * 0.002f;
     static constexpr float JERK_Q_THRESH_X_BASE  = KF_WIDTH * 0.001f;
     static constexpr float ACCEL_Q_THRESH_Y_BASE = KF_HEIGHT * 0.002f;
@@ -93,173 +579,127 @@ public:
 
     static constexpr float ACCEL_Q_THRESH_X_LOWER = ACCEL_Q_THRESH_X_BASE * 0.8f;
     static constexpr float ACCEL_Q_THRESH_X_UPPER = ACCEL_Q_THRESH_X_BASE * 1.2f;
-    static constexpr float JERK_Q_THRESH_X_LOWER  = JERK_Q_THRESH_X_BASE * 0.8f;
+    static constexpr float JERK_Q_THRESH_X_LOWER  = JERK_Q_THRESH_X_BASE * 0.8f; // Corretto un typo JERK_Q_THRESH_X_X_BASE
     static constexpr float JERK_Q_THRESH_X_UPPER  = JERK_Q_THRESH_X_BASE * 1.2f;
     static constexpr float ACCEL_Q_THRESH_Y_LOWER = ACCEL_Q_THRESH_Y_BASE * 0.8f;
     static constexpr float ACCEL_Q_THRESH_Y_UPPER = ACCEL_Q_THRESH_Y_BASE * 1.2f;
     static constexpr float JERK_Q_THRESH_Y_LOWER  = JERK_Q_THRESH_Y_BASE * 0.8f;
     static constexpr float JERK_Q_THRESH_Y_UPPER  = JERK_Q_THRESH_Y_BASE * 1.2f;
 
-    static constexpr float SPEED_LOW_THRESHOLD = 1.5f;          // VALORE DA AFFINARE!
-    static constexpr float SPEED_HIGH_THRESHOLD = KF_WIDTH * 0.03f; // VALORE DA AFFINARE!
-    static constexpr float DAMPING_AT_LOW_SPEED = 0.65f;        // VALORE DA AFFINARE!
-    static constexpr float DAMPING_AT_HIGH_SPEED = 0.98f;      // VALORE DA AFFINARE!
-
-    static constexpr float X_EDGE_PROXIMITY_DECAY_RATE = 20.0f; // VALORE CHIAVE DA AFFINARE!
-    static constexpr float MIN_PRECISION_FACTOR_Y_AT_X_EDGE = 0.95f;    // VALORE DA AFFINARE!
-    static constexpr float DAMPING_AT_LOW_SPEED_Y_AT_X_EDGE = 0.80f;    // VALORE DA AFFINARE!
-    static constexpr float DEAD_ZONE_Y_SCALE_AT_X_EDGE = 0.6f;          // VALORE DA AFFINARE!
-
-    static constexpr float fPI_KF = M_PI;
-
-private:
-    // ---- VARIABILI DI STATO DEL FILTRO DI KALMAN (static inline) ----
-    static constexpr int INITIAL_FINAL_X[4] = {
-        400 * CamToMouseMult, 623 * CamToMouseMult, 400 * CamToMouseMult, 623 * CamToMouseMult
-    };
-    static constexpr int INITIAL_FINAL_Y[4] = {
-        200 * CamToMouseMult, 200 * CamToMouseMult, 568 * CamToMouseMult, 568 * CamToMouseMult
-    };
-
-    static inline float q_min_base[4] = { Q_MAX * 0.01f, Q_MAX * 0.01f, Q_MAX * 0.01f, Q_MAX * 0.01f };
-    static inline float p_x[4] = { KF_WIDTH * 0.05f, KF_WIDTH * 0.05f, KF_WIDTH * 0.05f, KF_WIDTH * 0.05f };
-    static inline float p_y[4] = { KF_HEIGHT * 0.05f, KF_HEIGHT * 0.05f, KF_HEIGHT * 0.05f, KF_HEIGHT * 0.05f };
-
-    static inline float x_filt[4] = {
-        static_cast<float>(INITIAL_FINAL_X[0]), static_cast<float>(INITIAL_FINAL_X[1]),
-        static_cast<float>(INITIAL_FINAL_X[2]), static_cast<float>(INITIAL_FINAL_X[3])
-    };
-    static inline float y_filt[4] = {
-        static_cast<float>(INITIAL_FINAL_Y[0]), static_cast<float>(INITIAL_FINAL_Y[1]),
-        static_cast<float>(INITIAL_FINAL_Y[2]), static_cast<float>(INITIAL_FINAL_Y[3])
-    };
-
-    static inline float k_x[4] = {0.0f}; static inline float k_y[4] = {0.0f};
-    static inline float last_x[4] = { x_filt[0], x_filt[1], x_filt[2], x_filt[3] };
-    static inline float last_y[4] = { y_filt[0], y_filt[1], y_filt[2], y_filt[3] };
-    static inline float last_vx[4] = {0.0f}; static inline float last_vy[4] = {0.0f};
-    static inline float last_ax[4] = {0.0f}; static inline float last_ay[4] = {0.0f};
-    static inline float last_jerk_x[4] = {0.0f}; static inline float last_jerk_y[4] = {0.0f};
-    static inline float r_dynamic[4] = { R_BASE, R_BASE, R_BASE, R_BASE }; // Questo verrà aggiornato dinamicamente nel Kalman_filter()
-    static inline int stationary_counter[4] = {0};
-    static inline float last_known_good_raw_x[4] = { x_filt[0], x_filt[1], x_filt[2], x_filt[3] };
-    static inline float last_known_good_raw_y[4] = { y_filt[0], y_filt[1], y_filt[2], y_filt[3] };
-
-    // ---- Membri Non Statici (stato dell'istanza) ----
-    int positionXX[4];       // Coordinate X (int) dei blob visti
-    int positionYY[4];       // Coordinate Y (int) dei blob visti
-    int positionX[4];
-    int positionY[4];
-    int last_FinalX[4], last_FinalY[4];  // FinalX/Y del frame precedente - int se FinalX/Y sono int
-    //unsigned char see[4];               // Stato: 0=non visto, 1=visto diretto, 2=stimato
-    bool initial_positions_established = false; // true se last_FinalX/Y sono validi
-    float sensor_aspect_ratio = 1.0f; // Memorizza width / height
-    bool aspect_ratio_calculated = false; // Flag per sapere se è stato calcolato
+    static constexpr float X_EDGE_PROXIMITY_DECAY_RATE = 20.0f; // Usata da expf
+    static constexpr float EDGE_SMOOTHING = 1.5f; // Vecchio nome del parametro
+    static constexpr float ACCEL_NORMALIZATION_FACTOR = 20.0f; // Per t_pred_a
     
-    static inline unsigned long testLastStampAux = 0;
+    // Queste costanti esistevano ma potrebbero non essere usate da Kalman_filter() o Kalman_filter_All()
+    static constexpr float MIN_PRECISION_FACTOR = 0.90f;
+    static constexpr float CORNER_SMOOTHING_EXPONENT_X = 2.5f;
+    static constexpr float CORNER_SMOOTHING_EXPONENT_Y = 3.0f;
+    static constexpr float EDGE_TRANSITION_THRESHOLD = 0.22f;
+    static constexpr float EXP_SMOOTHNESS_FACTOR = 2.5f;
+    static constexpr float MIN_PRECISION_FACTOR_Y_AT_X_EDGE = 0.95f;
+    static constexpr float DEAD_ZONE_MULTIPLIER_EDGE = 1.5f;
+    static constexpr float DEAD_ZONE_MULTIPLIER_CENTER = 1.2f;
+    static constexpr float STATIONARY_THRESHOLD_EDGE_COUNT = 15.0f;
+    static constexpr float DEAD_ZONE_Y_SCALE_AT_X_EDGE = 0.6f;
+    static constexpr float EDGE_SKEPTICISM_EXPONENT = 2.5f;
+    static constexpr float R_SLOW_AT_CENTER = R_BASE * 60.0f;
+    static constexpr float R_SLOW_AT_EDGE = R_BASE * 250.0f;
+    static constexpr float R_SLOW_AT_HORIZONTAL_EDGE = R_BASE * 120.0f;
+    static constexpr float R_SLOW_AT_VERTICAL_EDGE = R_BASE * 400.0f;
 
-    unsigned int start = 0;
-    unsigned int seenFlags = 0;
 
-    int FinalX[4] = {400 * CamToMouseMult, 623 * CamToMouseMult, 400 * CamToMouseMult, 623 * CamToMouseMult};
-    int FinalY[4] = {200 * CamToMouseMult, 200 * CamToMouseMult, 568 * CamToMouseMult, 568 * CamToMouseMult};
-    unsigned int see[4] = {0};
-    int medianY = MouseMaxY / 2;
-    int medianX = MouseMaxX / 2;
+    //================================================================
+    // STATO DEL TRACKER (Membri non-statici, specifici dell'istanza)
+    //================================================================
+    
+    // Stato principale e di output
+    int FinalX[4];
+    int FinalY[4];
+    int medianX;
+    int medianY;
+    unsigned int see[4];
+    float height;
+    float width;
+    float angle;
+    float angleOffset[4];
+
+    // Variabili di stato interne
+    unsigned int start;
+    unsigned int seenFlags;
+    
+    // Variabili per la logica di stima e del filtro
     float xDistTop, xDistBottom, yDistLeft, yDistRight;
     float angleTop, angleBottom, angleLeft, angleRight;
-    float angle, height, width;
-    float angleOffset[4];
-    bool initialization_complete_flag_;
+    bool initialization_complete_flag_; // Flag per l'inizializzazione generica, se usata altrove
     unsigned int seenFlags_cam;
     TrackingQuality current_tracking_state_;
     float current_input_for_kf_x_[4];
     float current_input_for_kf_y_[4];
 
-    // ---- Struttura Helper per Identificazione ----
-    struct CameraPoint {
-        float x, y;
-        int original_cam_index;
-        bool assigned_to_logical_point;
-    };
 
-    // ---- Funzioni Helper Private Static Inline ----
-    template<typename T>
-    static inline T constrain_custom(T val, T min_val, T max_val) {
-        if (val < min_val) return min_val;
-        if (val > max_val) return max_val;
-        return val;
-    }
-    static inline float map_float_custom(float x, float in_min, float in_max, float out_min, float out_max) {
-        if (fabsf(in_max - in_min) < 1e-6f) return out_min;
-        return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-    }
-    static inline float lerp_custom(float a, float b, float t) { return a + t * (b - a); }
-    static inline float smoothstep_custom(float edge0, float edge1, float x) {
-        if (edge0 == edge1) return (x >= edge0) ? 1.0f : 0.0f;
-        float t = constrain_custom((x - edge0) / (edge1 - edge0), 0.0f, 1.0f);
-        return t * t * (3.0f - 2.0f * t);
-    }
+    //================================================================
+    // STATO DEL FILTRO ADATTIVO (Membri statici, condivisi per i 4 punti)
+    //================================================================
+    // Mantenuti static come da tua specifica architettura a istanza unica.
+    // Questi sono per la Kalman_filter() per i singoli punti.
+    
+    static inline float p_x[4];
+    static inline float p_y[4];
+    static inline float x_filt[4];
+    static inline float y_filt[4];
+    static inline float k_x[4];
+    static inline float k_y[4];
+    static inline float last_x[4];
+    static inline float last_y[4];
+    static inline float last_vx[4];
+    static inline float last_vy[4];
+    static inline float last_ax[4];
+    static inline float last_ay[4];
+    static inline float last_jerk_x[4];
+    static inline float last_jerk_y[4];
+    static inline float r_dynamic[4];
+    static inline int stationary_counter[4];
+    static inline float last_known_good_raw_x[4];
+    static inline float last_known_good_raw_y[4];
+    static inline float q_min_base[4];
 
-    // ---- Metodi Privati per la Logica Interna ----
-    void Kalman_filter();
-    // Helper per stimare 2 punti mancanti quando 2 sono noti
-    bool try_estimate_from_two_known_points(
-        const bool known_logical_points_mask[4],   // Input: maschera di quali punti logici (0-3) sono noti
-        const float current_known_x[4],             // Input: coordinate X dei punti noti (gli altri sono TBD)
-        const float current_known_y[4],             // Input: coordinate Y dei punti noti
-        float out_estimated_or_known_x[4],          // Output: tutte e 4 le X (2 note, 2 stimate se successo)
-        float out_estimated_or_known_y[4]          // Output: tutte e 4 le Y
-    );
-    bool try_estimate_one_missing_point(
-        const bool known_logical_points_mask[4], // Input: maschera di quali 3 punti logici sono noti
-        const float current_known_x[4],         // Input: coordinate X dei 3 punti noti
-        const float current_known_y[4],         // Input: coordinate Y dei 3 punti noti
-        int missing_logical_idx,                // Input: indice del punto da stimare (0-3)
-        float& out_estimated_x,                 // Output: X stimata
-        float& out_estimated_y                 // Output: Y stimata
-    );
+    //================================================================
+    // VARIABILI PER FILTRO KALMAN BASATO SU CENTRO DI MASSA
+    // (Utilizzate solo da Kalman_filter_All())
+    //================================================================
+    
+    static float center_x_filt;
+    static float center_y_filt;
+    static float center_p_x;
+    static float center_p_y;
+    static float center_k_x;
+    static float center_k_y;
+    static float last_center_x;
+    static float last_center_y;
+    static float last_center_vx;
+    static float last_center_vy;
+    static float last_center_ax;
+    static float last_center_ay;
+    static float last_center_jerk_x;
+    static float last_center_jerk_y;
+    static float center_r_dynamic; // Nota: nel codice della funzione, r_x_dynamic e r_y_dynamic sono variabili locali.
+                                  // center_r_dynamic non viene più direttamente assegnato nella funzione.
+                                  // Se vuoi esporre r_x_dynamic e r_y_dynamic come membri statici,
+                                  // dovresti dichiarli qui e assegnarli nel codice della funzione.
+    static float center_q_min_base;
+    static int center_stationary_counter;
+    static float last_known_good_center_x;
+    static float last_known_good_center_y;
+    
+    // Flag per l'inizializzazione del filtro Kalman_filter_All()
+    static bool is_kalman_initialized; 
 
-    // === Funzione Helper Locale per Distanza al Quadrato ===
-    static inline float helper_calculate_distance_sq(float x1, float y1, float x2, float y2) {
-        float dx = x1 - x2;
-        float dy = y1 - y2;
-        return dx * dx + dy * dy;
-    }
-
-    void identify_points_and_prepare_kf_inputs(
-        const float cam_points_x_input_scaled_processed[],
-        const float cam_points_y_input_scaled_processed[],
-        unsigned int current_cam_seen_flags,
-        int out_kf_input_x[],
-        int out_kf_input_y[],
-        bool out_logical_point_seen[],       // Output: true se il punto logico ha un input valido per KF (visto o stimato)
-        bool out_logical_point_is_estimated[] // NUOVO Output: true se il punto è stato stimato geometricamente
-    );
-    void perform_kalman_reset_and_initial_identification(
-        const float scaled_cam_x[],
-        const float scaled_cam_y[],
-        unsigned int seen_flags_from_cam,
-        bool is_initial_boot
-    );
-
-public:
-    // ---- COSTRUTTORE E METODI PUBBLICI ----
-    OpenFIRE_Square();
-    void begin(const int* px, const int* py, unsigned int seen);
-    int X(int index) const { return FinalX[index]; }
-    int Y(int index) const { return FinalY[index]; }
-    unsigned int testSee(int index) const { return see[index]; }
-    int testMedianX() const { return medianX; }
-    int testMedianY() const { return medianY; }
-    float H() const { return height; }
-    float W() const { return width; }
-    float Ang() const { return angle; }
-    unsigned int seen() const { return seenFlags; }
-    TrackingQuality getCurrentTrackingState() const { return current_tracking_state_; }
+    //================================================================
+    // METODI PRIVATI
+    //================================================================
+    
+    void Kalman_filter_base();
 };
-#endif //COMMENTO
-
 
 #endif // _OpenFIRE_Square_Advanced_h_
 #endif //USE_SQUARE_ADVANCED
