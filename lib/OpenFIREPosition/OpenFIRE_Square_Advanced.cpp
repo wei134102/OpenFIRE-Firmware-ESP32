@@ -199,7 +199,13 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
                 // 2) lunghezza della diagonale misurata
                 float dx = P2x - P1x;
                 float dy = P2y - P1y;
-                float L  = hypotf(dx, dy);
+                float L  = hypotf(dx, dy); // float L = sqrtf(dx*dx + dy*dy);
+
+                if (L < 1e-5f) {
+                    //check di sicurezza
+                    // se si verifica, abbandono l’algoritmo o rimango col frame precedente
+                    return;
+                }
 
                 // 3) lunghezza diagonale ideale e fattore di scala
                 float L0 = hypotf((float)width, (float)height);
@@ -397,7 +403,8 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
         FinalX[B] = positionXX[b]; FinalY[B] = positionYY[b];
         FinalX[C] = positionXX[c]; FinalY[C] = positionYY[c];
         FinalX[D] = positionXX[d]; FinalY[D] = positionYY[d];
-        
+
+
         //////////////////////////////////////////////////////////////////////////////////////////
         // ==== calcolo medianX, medianY, height, width, angle ... per compatibilità ========== //
         //////////////////////////////////////////////////////////////////////////////////////////
@@ -420,6 +427,7 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
         // ============================ filtro di Kalman se atttivo  ========================== //
         //////////////////////////////////////////////////////////////////////////////////////////
 
+        
         #ifdef USE_KALMAN_FILTER
             for (int i = 0; i < 4; i++)
             {
@@ -436,6 +444,8 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
             }
 
         #endif //USE_KALMAN_FILTER
+        
+
     }
 }
 #endif // COMMENTO
