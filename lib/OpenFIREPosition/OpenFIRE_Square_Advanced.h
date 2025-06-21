@@ -63,6 +63,17 @@ private:
 
     unsigned int start = 0;
     unsigned int seenFlags = 0;
+
+    bool is_tracking_stable = false; // s efalse vul dire che al frame precedente non sono stati visti punti o solo 1
+    float ideal_aspect_ratio = 16.0f / 9.0f; // rapporto tra larghezza e altezza del rettangolo formato dai TxIR
+    uint8_t prev_num_points_seen = 0; // numero di TxIR visti
+    uint8_t prev_point_seen_mask = 0b00000000; // A->00001000  B->00000100  C->00000010  D->00000001
+    uint8_t last_identified_idx; //Per ricordare quale punto era visibile con solo un sensore visto
+    uint8_t current_point_seen_mask = 0;
+    // A---B  //TxIR superiori orrizzontali 
+    // |   |  // la base AB-CD è sempre più corta dell'altezza AC-BD
+    // |   |  // le diagonali del rettangolo sono AD-BC
+    // C---D  //TxIR inferiori orrizzontali
 };
 
 #endif // _OpenFIRE_Square_Advanced_h_
