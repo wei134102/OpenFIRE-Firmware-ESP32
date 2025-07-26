@@ -13,7 +13,12 @@
                        (x) = GND/No Connect | (-) = GPIO | (p) = Power
 ```
 
-### NOTE: Any button/function GPIO pin assignments written here are the *defaults*, and can be changed for any other function from the OpenFIRE App.
+> [!NOTE]
+> Any button/function GPIO pin assignments written here are the ***defaults***, and can be changed for any other function from within the OpenFIRE App.
+> 
+> All of these layouts can also be previewed from within the OpenFIRE App (v3.0+) under *Help->View Compatible Boards*.
+
+### 
 
 ## waveshare esp32-s3-pico
 ```
@@ -50,10 +55,10 @@ Peripherals SCL OLED RGB Green   36  |-)       (-|  04   Camera SDA
                                  GND |-)  USB  USB  (-| GND
                                  GND |-)  SER  OTG  (-| 5V IN-OUT
     COLLEGATO A USB OTG ???  GPIO 19 |x)            (x| GPIO 14
-    COLLEGATO A USB OTG ???  GPIO 20 |-)            (x| GPIO 13  MISO (non usato per momento) SPI
-     2DOWN     GUNC          GPIO 21 |-)            (p| GPIO 12  SCK  (non usato per momento) SPI
-     2LEFT      PEDAL        GPIO 47 |-)            (x| GPIO 11  MOSI (non usato per momento) SPI
-       COLLEGATO AL LED RGB  GPIO 48 |-)            (-| GPIO 10  SS   (non usato per momento) SPI
+    COLLEGATO A USB OTG ???  GPIO 20 |-)            (x| GPIO 13  MISO -> RX  (non usato per momento) SPI
+     2DOWN     GUNC          GPIO 21 |-)            (p| GPIO 12  SCK  -> SCK (non usato per momento) SPI
+     2LEFT      PEDAL        GPIO 47 |-)            (x| GPIO 11  MOSI -> TX  (non usato per momento) SPI
+       COLLEGATO AL LED RGB  GPIO 48 |-)            (-| GPIO 10  SS   -> CSn (non usato per momento) SPI
      2RIGHT     PUMP         GPIO 45 |x)            (x| GPIO  9  SCL (sono di default li riusiamo in OpenFIRE) CAM SCL
   COLLEGATO A PULSANTE BOOT  GPIO  0 |-)            (-| GPIO 46
     2MIDDLE    HOME          GPIO 35 |-)            (-| GPIO  3 USATO PER USB SERIALE JTAG ????? (comunque non usato)

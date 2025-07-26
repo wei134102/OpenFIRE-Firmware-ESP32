@@ -60,6 +60,7 @@
   #include "MacAddress.h"
   #include "esp_wifi.h"
   #include "freertos/semphr.h"
+  #include "esp_timer.h"
 #elif defined(ARDUINO_ARCH_RP2040)
   // vediamo
 #endif
@@ -149,11 +150,13 @@ class SerialWireless_ : public Stream
 
   // ======= per FIFO SERIAL ===============
   // ===== per write === buffer lineare ====
-  #define FIFO_SIZE_WRITE_SERIAL 200
-  #define TIME_OUT_SERIAL_WRITE 3
+  #define FIFO_SIZE_WRITE_SERIAL 128
+  #define TIME_OUT_SERIAL_WRITE 3  // in seguito rimuovere o rideterminare in microsecondi
+  #define TIMER_HANDLE_SERIAL_DURATION_MICROS 3000 // 3000 microsecondi un 3 millisecondi
   uint8_t bufferSerialWrite[FIFO_SIZE_WRITE_SERIAL];
-  unsigned long startTimeSerialWrite = 0; // = millis();
+  unsigned long startTimeSerialWrite = 0; // = millis(); // poi convertire in microsecondi // in seguito rimovere
   volatile uint16_t lenBufferSerialWrite = 0;
+  esp_timer_handle_t timer_handle_serial;
   // ====== per read ====== buffer circolare =====
   #define FIFO_SIZE_READ_SERIAL 200
   uint8_t bufferSerialRead[FIFO_SIZE_READ_SERIAL];
@@ -198,7 +201,7 @@ class SerialWireless_ : public Stream
   
   // overraid da ::Print
   int availableForWrite() override;
-  void flush() override; 
+  void flush() override;
   size_t write(uint8_t c) override;
   size_t write(const uint8_t *data, size_t len) override;
   using Print::write;
@@ -211,6 +214,7 @@ class SerialWireless_ : public Stream
   size_t writeBin(const uint8_t *data, size_t len);
   void flushBin();
   int availableForWriteBin();
+  bool flush_sem();
   // inserire da me per gestione buffer ingresso
   int peekBin();
   int readBin();
@@ -222,6 +226,7 @@ class SerialWireless_ : public Stream
         
   // ======== generiche ============
   void SendData();  // utilizziamo anche flush
+  void SendData_sem();
   void SendPacket(const uint8_t *data, const uint8_t &len,const uint8_t &packetID); // non penso lo utilizzeremo
 
   bool checkForRxPacket(); // andrà nel ciclo principale .. messo nella callback
@@ -231,7 +236,12 @@ class SerialWireless_ : public Stream
   bool connection_gun_at_last_dongle();
 
   // ===============================
-  
+  // ===== per i timer ================
+
+//void setupTimer(uint64_t duration_us);
+void setupTimer();
+void stopTimer_serial();
+void resetTimer_serial(uint64_t duration_us);
 
 private:
 

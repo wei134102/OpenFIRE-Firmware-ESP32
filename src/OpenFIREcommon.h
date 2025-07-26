@@ -11,7 +11,21 @@
 
 #include <stdint.h>
 #include <DFRobotIRPositionEx.h>
-#include <OpenFIRE_Square.h>
+
+#ifdef USE_SQUARE_ADVANCED
+    #include <OpenFIRE_Square_Advanced.h>
+#else
+    #include <OpenFIRE_Square.h>
+#endif // USE_SQUARE_ADVANCED
+
+#ifdef USE_POS_KALMAN_FILTER
+    #include <OpenFIRE_Kalman_Filter.h>
+#endif // USE_POS_KALMAN_FILTER
+
+#ifdef USE_POS_ONE_EURO_FILTER
+    #include <OpenFIRE_One_Euro_Filter.h>
+#endif // USE_POS_ONE_EURO_FILTER
+
 #include <OpenFIRE_Diamond.h>
 #include <OpenFIRE_Perspective.h>
 #include <OpenFIREConst.h>
@@ -106,12 +120,12 @@ public:
 
     /// @brief    Updates LightgunButtons::ButtonDesc[] buttons descriptor array
     ///           with new pin mappings and control bindings, if any.
-    /// @param    lowButtons
-    ///           Flag that determines whether offscreen button compatibility bit is enabled.
-    ///           When true, Mouse+Keyboard slots' offscreen mapping is set to a different key.
-    ///           TODO: should be able to set offscreen button mode mappings too,
-    ///           but these are handled directly in firing modes currently.
-    static void UpdateBindings(const bool &lowButtons = false);
+    /// @param    rebindStrSel
+    ///           Flag that determines whether to reset the bindings of the special macros playerStartBtn/playerSelectBtn
+    static void UpdateBindings(const bool &rebindStrSel);
+
+    /// @brief    Checks Button Descriptor and replaces instances of 0xFF/0xFE with player-relative Start/Select
+    static void UpdateStartSelect();
 
     // initial gunmode
     static inline FW_Const::GunMode_e gunMode = FW_Const::GunMode_Init;
@@ -144,6 +158,31 @@ public:
     static inline int moveYAxisArr[3] = {0, 0, 0};
     static inline int moveIndex = 0;
 
+    //////////////////////////////////////////////////////////////////////////////////////////
+    // ================================ 696969 for filter ==================================//
+    //////////////////////////////////////////////////////////////////////////////////////////
+    #ifdef TEST_CAM   
+    static inline int positionX[4] = {0};
+    static inline int positionY[4] = {0};
+    #endif // TEST_CAM
+
+    #ifdef USE_POS_KALMAN_FILTER   
+        static inline int X_Kalman;
+        static inline int Y_Kalman;
+        static inline OpenFIRE_Kalman_Filter kf;
+    #endif // USE_POS_KALMAN_FILTER
+
+    #ifdef USE_POS_ONE_EURO_FILTER   
+        static inline int X_One_Euro;
+        static inline int Y_One_Euro;
+        static inline OpenFIRE_One_Euro_Filter oef;
+    #endif // USE_POS_KALMAN_FILTER
+
+
+    //////////////////////////////////////////////////////////////////////////////////////////
+    // ================================ 696969 for filter ==================================//
+    //////////////////////////////////////////////////////////////////////////////////////////
+
     // timer will set this to 1 when the IR position can update
     static inline volatile unsigned int irPosUpdateTick = 0;
 
@@ -158,6 +197,9 @@ public:
     static inline bool dockedSaving = false; //true; // false;  // 696969  se false invia dati di stick analogico, temperatura e tasti  - se true non invia nulla                     // To block sending test output in docked mode.
 
     static LightgunButtons buttons;
+
+    static inline char playerStartBtn = '1';
+    static inline char playerSelectBtn = '5';
 
     // For offscreen button stuff:
     static inline bool triggerPressedOffscreen = false;            // Set if shot offscreen; determines whether we release trigger btn code 1 or 2
@@ -182,9 +224,6 @@ public:
     #endif // MAMEHOOKER
     #endif // USES_DISPLAY
 };
-
-static inline char playerStartBtn = '1';
-static inline char playerSelectBtn = '5';
 
 // button runtime data arrays
 static inline LightgunButtonsStatic<ButtonCount> lgbData;

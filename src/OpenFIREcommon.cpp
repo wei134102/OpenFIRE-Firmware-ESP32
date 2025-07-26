@@ -16,6 +16,7 @@
 #endif // ARDUINO_ARCH_RP2040
 
 #include "OpenFIREcommon.h"
+#include "OpenFIREFeedback.h"
 #include "OpenFIRElights.h"
 #include "OpenFIREserial.h"
 
@@ -241,6 +242,10 @@ void FW_Common::SetMode(const FW_Const::GunMode_e &newMode)
     switch(gunMode) {
     case FW_Const::GunMode_Run:
         stateFlags |= FW_Const::StateFlag_PrintPreferences;
+        // MAKE SURE EVERYTHING IS DISENGAGED:
+        OF_FFB::FFBShutdown();
+        buttons.ReleaseAll();
+        buttons.ReportDisable();
         break;
     case FW_Const::GunMode_Pause:
         break;
@@ -327,6 +332,8 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
     buttons.ReportDisable();
 
     uint8_t calStage = 0;
+    char buf[6];
+    buf[0] = OF_Const::sCaliInfoUpd;
 
     // hold values in a buffer till calibration is complete
     int topOffset;
@@ -403,6 +410,7 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
         // Handle button presses and calibration stages
         if((buttons.pressedReleased & (FW_Const::ExitPauseModeBtnMask | FW_Const::ExitPauseModeHoldBtnMask) || Serial.read() == OF_Const::serialTerminator) && !justBooted) {
             Serial.printf("%c%c", OF_Const::sCaliStageUpd, FW_Const::Cali_Verify+1);
+            Serial.flush();
 
             // Reapplying backed up data
             OF_Prefs::profiles[OF_Prefs::currentProfile].topOffset = _topOffset;
@@ -425,7 +433,6 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
             return;
         } else if(buttons.pressed == FW_Const::BtnMask_Trigger && !mouseMoving) {
             Serial.printf("%c%c", OF_Const::sCaliStageUpd, ++calStage);
-
             // Ensure our messages go through, or else the HID reports eat UART.
             Serial.flush();
 
@@ -474,14 +481,11 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                 case FW_Const::Cali_Bottom:
                     // Set Offset buffer
                     topOffset = mouseY;
-                    {
-                      char buf[6];
-                      buf[0] = OF_Const::sCaliInfoUpd;
-                      buf[1] = 1;
-                      memcpy(&buf[2], &topOffset, sizeof(int));
-                      Serial.write(buf, sizeof(buf));
-                      Serial.flush();
-                    }
+
+                    buf[1] = 1;
+                    memcpy(&buf[2], &topOffset, sizeof(int));
+                    Serial.write(buf, sizeof(buf));
+                    Serial.flush();
 
                     // Set mouse movement to bottom position
                     if(!fromDesktop) {
@@ -493,14 +497,11 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                 case FW_Const::Cali_Left:
                     // Set Offset buffer
                     bottomOffset = (res_y - mouseY);
-                    {
-                      char buf[6];
-                      buf[0] = OF_Const::sCaliInfoUpd;
-                      buf[1] = 2;
-                      memcpy(&buf[2], &bottomOffset, sizeof(int));
-                      Serial.write(buf, sizeof(buf));
-                      Serial.flush();
-                    }
+
+                    buf[1] = 2;
+                    memcpy(&buf[2], &bottomOffset, sizeof(int));
+                    Serial.write(buf, sizeof(buf));
+                    Serial.flush();
 
                     // Set mouse movement to left position
                     if(!fromDesktop) {
@@ -512,14 +513,11 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                 case FW_Const::Cali_Right:
                     // Set Offset buffer
                     leftOffset = mouseX;
-                    {
-                      char buf[6];
-                      buf[0] = OF_Const::sCaliInfoUpd;
-                      buf[1] = 3;
-                      memcpy(&buf[2], &leftOffset, sizeof(int));
-                      Serial.write(buf, sizeof(buf));
-                      Serial.flush();
-                    }
+
+                    buf[1] = 3;
+                    memcpy(&buf[2], &leftOffset, sizeof(int));
+                    Serial.write(buf, sizeof(buf));
+                    Serial.flush();
 
                     // Set mouse movement to right position
                     if(!fromDesktop) {
@@ -531,14 +529,11 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                 case FW_Const::Cali_Center:
                     // Set Offset buffer
                     rightOffset = (res_x - mouseX);
-                    {
-                      char buf[6];
-                      buf[0] = OF_Const::sCaliInfoUpd;
-                      buf[1] = 4;
-                      memcpy(&buf[2], &rightOffset, sizeof(int));
-                      Serial.write(buf, sizeof(buf));
-                      Serial.flush();
-                    }
+
+                    buf[1] = 4;
+                    memcpy(&buf[2], &rightOffset, sizeof(int));
+                    Serial.write(buf, sizeof(buf));
+                    Serial.flush();
 
                     // Save Offset buffer to profile
                     OF_Prefs::profiles[OF_Prefs::currentProfile].topOffset = topOffset;
@@ -567,20 +562,14 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                                                                      (OpenFIREsquare.testMedianY() - (384 << 2)) * cos(OpenFIREsquare.Ang()) + (384 << 2);
                     }
 
-                    {
-                      char buf[6];
-                      buf[0] = OF_Const::sCaliInfoUpd;
-                      buf[1] = 5;
-                      memcpy(&buf[2], &OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, sizeof(float));
-                      Serial.write(buf, sizeof(buf));
-                    }
-                    {
-                      char buf[6];
-                      buf[0] = OF_Const::sCaliInfoUpd;
-                      buf[1] = 6;
-                      memcpy(&buf[2], &OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, sizeof(float));
-                      Serial.write(buf, sizeof(buf));
-                    }
+                    buf[1] = 5;
+                    memcpy(&buf[2], &OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, sizeof(float));
+                    Serial.write(buf, sizeof(buf));
+                    Serial.flush();
+
+                    buf[1] = 6;
+                    memcpy(&buf[2], &OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, sizeof(float));
+                    Serial.write(buf, sizeof(buf));
                     Serial.flush();
 
                     // Update Cam centre in perspective library
@@ -690,9 +679,11 @@ void FW_Common::GetPosition()
     if(dfrIRPos != nullptr) {
         int error = dfrIRPos->basicAtomic(DFRobotIRPositionEx::Retry_2);
         if(error == DFRobotIRPositionEx::Error_Success) {
+           
             // if diamond layout, or square
-            if(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout) {
+            if(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout) { // layoutDiamond = 1
                 OpenFIREdiamond.begin(dfrIRPos->xPositions(), dfrIRPos->yPositions(), dfrIRPos->seen());
+
                 OpenFIREper.warp(OpenFIREdiamond.X(0), OpenFIREdiamond.Y(0),
                                 OpenFIREdiamond.X(1), OpenFIREdiamond.Y(1),
                                 OpenFIREdiamond.X(2), OpenFIREdiamond.Y(2),
@@ -700,8 +691,20 @@ void FW_Common::GetPosition()
                                 res_x / 2, 0, 0,
                                 res_y / 2, res_x / 2,
                                 res_y, res_x, res_y / 2);
-            } else {
+            } else { // layoutSquare = 0
                 OpenFIREsquare.begin(dfrIRPos->xPositions(), dfrIRPos->yPositions(), dfrIRPos->seen());
+                
+                #ifdef TEST_CAM
+                positionX[0] = OpenFIREsquare.X(0);
+                positionY[0] = OpenFIREsquare.Y(0);
+                positionX[1] = OpenFIREsquare.X(1);
+                positionY[1] = OpenFIREsquare.Y(1);
+                positionX[2] = OpenFIREsquare.X(2);
+                positionY[2] = OpenFIREsquare.Y(2);
+                positionX[3] = OpenFIREsquare.X(3);
+                positionY[3] = OpenFIREsquare.Y(3);
+                #endif //TESTCAM
+
                 OpenFIREper.warp(OpenFIREsquare.X(0), OpenFIREsquare.Y(0),
                                 OpenFIREsquare.X(1), OpenFIREsquare.Y(1),
                                 OpenFIREsquare.X(2), OpenFIREsquare.Y(2),
@@ -712,9 +715,45 @@ void FW_Common::GetPosition()
                                 OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, res_y);
             }
 
+            
+            #ifdef USE_POS_ONE_EURO_FILTER
+                X_One_Euro = OpenFIREper.getX();
+                Y_One_Euro = OpenFIREper.getY();
+                //int aux_X = X_One_Euro; //
+                //int aux_Y = Y_One_Euro; //
+                oef.One_Euro_Filter(X_One_Euro, Y_One_Euro);
+                #ifndef USE_POS_KALMAN_FILTER
+                    mouseX = map(X_One_Euro, 0, res_x, (0 - OF_Prefs::profiles[OF_Prefs::currentProfile].leftOffset), (res_x + OF_Prefs::profiles[OF_Prefs::currentProfile].rightOffset));                 
+                    mouseY = map(Y_One_Euro, 0, res_y, (0 - OF_Prefs::profiles[OF_Prefs::currentProfile].topOffset), (res_y + OF_Prefs::profiles[OF_Prefs::currentProfile].bottomOffset));
+                #endif 
+            #endif
+            #ifdef USE_POS_KALMAN_FILTER
+                #ifdef USE_POS_ONE_EURO_FILTER
+                    X_Kalman = X_One_Euro;
+                    Y_Kalman = Y_One_Euro;
+                #else
+                    X_Kalman = OpenFIREper.getX();
+                    Y_Kalman = OpenFIREper.getY();
+                #endif
+                //int aux_X = X_Kalman; //
+                //int aux_Y = Y_Kalman; //
+                int aux_seen = dfrIRPos->seen() & 0xF;
+                if ((aux_seen & (aux_seen - 1)) != 0) {
+                    kf.Kalman_Filter(X_Kalman, Y_Kalman); // chiama il Kalman_filter solo se vede almeno 2 sensori
+                }
+                /*
+                if(millis() - testLastStamp > 30) {
+                    testLastStamp = millis();
+                    Serial.printf("X(%5d)-Y(%5d) -> Kalman: X(%5d)-Y(%5d)\n", aux_X, aux_Y,X_Kalman, Y_Kalman);
+                }
+                */
+                mouseX = map(X_Kalman, 0, res_x, (0 - OF_Prefs::profiles[OF_Prefs::currentProfile].leftOffset), (res_x + OF_Prefs::profiles[OF_Prefs::currentProfile].rightOffset));                 
+                mouseY = map(Y_Kalman, 0, res_y, (0 - OF_Prefs::profiles[OF_Prefs::currentProfile].topOffset), (res_y + OF_Prefs::profiles[OF_Prefs::currentProfile].bottomOffset));
+            #else
             // Output mapped to screen resolution because offsets are measured in pixels
             mouseX = map(OpenFIREper.getX(), 0, res_x, (0 - OF_Prefs::profiles[OF_Prefs::currentProfile].leftOffset), (res_x + OF_Prefs::profiles[OF_Prefs::currentProfile].rightOffset));                 
             mouseY = map(OpenFIREper.getY(), 0, res_y, (0 - OF_Prefs::profiles[OF_Prefs::currentProfile].topOffset), (res_y + OF_Prefs::profiles[OF_Prefs::currentProfile].bottomOffset));
+            #endif // USE_POS_KALMAN_FILTER
 
             switch(runMode) {
                 case FW_Const::RunMode_Average:
@@ -797,21 +836,42 @@ void FW_Common::GetPosition()
                      Gamepad16.moveCam(conMoveX, conMoveY);
                 else AbsMouse5.move(conMoveX, conMoveY);
 
-            } else if(gunMode == FW_Const::GunMode_Verification) {
-                // Output mapped to Mouse resolution
-                conMoveX = map(conMoveX, 0, res_x, 0, 32767);
-                conMoveY = map(conMoveY, 0, res_y, 0, 32767);
+                #ifdef TEST_CAM
+                    if(millis() - testLastStamp > 30) {
+                    testLastStamp = millis();
+                    // RAW Camera Output mapped to screen res (1920x1080)
+                    int rawX[4];
+                    int rawY[4];
+                    // RAW Output for viewing in processing sketch mapped to 1920x1080 screen resolution
+                    for (int i = 0; i < 4; ++i) {
+                        rawX[i] = map(positionX[i], 0, 1023 << 2, 1920, 0);
+                        rawY[i] = map(positionY[i], 0, 768 << 2, 0, 1080);
+                        //Serial.printf("P(%1d):%5d,%5d ", i, positionX[i],positionY[i]);
+                    }    
+                    //Serial.println();
+                    #ifdef USES_DISPLAY
+                        OLED.DrawVisibleIR(rawX, rawY);
+                    #endif // USES_DISPLAY
+                }
+                    
+                #endif // TEST CAM
 
-                AbsMouse5.move(conMoveX, conMoveY);
-                AbsMouse5.report();
             } else {
+                if(gunMode == FW_Const::GunMode_Verification) {
+                    // Output mapped to Mouse resolution
+                    conMoveX = map(conMoveX, 0, res_x, 0, 32767);
+                    conMoveY = map(conMoveY, 0, res_y, 0, 32767);
+
+                    AbsMouse5.move(conMoveX, conMoveY);
+                    AbsMouse5.report();
+                }
                 if(millis() - testLastStamp > 50) {
                     testLastStamp = millis();
                     // RAW Camera Output mapped to screen res (1920x1080)
                     int rawX[4];
                     int rawY[4];
                     // RAW Output for viewing in processing sketch mapped to 1920x1080 screen resolution
-                    for (int i = 0; i < 4; i++) {
+                    for (int i = 0; i < 4; ++i) {
                         if(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout) {
                             rawX[i] = map(OpenFIREdiamond.X(i), 0, 1023 << 2, 1920, 0);
                             rawY[i] = map(OpenFIREdiamond.Y(i), 0, 768 << 2, 0, 1080);
@@ -1109,55 +1169,99 @@ int FW_Common::SavePreferences()
     }
 }
 
-void FW_Common::UpdateBindings(const bool &lowButtons)
+void FW_Common::UpdateBindings(const bool &rebindStrSel)
 {
-    if(gunMode != FW_Const::GunMode_Run) {
+    switch(gunMode) {
+    case FW_Const::GunMode_Run:
+        buttons.ReleaseAll();
+        break;
+    case FW_Const::GunMode_Docked:
+    case FW_Const::GunMode_Init:
         // Updates pins
         for(int i = 0; i < ButtonCount; ++i)
             LightgunButtons::ButtonDesc[i].pin = OF_Prefs::pins[i];
+        break;
+    default:
+        break;
     }
 
-    #if defined(PLAYER_START) && defined(PLAYER_SELECT)
-    playerStartBtn = PLAYER_START;
-    playerSelectBtn = PLAYER_SELECT;
-    #else
-    if(OF_Prefs::usb.devicePID > 0 && OF_Prefs::usb.devicePID < 5) {
-        playerStartBtn = OF_Prefs::usb.devicePID + '0';
-        playerSelectBtn = OF_Prefs::usb.devicePID + '4';
-    } else {
-        playerStartBtn = '1';
-        playerSelectBtn = '5';
+    if(rebindStrSel) {
+        #if defined(PLAYER_START) && defined(PLAYER_SELECT)
+        playerStartBtn = PLAYER_START;
+        playerSelectBtn = PLAYER_SELECT;
+        #else
+        if(OF_Prefs::usb.devicePID > 0 && OF_Prefs::usb.devicePID < 5) {
+            playerStartBtn = OF_Prefs::usb.devicePID + '0';
+            playerSelectBtn = OF_Prefs::usb.devicePID + '4';
+        } else {
+            playerStartBtn = '1';
+            playerSelectBtn = '5';
+        }
+        #endif // PLAYER_NUMBER
     }
-    #endif // PLAYER_NUMBER
 
-    for(int i = 0; i < ButtonCount; ++i) {
+    for(int i = 0; i < ButtonCount; ++i)
         memcpy(&LightgunButtons::ButtonDesc[i].reportType,
                OF_Prefs::backupButtonDesc[i],
                sizeof(OF_Prefs::backupButtonDesc[0]));
-        
-        while(true) {
-            uint8_t *ptr = (uint8_t*)memchr(&LightgunButtons::ButtonDesc[i].reportCode, 0xFF, sizeof(OF_Prefs::backupButtonDesc[i]-1));
-            if(ptr != nullptr)
-                *ptr = playerStartBtn;
-            else break;
-        }
-
-        while(true) {
-            uint8_t *ptr = (uint8_t*)memchr(&LightgunButtons::ButtonDesc[i].reportCode, 0xFE, sizeof(OF_Prefs::backupButtonDesc[i]-1));
-            if(ptr != nullptr)
-                *ptr = playerSelectBtn;
-            else break;
-        }
-    }
 
     // Updates button functions for low-button mode
-    if(lowButtons) {
+    if(OF_Prefs::toggles[OF_Const::lowButtonsMode]) {
         memcpy(&LightgunButtons::ButtonDesc[FW_Const::BtnIdx_A].reportType2,
                OF_Prefs::backupButtonDesc[FW_Const::BtnIdx_Start],
                2);
         memcpy(&LightgunButtons::ButtonDesc[FW_Const::BtnIdx_B].reportType2,
                OF_Prefs::backupButtonDesc[FW_Const::BtnIdx_Select],
                2);
+    }
+
+    #ifdef MAMEHOOKER
+    if(OF_Serial::serialMappingsOffscreenShot) {
+        memcpy(&LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Trigger].reportType2,
+               OF_Prefs::backupButtonDesc[FW_Const::BtnIdx_A],
+               sizeof(LightgunButtons::Desc_s::reportType)*2);
+
+        // remap bindings for low button users to make e.g. VCop 3 playable with 1 btn + pedal
+        if(OF_Prefs::toggles[OF_Const::lowButtonsMode])
+            memcpy(&LightgunButtons::ButtonDesc[FW_Const::BtnIdx_A].reportType,
+                   OF_Prefs::backupButtonDesc[FW_Const::BtnIdx_Reload],
+                   sizeof(LightgunButtons::Desc_s::reportType)*2);
+    }
+
+    if(OF_Serial::serialMappingsPedalMode) switch(OF_Serial::serialMappingsPedalMode) {
+    case 1:
+        memcpy(&LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Pedal].reportType,
+               OF_Prefs::backupButtonDesc[FW_Const::BtnIdx_A],
+               sizeof(OF_Prefs::backupButtonDesc[0]));
+        break;
+    case 2:
+        memcpy(&LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Pedal].reportType,
+               OF_Prefs::backupButtonDesc[FW_Const::BtnIdx_B],
+               sizeof(OF_Prefs::backupButtonDesc[0]));
+        break;
+    default:
+        break;
+    }
+    #endif // MAMEHOOKER
+
+    UpdateStartSelect();
+}
+
+void FW_Common::UpdateStartSelect()
+{
+    uint8_t *btnMatchedPtr;
+    for(int i = 0; i < ButtonCount; ++i) {
+        do {
+            btnMatchedPtr = (uint8_t*)memchr(&LightgunButtons::ButtonDesc[i].reportCode, 0xFF, sizeof(OF_Prefs::backupButtonDesc[i])-1);
+            if(btnMatchedPtr != nullptr)
+                *btnMatchedPtr = playerStartBtn;
+        } while(btnMatchedPtr != nullptr);
+
+        do {
+            btnMatchedPtr = (uint8_t*)memchr(&LightgunButtons::ButtonDesc[i].reportCode, 0xFE, sizeof(OF_Prefs::backupButtonDesc[i])-1);
+            if(btnMatchedPtr != nullptr)
+                *btnMatchedPtr = playerSelectBtn;
+        } while(btnMatchedPtr != nullptr);
     }
 }
 

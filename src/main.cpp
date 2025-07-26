@@ -16,12 +16,6 @@
  */
 
 #include "OpenFIREmain.h"
-
-
-//#ifdef ARDUINO_ARCH_RP2040
-//    #define delay delay_nb
-//#endif //ARDUINO_ARCH_RP2040
-
 #include "boards/OpenFIREshared.h"
 #include "OpenFIREcolors.h"
 #include "OpenFIRElights.h"
@@ -82,14 +76,16 @@ void setup() {
     OF_Prefs::LoadPresets();
     
     if(OF_Prefs::InitFS() == OF_Prefs::Error_Success) {
-        //OF_Prefs::ResetPreferences(); //FORMATTA IL FILE SYSTEM
+        //OF_Prefs::ResetPreferences(); // ============ FORMATTA IL FILE SYSTEM =================================
         OF_Prefs::LoadProfiles();
     
         // Profile sanity checks
         // resets offsets that are wayyyyy too unreasonably high
         for(int i = 0; i < PROFILE_COUNT; ++i) {
-            if(OF_Prefs::profiles[i].rightOffset >= 32768 || OF_Prefs::profiles[i].bottomOffset >= 32768 ||
-               OF_Prefs::profiles[i].topOffset >= 32768   || OF_Prefs::profiles[i].leftOffset >= 32768) {
+            if(OF_Prefs::profiles[i].topOffset >= 32768     || OF_Prefs::profiles[i].topOffset <= -32768 ||
+               OF_Prefs::profiles[i].bottomOffset >= 32768  || OF_Prefs::profiles[i].bottomOffset <= -32768 ||
+               OF_Prefs::profiles[i].rightOffset >= 32768   || OF_Prefs::profiles[i].rightOffset <= -32768 ||
+               OF_Prefs::profiles[i].leftOffset >= 32768    || OF_Prefs::profiles[i].leftOffset <= -32768) {
                 OF_Prefs::profiles[i].topOffset = 0;
                 OF_Prefs::profiles[i].bottomOffset = 0;
                 OF_Prefs::profiles[i].leftOffset = 0;
@@ -187,7 +183,7 @@ void setup() {
 // ====== 696969 ============ spostato sopra prima della connessione =================================================
 
     // this is needed for both customs and builtins, as defaults are all uninitialized
-    FW_Common::UpdateBindings(OF_Prefs::toggles[OF_Const::lowButtonsMode]);
+    FW_Common::UpdateBindings(true);
 
     // Initialize DFRobot Camera Wires & Object
     FW_Common::CameraSet();
@@ -228,6 +224,10 @@ void setup() {
         if (analogValueY > ANALOG_STICK_DEADZONE_Y_MAX) ANALOG_STICK_DEADZONE_Y_MAX = analogValueY;
         if (analogValueY < ANALOG_STICK_DEADZONE_Y_MIN) ANALOG_STICK_DEADZONE_Y_MIN = analogValueY;
     }
+    
+    ANALOG_STICK_DEADZONE_X_CENTER = (ANALOG_STICK_DEADZONE_X_MIN + ANALOG_STICK_DEADZONE_X_MAX) / 2; 
+    ANALOG_STICK_DEADZONE_Y_CENTER = (ANALOG_STICK_DEADZONE_Y_MIN + ANALOG_STICK_DEADZONE_Y_MAX) / 2; 
+    
     ANALOG_STICK_DEADZONE_X_MIN -= 400;
     ANALOG_STICK_DEADZONE_X_MAX += 400;
     ANALOG_STICK_DEADZONE_Y_MIN -= 400;
@@ -242,7 +242,7 @@ void setup() {
 #ifdef USE_TINYUSB
         #if defined(ARDUINO_RASPBERRY_PI_PICO_W) && defined(ENABLE_CLASSIC)
         // is VBUS (USB voltage) detected?
-        if(digitalRead(34)) {
+        if(digitalRead(34) || true) { // digitalRead(34) non funziona e non è il metodo corretto
             // If so, we're connected via USB, so initializing the USB devices chunk.
             TinyUSBDevices.begin(POLL_RATE); // 696969 inserito questo al posto di quello sotto
             // TUSBDeviceSetup.begin(1); // 696969 tolto ancora non fatta completa transizione
@@ -370,7 +370,7 @@ void setup() {
 
     // IR camera maxes out motion detection at ~300Hz, and millis() isn't good enough
     
-    if (TinyUSBDevices.onBattery) startIrCamTimer(120);  // 100->10ms 66 -> 15ms per connessione wireless
+    if (TinyUSBDevices.onBattery) startIrCamTimer(209);  // 120 ---- 100->10ms 66 -> 15ms per connessione wireless
       else startIrCamTimer(209); // 5ms per connessione via seriale
     
     FW_Common::OpenFIREper.source(OF_Prefs::profiles[OF_Prefs::currentProfile].adjX,
@@ -512,6 +512,11 @@ void setup1()
 // currently handles all button & serial processing when Core 0 is in ExecRunMode()
 void loop1()
 {
+    #ifdef ARDUINO_ARCH_ESP32
+        esp32_fifo.pop();
+    #else // rp2040
+    rp2040.fifo.pop();
+    #endif
     while(FW_Common::gunMode == FW_Const::GunMode_Run) {
         // All buttons' outputs except for the trigger are processed here.
         FW_Common::buttons.Poll(0);
@@ -561,35 +566,35 @@ void loop1()
             } else if(pauseHoldStarted) {
                 unsigned long t = millis();
                 if(t - pauseHoldStartstamp > OF_Prefs::settings[OF_Const::holdToPauseLength]) {
-                    // MAKE SURE EVERYTHING IS DISENGAGED:
-                    OF_FFB::FFBShutdown();
-                    FW_Common::buttons.ReportDisable();
-                    // Signal the main core to set mode, since it's more stable there.
-                    // Pop blocks until we get the okay from the main core (the value returned doesn't matter atm)
-                    #ifdef ARDUINO_ARCH_ESP32
-                        esp32_fifo.push(FW_Const::GunMode_Pause);
-                        esp32_fifo.pop();
-                    #else // rp2040
-                    rp2040.fifo.push(FW_Const::GunMode_Pause);
-                    rp2040.fifo.pop();
-                    #endif
+                    // in the infinitely tiny chance that this happens at the same time as a serial-pinged Dock request:
+                    if(FW_Common::gunMode == FW_Const::GunMode_Run) {
+                        // Signal the main core to set mode, since it's more stable there.
+                        // Pop blocks until we get the okay from the main core (the value returned doesn't matter atm)
+                        #ifdef ARDUINO_ARCH_ESP32
+                            esp32_fifo.push(FW_Const::GunMode_Pause);
+                            esp32_fifo.pop();
+                        #else // rp2040 
+                        rp2040.fifo.push(FW_Const::GunMode_Pause);
+                        rp2040.fifo.pop();
+                        #endif
+                    }
                 }
             }
         } else {
             if(FW_Common::buttons.pressedReleased == FW_Const::EnterPauseModeBtnMask ||
                FW_Common::buttons.pressedReleased == FW_Const::BtnMask_Home) {
-                // MAKE SURE EVERYTHING IS DISENGAGED:
-                OF_FFB::FFBShutdown();
-                FW_Common::buttons.ReportDisable();
-                // Signal the main core to set mode, since it's more stable there.
-                // Pop blocks until we get the okay from the main core (the value returned doesn't matter atm)
-                #ifdef ARDUINO_ARCH_ESP32
-                    esp32_fifo.push(FW_Const::GunMode_Pause);
-                    esp32_fifo.pop();
-                #else // rp2040
-                rp2040.fifo.push(FW_Const::GunMode_Pause);
-                rp2040.fifo.pop();
-                #endif
+                // in the infinitely tiny chance that this happens at the same time as a serial-pinged Dock request:
+                if(FW_Common::gunMode == FW_Const::GunMode_Run) {
+                    // Signal the main core to set mode, since it's more stable there.
+                    // Pop blocks until we get the okay from the main core (the value returned doesn't matter atm)
+                    #ifdef ARDUINO_ARCH_ESP32
+                        esp32_fifo.push(FW_Const::GunMode_Pause);
+                        esp32_fifo.pop();
+                    #else // rp2040                    
+                    rp2040.fifo.push(FW_Const::GunMode_Pause);
+                    rp2040.fifo.pop();
+                    #endif
+                }
             }
         }
     }
@@ -904,6 +909,15 @@ void ExecRunMode()
         FW_Common::justBooted = false;
     }
 
+    #if /*defined(ARDUINO_ARCH_RP2040) &&*/ defined(DUAL_CORE)
+        // wake up second core
+        #ifdef ARDUINO_ARCH_ESP32
+            esp32_fifo.push(0);
+        #else // rp2040
+        rp2040.fifo.push(0);
+        #endif
+    #endif // ARDUINO_ARCH_RP2040 && DUAL_CORE
+
     for(;;) {
         // Setting the state of our toggles, if used.
         // Only sets these values if the switches are mapped to valid pins.
@@ -1024,8 +1038,6 @@ void ExecRunMode()
                     // MAKE SURE EVERYTHING IS DISENGAGED:
                     OF_FFB::FFBShutdown();
                     FW_Common::SetMode(FW_Const::GunMode_Pause);
-                    FW_Common::buttons.ReleaseAll();
-                    FW_Common::buttons.ReportDisable();
                     return;
                 }
             }
@@ -1033,9 +1045,7 @@ void ExecRunMode()
             if(FW_Common::buttons.pressedReleased == FW_Const::EnterPauseModeBtnMask || FW_Common::buttons.pressedReleased == FW_Const::BtnMask_Home) {
                 // MAKE SURE EVERYTHING IS DISENGAGED:
                 OF_FFB::FFBShutdown();
-		FW_Common::SetMode(FW_Const::GunMode_Pause);
-                FW_Common::buttons.ReleaseAll();
-                FW_Common::buttons.ReportDisable();
+                FW_Common::SetMode(FW_Const::GunMode_Pause);
                 return;
             }
         }
@@ -1047,7 +1057,6 @@ void ExecRunMode()
         #endif
             FW_Common::SetMode((FW_Const::GunMode_e)fifoData);
             fifoData = 0;
-            FW_Common::buttons.ReleaseAll();
             // the value doesn't matter; all core1 is doing is waiting for any signal from the FIFO.
             #ifdef ARDUINO_ARCH_ESP32
                 esp32_fifo.push(true);
@@ -1108,40 +1117,39 @@ void ExecGunModeDocked()
 
     unsigned long tempChecked = millis();
     unsigned long aStickChecked = millis();
-    uint8_t aStickDirPrev;
+    unsigned long currentMillis = millis();
 
-    {
-        char buf[64];
-        int pos = sprintf(&buf[0], "%.1f"
-                                    #ifdef GIT_HASH
-                                    "-%s"
-                                    #endif // GIT_HASH
-                                    , OPENFIRE_VERSION
-                                    #ifdef GIT_HASH
-                                    , GIT_HASH
-                                    #endif // GIT_HASH
-                          );
+    char buf[64];
+    int pos = sprintf(&buf[0], "%.1f"
+                                #ifdef GIT_HASH
+                                "-%s"
+                                #endif // GIT_HASH
+                                , OPENFIRE_VERSION
+                                #ifdef GIT_HASH
+                                , GIT_HASH
+                                #endif // GIT_HASH
+                      );
+    buf[pos++] = OF_Const::serialTerminator;
+    pos += sprintf(&buf[pos], "%s", OPENFIRE_BOARD);
+    buf[pos++] = OF_Const::serialTerminator;
+    memcpy(&buf[pos], &OF_Prefs::usb, sizeof(OF_Prefs::USBMap_t));
+    pos += sizeof(OF_Prefs::USBMap_t);
+    if(FW_Common::camNotAvailable) {
         buf[pos++] = OF_Const::serialTerminator;
-        pos += sprintf(&buf[pos], "%s", OPENFIRE_BOARD);
-        buf[pos++] = OF_Const::serialTerminator;
-        memcpy(&buf[pos], &OF_Prefs::usb, sizeof(OF_Prefs::USBMap_t));
-        pos += sizeof(OF_Prefs::USBMap_t);
-        if(FW_Common::camNotAvailable) {
-            buf[pos++] = OF_Const::serialTerminator;
-            buf[pos++] = OF_Const::sError;
-        }
-        Serial.write(buf, pos);
-        Serial.flush();
+        buf[pos++] = OF_Const::sError;
     }
+    Serial.write(buf, pos);
+    Serial.flush();
 
     for(;;) {
         FW_Common::buttons.Poll(1);
+        currentMillis = millis();
 
         if(!FW_Common::dockedSaving) {
             if(FW_Common::buttons.pressed) {
                 for(uint i = 0; i < ButtonCount; ++i)
                     if(bitRead(FW_Common::buttons.pressed, i)) {
-                        const char buf[] = {OF_Const::sBtnPressed, (uint8_t)i};
+                        buf[0] = OF_Const::sBtnPressed, buf[1] = i;
                         Serial.write(buf, 2);
                     }
             }
@@ -1149,23 +1157,21 @@ void ExecGunModeDocked()
             if(FW_Common::buttons.released) {
                 for(uint i = 0; i < ButtonCount; ++i)
                     if(bitRead(FW_Common::buttons.released, i)) {
-                        const char buf[] = {OF_Const::sBtnReleased, (uint8_t)i};
+                        buf[0] = OF_Const::sBtnReleased, buf[1] = i;
                         Serial.write(buf, 2);
                     }
             }
 
             #ifdef USES_TEMP
-                if(OF_Prefs::pins[OF_Const::tempPin] > -1)
+                if(OF_Prefs::pins[OF_Const::tempPin] > -1) {
                     OF_FFB::TemperatureUpdate();
 
-                unsigned long currentMillis = millis();
-                if(currentMillis - tempChecked >= 1000) {
-                    if(OF_Prefs::pins[OF_Const::tempPin] >= 0) {
-                        const char buf[] = {OF_Const::sTemperatureUpd, (uint8_t)OF_FFB::temperatureCurrent};
+                    if(currentMillis - tempChecked >= 1000) {
+                        buf[0] = OF_Const::sTemperatureUpd, buf[1] = OF_FFB::temperatureCurrent;
                         Serial.write(buf, 2);
-                    }
 
-                    tempChecked = currentMillis;
+                        tempChecked = currentMillis;
+                    }
                 }
             #endif // USES_TEMP
             
@@ -1176,10 +1182,10 @@ void ExecGunModeDocked()
                     uint16_t analogValueX = analogRead(OF_Prefs::pins[OF_Const::analogX]);
                     uint16_t analogValueY = analogRead(OF_Prefs::pins[OF_Const::analogY]);
 
-                    char buf[5] = {OF_Const::sAnalogPosUpd};
+                    buf[0] = OF_Const::sAnalogPosUpd;
                     memcpy(&buf[1], (uint8_t*)&analogValueX, sizeof(uint16_t));
                     memcpy(&buf[3], (uint8_t*)&analogValueY, sizeof(uint16_t));
-                    Serial.write(buf, sizeof(buf));
+                    Serial.write(buf, 5);
                 }
             #endif // USES_ANALOG
         }
@@ -1704,8 +1710,3 @@ void SolenoidToggle()
     #endif // USES_DISPLAY
 }
 #endif // USES_SOLENOID
-
-void delay_nb(uint32_t duration) {
-    unsigned long startMillis = millis();
-    while (millis() - startMillis < duration) yield();
-}

@@ -123,7 +123,15 @@ void OF_Serial::SerialProcessing()
                     case '3':
                     // disabled
                     case '0':
-                      FW_Common::UpdateBindings(OF_Prefs::toggles[OF_Const::lowButtonsMode]);
+                      memcpy(&LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Trigger].reportType2,
+                             &OF_Prefs::backupButtonDesc[FW_Const::BtnIdx_Trigger][2],
+                             sizeof(LightgunButtons::Desc_s::reportType)*2);
+                      // reset remapping for low button users if M1x2 was previously called
+                      if(OF_Prefs::toggles[OF_Const::lowButtonsMode])
+                          memcpy(&LightgunButtons::ButtonDesc[FW_Const::BtnIdx_A].reportType,
+                                 OF_Prefs::backupButtonDesc[FW_Const::BtnIdx_A],
+                                 sizeof(LightgunButtons::Desc_s::reportType)*2);
+                      serialMappingsOffscreenShot = false;
                       break;
                     // offscreen button
                     case '2':
@@ -135,8 +143,10 @@ void OF_Serial::SerialProcessing()
                           memcpy(&LightgunButtons::ButtonDesc[FW_Const::BtnIdx_A].reportType,
                                  OF_Prefs::backupButtonDesc[FW_Const::BtnIdx_Reload],
                                  sizeof(LightgunButtons::Desc_s::reportType)*2);
+                      serialMappingsOffscreenShot = true;
                       break;
                 }
+                FW_Common::UpdateBindings(false);
                 break;
               // pedal functionality
               case '2':
@@ -144,21 +154,27 @@ void OF_Serial::SerialProcessing()
                 switch(Serial.read()) {
                     // separate button (default to original binds)
                     case '0':
-                      FW_Common::UpdateBindings(OF_Prefs::toggles[OF_Const::lowButtonsMode]);
+                      memcpy(&LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Pedal].reportType,
+                             OF_Prefs::backupButtonDesc[FW_Const::BtnIdx_Pedal],
+                             sizeof(OF_Prefs::backupButtonDesc[0]));
+                      serialMappingsPedalMode = 0;
                       break;
                     // make reload button (mapping of Button A)
                     case '1':
                       memcpy(&LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Pedal].reportType,
                              OF_Prefs::backupButtonDesc[FW_Const::BtnIdx_A],
                              sizeof(OF_Prefs::backupButtonDesc[0]));
+                      serialMappingsPedalMode = 1;
                       break;
                     // make middle mouse button (mapping of Button B, useful for low buttons mode & e.g. using VCop3 ES mode)
                     case '2':
                       memcpy(&LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Pedal].reportType,
                              OF_Prefs::backupButtonDesc[FW_Const::BtnIdx_B],
                              sizeof(OF_Prefs::backupButtonDesc[0]));
+                      serialMappingsPedalMode = 2;
                       break;
                 }
+                FW_Common::UpdateBindings(false);
                 break;
               // aspect ratio correction
               case '3':
@@ -271,6 +287,8 @@ void OF_Serial::SerialProcessing()
                   serialMode = false;
                   memset(serialQueue, false, sizeof(serialQueue));
                   serialARcorrection = false;
+                  serialMappingsOffscreenShot = false;
+                  serialMappingsPedalMode = 0;
                   #ifdef USES_DISPLAY
                       FW_Common::OLED.serialDisplayType = ExtDisplay::ScreenSerial_None;
                       if(FW_Common::gunMode == FW_Const::GunMode_Run) FW_Common::OLED.ScreenModeChange(ExtDisplay::Screen_Normal, FW_Common::buttons.analogOutput);
@@ -309,7 +327,7 @@ void OF_Serial::SerialProcessing()
                   #endif // USES_SOLENOID
                   FW_Common::buttons.ReleaseAll();
                   // remap back to defaults, in case they were changed
-                  FW_Common::UpdateBindings(OF_Prefs::toggles[OF_Const::lowButtonsMode]);
+                  FW_Common::UpdateBindings(true);
                   Serial.println("Received end serial pulse, releasing FF override.");
               }
               break;
@@ -327,9 +345,9 @@ void OF_Serial::SerialProcessing()
               {
                 char serialInput = Serial.read();
                 if(serialInput >= '1' && serialInput <= '4') {
-                    playerStartBtn = serialInput;
-                    playerSelectBtn = serialInput + 4;
-                    FW_Common::UpdateBindings(OF_Prefs::toggles[OF_Const::lowButtonsMode]);
+                    FW_Common::playerStartBtn = serialInput;
+                    FW_Common::playerSelectBtn = serialInput + 4;
+                    FW_Common::UpdateBindings(false);
                 } else Serial.println("SERIALREAD: Player remap command called, but an invalid or no slot number was declared!");
                 break;
               }
@@ -344,13 +362,16 @@ void OF_Serial::SerialProcessing()
         // Enter Docked Mode
         case OF_Const::sDock1:
           if(Serial.read() == OF_Const::sDock2) {
-            #ifdef DUAL_CORE // This may be being run from Core 1, so signal if running in main Run Mode.
-            if(FW_Common::gunMode == FW_Const::GunMode_Run)
+            #if /*defined(ARDUINO_ARCH_RP2040) &&*/ defined(DUAL_CORE) // This may be being run from Core 1, so signal if running in main Run Mode.
+            if(FW_Common::gunMode == FW_Const::GunMode_Run) {
                 #ifdef ARDUINO_ARCH_ESP32 
                 esp32_fifo.push(FW_Const::GunMode_Docked);
+                esp32_fifo.pop();
                 #else //rp2040
                 rp2040.fifo.push(FW_Const::GunMode_Docked);
+                rp2040.fifo.pop();
                 #endif
+            }
             else FW_Common::SetMode(FW_Const::GunMode_Docked);
             #else
             FW_Common::SetMode(FW_Const::GunMode_Docked);
@@ -948,14 +969,6 @@ void OF_Serial::SerialProcessingDocked()
         Serial_available(1);
         if(Serial.read() == OF_Const::sDock2) FW_Common::SetMode(FW_Const::GunMode_Docked);
         break;
-    // 696969 aggiunto da me per disabilitare invio dati docker (stick, temp)
-    case OF_Const::sDockedSaving:
-        Serial_available(1);
-        if(Serial.read() == OF_Const::sDockedSaving_on) FW_Common::dockedSaving = true;
-          else FW_Common::dockedSaving = false;
-          Serial.write(OF_Const::sDockedSaving);  
-        break;      
-    // 696969 fine aggiunto da me
     // Common terminator
     case OF_Const::serialTerminator:
         if(!FW_Common::justBooted)
@@ -1003,11 +1016,14 @@ void OF_Serial::SerialProcessingDocked()
         if(Serial.peek() < PROFILE_COUNT) {
             FW_Common::SelectCalProfile(Serial.read());
             char buf[2] = {OF_Const::sCurrentProf, (uint8_t)OF_Prefs::currentProfile};
-            Serial.write(buf, 2);
+            Serial.write(buf, sizeof(buf));
             Serial_available(1);
             if(Serial.read() == OF_Const::sCaliStart) {
-                if(FW_Common::camNotAvailable) Serial.write(OF_Const::sError);
-                else {
+                if(FW_Common::camNotAvailable) {
+                    buf[0] = OF_Const::sError;
+                    buf[1] = OF_Const::sErrCam;
+                    Serial.write(buf, sizeof(buf));
+                } else {
                   // sensitivity/layout preset
                   Serial_available(1); 
                   if(Serial.peek() != -1) {
@@ -1089,7 +1105,7 @@ void OF_Serial::SerialProcessingDocked()
                             FW_Common::CameraSet();
                             FW_Common::FeedbackSet();
                             
-                            FW_Common::UpdateBindings(OF_Prefs::toggles[OF_Const::lowButtonsMode]);
+                            FW_Common::UpdateBindings(true);
 
                         #ifdef LED_ENABLE
                             // Save op above resets color, so re-set it back to docked idle color
@@ -1107,11 +1123,13 @@ void OF_Serial::SerialProcessingDocked()
                     case OF_Const::serialTerminator:
                         // Assumed failed/aborting save, so roll back to what's in flash.
                         OF_Prefs::Load();
+                        FW_Common::buttons.Begin();
                         exit = true;
                         break;
 
                     //// Saving ops
                     case OF_Const::sCommitID:
+                        Serial_available(18);
                         rxLen = Serial.readBytes(RXbuf, Serial.available());
                         if(rxLen == 18) memcpy(&OF_Prefs::usb, RXbuf, rxLen);
                         break;
@@ -1171,14 +1189,14 @@ void OF_Serial::SerialProcessingDocked()
     }
 }
 
-void OF_Serial::SerialBatchSend(void *dataPtr, const std::unordered_map<std::string, int> &mapPtr, const size_t &dataSize, const int &profNum)
+void OF_Serial::SerialBatchSend(void *dataPtr, const std::unordered_map<std::string_view, int> &mapPtr, const size_t &dataSize, const int &profNum)
 {
     size_t pos;
     bool profNumSent = false;
     for(auto &pair : mapPtr) {
         if(pair.second >= 0) {
             pos = 0;
-            strcpy(&TXbuf[pos], pair.first.c_str());
+            strcpy(&TXbuf[pos], pair.first.data());
             pos += pair.first.length()+1;
             if(&mapPtr == &OF_Prefs::OFPresets.profSettingTypes_Strings) {
                 if(pair.second == OF_Const::profCurrent) {
@@ -1230,7 +1248,7 @@ void OF_Serial::SerialBatchSend(void *dataPtr, const std::unordered_map<std::str
     }
 }
 
-void OF_Serial::SerialBatchRecv(const char *bufPtr, void *dataPtr, const std::unordered_map<std::string, int> &mapPtr, const size_t &dataSize, const size_t &rxDatSize, const size_t &rxBufSize)
+void OF_Serial::SerialBatchRecv(const char *bufPtr, void *dataPtr, const std::unordered_map<std::string_view, int> &mapPtr, const size_t &dataSize, const size_t &rxDatSize, const size_t &rxBufSize)
 {
     if(mapPtr.count(bufPtr)) {
         if(&mapPtr == &OF_Prefs::OFPresets.profSettingTypes_Strings && mapPtr.at(bufPtr) == OF_Const::profCurrent) {

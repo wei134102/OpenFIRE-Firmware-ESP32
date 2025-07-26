@@ -23,10 +23,10 @@ public:
     static void SerialProcessingDocked();
 
     /// @brief    Generic method for sending data over Serial to connected host
-    static void SerialBatchSend(void*, const std::unordered_map<std::string, int> &, const size_t&, const int& = -1);
+    static void SerialBatchSend(void*, const std::unordered_map<std::string_view, int> &, const size_t&, const int& = -1);
 
     /// @brief    Generic method for reading commit data over Serial from connected host
-    static void SerialBatchRecv(const char*, void*, const std::unordered_map<std::string, int> &, const size_t&, const size_t&, const size_t&);
+    static void SerialBatchRecv(const char*, void*, const std::unordered_map<std::string_view, int> &, const size_t&, const size_t&, const size_t&);
 
     // Main routine that prints information to connected serial monitor when the gun enters Pause Mode.
     static void PrintResults();
@@ -64,6 +64,8 @@ public:
     static inline bool serialMode = false;                         // Set if we're prioritizing force feedback over serial commands or not.
     static inline bool serialQueue[SerialQueueBitsCount] = {false};// Array of events we've queued from the serial receipt.
     static inline bool serialARcorrection = false;                 // 4:3 AR correction mode flag
+    static inline bool serialMappingsOffscreenShot = false;        // Marker if Offscreen Shot Mode's been enabled, for FW_Common::UpdateBindings
+    static inline int  serialMappingsPedalMode = 0;                // Marker if Pedal has been remapped, for FW_Common::UpdateBindings
     // from least to most significant bit: solenoid digital, solenoid pulse, rumble digital, rumble pulse, R/G/B direct, RGB (any) pulse.
 
     // These do get addressed by the main code

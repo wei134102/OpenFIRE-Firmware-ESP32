@@ -10,12 +10,72 @@
 #define _OPENFIREDISPLAY_H_
 
 #include <stdint.h>
-#include <Adafruit_SSD1306.h>
+
+#ifdef USE_LOVYAN_GFX
+    #define LGFX_USE_V1
+    #include <LovyanGFX.hpp>
+#else
+    #include <Adafruit_SSD1306.h>
+    #include <Adafruit_GFX.h>
+#endif
 
 #include "OpenFIREDefines.h"
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
+
+#ifdef USE_LOVYAN_GFX
+// adattarlo al codice già scritto di OpenFire definizione dei colori
+#define BLACK TFT_BLACK   ///< Draw 'off' pixels
+#define WHITE TFT_WHITE   ///< Draw 'on' pixels
+
+class LGFX_SSD1306 : public lgfx::LGFX_Device
+{
+  lgfx::Panel_SSD1306 _panel_instance; // Pannello SSD1306
+  lgfx::Bus_I2C _bus_instance;         // Bus I2C
+
+public:
+  LGFX_SSD1306(uint8_t i2c_port, int16_t sda, int16_t scl, uint8_t i2c_addr, uint16_t width, uint16_t height) //IN AUTOMATICO DAL PANNELLO 128X64
+  { 
+    {   // configurazione del bus I2C
+        auto cfg = _bus_instance.config();
+        cfg.i2c_port = i2c_port;  // Porta I2C (0 o 1)
+        cfg.pin_sda = sda;        // Pin SDA dinamico
+        cfg.pin_scl = scl;        // Pin SCL dinamico
+        cfg.i2c_addr = i2c_addr;  // Indirizzo del display (es. 0x3C o 0x3D)
+        //cfg.freq_write = 400000; //800000;  // Imposta la frequenza a 800kHz (800.000) // defoult se non si imposta è 400khz
+        cfg.freq_write  = 400000;
+        cfg.freq_read   = 400000;
+        _bus_instance.config(cfg);
+        _panel_instance.setBus(&_bus_instance);
+    }
+
+    {   // configurazione del pannello
+        auto cfg = _panel_instance.config();
+        cfg.panel_width = width;
+        cfg.panel_height = height;
+        //cfg.offset_x = 0; // se necessario
+        //cfg.offset_y = 0; // se necessario
+        //cfg.invert = true;
+        //cfg.rgb_order = false;
+        //cfg.offset_rotation = 2;
+       _panel_instance.setRotation(2); // 2 = 180 GRADI
+       _panel_instance.setBrightness(255);
+
+       //cfg.pin_rst = -1; // pin reset opzionale (-1 = disable)
+       //cfg.pin_bl = 69; //pin backlight (se presente)  ????? esiste ???
+       //cfg.pin_cs = -1; // pin clable select (se presente) (-1 = disable)
+       // cfg.pin_busy = -1; // (-1 = disable)
+
+
+       _panel_instance.config(cfg);
+    }
+
+    setPanel(&_panel_instance); // Associa il pannello alla classe
+  }
+};
+
+#endif //USE_LOVYAN_GFX
 
 class ExtDisplay {
 public:
@@ -32,7 +92,7 @@ public:
     void TopPanelUpdate(const char *, const char * = nullptr);
 
     /// @brief Clear screen for different gun modes
-    void ScreenModeChange(int8_t screenMode, bool isAnalog = false);
+    void ScreenModeChange(const int &screenMode, const bool &isAnalog = false);
 
     /// @brief Perform maintenance operations (WIP)
     /// @details For when values aren't being updated, but still want to change something on the screen
@@ -41,25 +101,26 @@ public:
 
     /// @brief Draw seen points here
     /// @details Should ONLY be used in scenarios where the mouse isn't being updated, i.e. calibration.
-    void DrawVisibleIR(int pointX[4], int pointY[4]);
+    ///          Arguments here point to the original arrays of seen coords [4]
+    void DrawVisibleIR(int *pointX, int *pointY);
 
     /// @brief Draw hotkey pause mode layout
-    void PauseScreenShow(uint8_t currentProf, char name1[16], char name2[16], char name3[16], char name4[16]);
+    void PauseScreenShow(const int &currentProf, const char* name1, const char* name2, const char* name3, const char* name4);
 
     /// @brief Update simple pause mode list on screen
-    void PauseListUpdate(uint8_t selection);
+    void PauseListUpdate(const int &selection);
 
     /// @brief Update simple pause mode profiles list on screen
-    void PauseProfileUpdate(uint8_t selection, char name1[16], char name2[16], char name3[16], char name4[16]);
+    void PauseProfileUpdate(const int &selection, const char* name1, const char* name2, const char* name3, const char* name4);
 
     /// @brief Print save status message
-    void SaveScreen(uint8_t status);
+    void SaveScreen(const int &status);
 
     /// @brief Update main screen ammo glyphs
-    void PrintAmmo(uint8_t ammo);
+    void PrintAmmo(const uint &ammo);
 
     /// @brief Update main screen life glyphs
-    void PrintLife(uint8_t life);
+    void PrintLife(const uint &life);
 
     enum ScreenMode_e {
         Screen_None = -1,
@@ -93,7 +154,11 @@ public:
         ScreenSerial_Both
     };
 
-    Adafruit_SSD1306 *display = nullptr;
+    #ifdef USE_LOVYAN_GFX
+        LGFX_SSD1306 *display = nullptr;
+    #else
+        Adafruit_SSD1306 *display = nullptr;
+    #endif
 
     /// @brief Whether life updates are in lifebar or life glyphs form
     bool lifeBar = false;
@@ -105,7 +170,7 @@ public:
     bool mister = false;
 
 private:
-    int8_t screenState = Screen_None;
+    int screenState = Screen_None;
 
     bool ammoEmpty = false;
     bool lifeEmpty = false;

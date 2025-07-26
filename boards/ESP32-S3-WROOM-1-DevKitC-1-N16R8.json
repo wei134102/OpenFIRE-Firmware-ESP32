@@ -1,19 +1,23 @@
 {
   "build": {
-    "arduino":{
+    "arduino": {
       "ldscript": "esp32s3_out.ld",
-      "partitions": "default_8MB.csv"
+      "partitions": "default_16MB.csv"
     },
     "core": "esp32",
     "extra_flags": [
       "-DARDUINO_ESP32S3_DEV",
       "-DARDUINO_USB_MODE=1",
       "-DARDUINO_RUNNING_CORE=1",
-      "-DARDUINO_EVENT_RUNNING_CORE=1"
+      "-DARDUINO_EVENT_RUNNING_CORE=1",
+      "-DBOARD_HAS_PSRAM"
     ],
     "f_cpu": "240000000L",
     "f_flash": "80000000L",
     "flash_mode": "qio",
+    "flash_size": "16MB",
+    "psram_type": "opi",
+    "psram_size": "8MB",
     "hwids": [
       [
         "0x303A",
@@ -24,8 +28,8 @@
     "variant": "esp32s3"
   },
   "connectivity": [
-    "bluetooth",
-    "wifi"
+    "wifi",
+    "bluetooth"
   ],
   "debug": {
     "default_tool": "esp-builtin",
@@ -38,13 +42,16 @@
     "arduino",
     "espidf"
   ],
-  "name": "Espressif ESP32-S3-DevKitC-1-N8 (8 MB QD, No PSRAM)",
+  "platforms": [
+    "espressif32"
+  ],
+  "name": "Espressif ESP32-S3-WROOM-1-N16R8 (16 MB Flash Quad, 8 MB PSRAM Octal)",
   "upload": {
-    "flash_size": "8MB",
+    "flash_size": "16MB",
     "maximum_ram_size": 327680,
-    "maximum_size": 8388608,
+    "maximum_size": 16777216,
     "require_upload_port": true,
-    "speed": 460800
+    "speed": 921600
   },
   "url": "https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/hw-reference/esp32s3/user-guide-devkitc-1.html",
   "vendor": "Espressif"

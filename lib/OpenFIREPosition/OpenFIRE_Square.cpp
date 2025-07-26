@@ -1,3 +1,4 @@
+#ifndef USE_SQUARE_ADVANCED
 /*!
  * @file OpenFIRE_Square.cpp.cpp
  * @brief Light Gun library for 4 LED setup
@@ -235,3 +236,4 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen)
     float cosAngle = cos(angle);
     float sinAngle = sin(angle);
 }
+#endif // USE_SQUARE_ADVANCED
