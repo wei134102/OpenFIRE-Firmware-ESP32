@@ -91,6 +91,7 @@ public:
         //PauseMode_BurstFireToggle,
         #endif // USES_SOLENOID
         PauseMode_ModeChange,//wei134102 add
+        PauseMode_LowButtonToggle,//wei134102 add
         PauseMode_EscapeSignal
     };
 
