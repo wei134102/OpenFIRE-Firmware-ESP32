@@ -144,9 +144,18 @@ public:
         ScreenPause_Save,
         ScreenPause_Rumble,
         ScreenPause_Solenoid,
+        ScreenPause_ModeChange,//wei134102 add 
         ScreenPause_EscapeKey
     };
+//wei134102 add start
+    // Mode change menu items
+    enum ModeChangeMenu_e {
+        ModeChange_MouseKeyboard = 0,
+        ModeChange_Gamepad,
+        ModeChange_MisterOptimized
+    };
 
+//wei134102 add end
     enum ScreenSerialInit_e {
         ScreenSerial_None = 0,
         ScreenSerial_Life,

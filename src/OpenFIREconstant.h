@@ -90,6 +90,7 @@ public:
         PauseMode_SolenoidToggle,
         //PauseMode_BurstFireToggle,
         #endif // USES_SOLENOID
+        PauseMode_ModeChange,//wei134102 add
         PauseMode_EscapeSignal
     };
 
@@ -105,7 +106,10 @@ public:
 
     // press any button to exit hotkey pause mode back to run mode (this is not a button combo)
     static inline constexpr uint32_t ExitPauseModeBtnMask = BtnMask_Reload | BtnMask_Home;
-
+    //wei134102 add start
+    // Button combination to enter mode change menu
+    static inline constexpr uint32_t ModeChangeBtnMask = BtnMask_Start | BtnMask_Right;
+    //wei134102 add end
     // press and hold any button to exit simple pause menu (this is not a button combo)
     static inline constexpr uint32_t ExitPauseModeHoldBtnMask = BtnMask_A | BtnMask_B;
 

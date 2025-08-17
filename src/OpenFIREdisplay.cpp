@@ -19,7 +19,7 @@
 
 #include <Wire.h>
 #include <TinyUSB_Devices.h>
-
+#include "OpenFIREcommon.h"//wei134102 add
 #include "OpenFIREdisplay.h"
 #include "OpenFIREprefs.h"
 #include "OpenFIREFeedback.h"
@@ -396,9 +396,9 @@ void ExtDisplay::PauseListUpdate(const int &selection)
                 display->println(" Solenoid Toggle ");
                 display->setTextColor(WHITE, BLACK);
                 display->setCursor(0, 47);
-                display->println(" Send Escape Keypress");
+                display->println(" Mode Change ");
               } else {
-                display->println(" Send Escape Keypress");
+                display->println(" Mode Change ");
                 display->setTextColor(WHITE, BLACK);
                 display->setCursor(0, 47);
                 display->println("Calibrate");
@@ -410,9 +410,9 @@ void ExtDisplay::PauseListUpdate(const int &selection)
               display->println(" Solenoid Toggle ");
               display->setTextColor(WHITE, BLACK);
               display->setCursor(0, 47);
-              display->println(" Send Escape Keypress");
+              display->println(" Mode Change ");
             } else {
-              display->println(" Send Escape Keypress");
+              display->println(" Mode Change ");
               display->setTextColor(BLACK, WHITE);
               display->setCursor(0, 36);
               display->println(" Calibrate ");
@@ -421,6 +421,32 @@ void ExtDisplay::PauseListUpdate(const int &selection)
               display->println(" Profile Select ");
             }
             break;
+//wei134102 add start
+          case ScreenPause_ModeChange:
+            display->setTextColor(WHITE, BLACK);
+            display->setCursor(0, 25);
+            if(OF_Prefs::pins[OF_Const::solenoidPin] >= 0 && OF_Prefs::pins[OF_Const::solenoidSwitch] == -1) {
+              display->println(" Solenoid Toggle ");
+            } else if(OF_Prefs::pins[OF_Const::rumblePin] >= 0 && OF_Prefs::pins[OF_Const::rumbleSwitch] == -1) {
+              display->println(" Rumble Toggle ");
+            } else {
+              display->println(" Save Gun Settings ");
+            }
+            display->setTextColor(BLACK, WHITE);
+            display->setCursor(0, 36);
+            display->println(" Mode Change ");
+            // Display current mode
+            display->setTextColor(WHITE, BLACK);
+            display->setCursor(0, 47);
+            if(FW_Common::OLED.mister) {
+              display->println(" Current: MiSTer ");
+            } else if(FW_Common::buttons.analogOutput) {
+              display->println(" Current: Gamepad ");
+            } else {
+              display->println(" Current: Mouse/KB ");
+            }
+            break;
+//wei134102 add end            
           case ScreenPause_EscapeKey:
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 25);

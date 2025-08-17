@@ -714,6 +714,44 @@ void loop()
                               Serial.println("Saving...");
                           FW_Common::SavePreferences();
                           break;
+//wei134102 add start
+                        case FW_Const::PauseMode_ModeChange:
+                          if(!OF_Serial::serialMode) {
+                              Serial.println("Changing input mode...");
+                          }
+                          // Cycle through modes: Mouse/KB -> Gamepad -> MiSTer Optimized -> Mouse/KB
+                          if(!FW_Common::buttons.analogOutput && !FW_Common::OLED.mister) {
+                              // Current: Mouse/KB -> Switch to Gamepad
+                              FW_Common::buttons.analogOutput = true;
+                              if(!OF_Serial::serialMode)
+                                  Serial.println("Mode changed to: Gamepad");
+                          } else if(FW_Common::buttons.analogOutput && !FW_Common::OLED.mister) {
+                              // Current: Gamepad -> Switch to MiSTer Optimized
+                              FW_Common::OLED.mister = true;
+                              if(!OF_Serial::serialMode)
+                                  Serial.println("Mode changed to: MiSTer Optimized");
+                          } else {
+                              // Current: MiSTer Optimized -> Switch to Mouse/KB
+                              FW_Common::buttons.analogOutput = false;
+                              FW_Common::OLED.mister = false;
+                              if(!OF_Serial::serialMode)
+                                  Serial.println("Mode changed to: Mouse/Keyboard");
+                          }
+                          // Update display to show new mode
+                          #ifdef USES_DISPLAY
+                              FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_ModeChange);
+                          #endif // USES_DISPLAY
+                          // Provide visual feedback
+                          #ifdef LED_ENABLE
+                              for(uint i = 0; i < 2; ++i) {
+                                  OF_RGB::LedUpdate(0,255,255);
+                                  delay(150);
+                                  OF_RGB::LedOff();
+                                  delay(100);
+                              }
+                          #endif // LED_ENABLE
+                          break;
+//wei134102 add end
                         #ifdef USES_RUMBLE
                         case FW_Const::PauseMode_RumbleToggle:
                           if(!OF_Serial::serialMode)
@@ -1365,6 +1403,11 @@ void SetPauseModeSelection(const bool &isIncrement)
                         FW_Common::pauseModeSelection++;
                     }
                 #endif // USES_SOLENOID
+                //wei134102 add start
+                if(FW_Common::pauseModeSelection == FW_Const::PauseMode_ModeChange) {
+                    // ModeChange is always visible
+                }
+                //wei134102 add end
             #else
                 #ifdef USES_RUMBLE
                     if(FW_Common::pauseModeSelection == FW_Const::PauseMode_RumbleToggle &&
@@ -1398,6 +1441,11 @@ void SetPauseModeSelection(const bool &isIncrement)
                         FW_Common::pauseModeSelection--;
                     }
                 #endif // USES_RUMBLE
+                //wei134102 add start
+                if(FW_Common::pauseModeSelection == FW_Const::PauseMode_ModeChange) {
+                    // ModeChange is always visible
+                }  
+                //wei134102 add end              
             #else
                 #ifdef USES_SOLENOID
                     if(FW_Common::pauseModeSelection == FW_Const::PauseMode_SolenoidToggle &&
@@ -1428,6 +1476,14 @@ void SetPauseModeSelection(const bool &isIncrement)
               OF_RGB::LedUpdate(200,50,0);
           #endif // LED_ENABLE
           break;
+        //wei134102 add start
+        case FW_Const::PauseMode_ModeChange:
+          Serial.println("Selecting: Change input mode");
+          #ifdef LED_ENABLE
+              OF_RGB::LedUpdate(0,255,255);
+          #endif // LED_ENABLE
+          break;       
+        //wei134102 add end  
         case FW_Const::PauseMode_Save:
           Serial.println("Selecting: Save Settings");
           #ifdef LED_ENABLE
