@@ -92,6 +92,7 @@ public:
         ScreenPause_Rumble,
         ScreenPause_Solenoid,
         ScreenPause_ModeChange,//wei134102 add
+        ScreenPause_LowButtonToggle,//wei134102 add
         ScreenPause_EscapeKey
     };
 //wei134102 add start

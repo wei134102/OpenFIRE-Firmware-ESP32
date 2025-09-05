@@ -421,6 +421,23 @@ void ExtDisplay::PauseListUpdate(const int &selection)
               display->println(" Profile Select ");
             }
             break;
+//wei13402 add start
+          case ScreenPause_LowButtonToggle:
+            display->setTextColor(WHITE, BLACK);
+            display->setCursor(0, 25);
+            display->println(" Mode Change ");
+            display->setTextColor(BLACK, WHITE);
+            display->setCursor(0, 36);
+            if(OF_Prefs::toggles[OF_Const::lowButtonsMode]) {
+              display->println(" Low Button: ON ");
+            } else {
+              display->println(" Low Button: OFF ");
+            }
+            display->setTextColor(WHITE, BLACK);
+            display->setCursor(0, 47);
+            display->println(" Send Escape Keypress ");
+            break;
+//wei13402 add end                
 //wei134102 add start
           case ScreenPause_ModeChange:
             display->setTextColor(WHITE, BLACK);
@@ -429,8 +446,10 @@ void ExtDisplay::PauseListUpdate(const int &selection)
               display->println(" Solenoid Toggle ");
             } else if(OF_Prefs::pins[OF_Const::rumblePin] >= 0 && OF_Prefs::pins[OF_Const::rumbleSwitch] == -1) {
               display->println(" Rumble Toggle ");
+            } else if(OF_Prefs::toggles[OF_Const::lowButtonsMode]) {
+              display->println(" Low Button: ON ");              
             } else {
-              display->println(" Save Gun Settings ");
+              display->println(" Low Button: OFF ");
             }
             display->setTextColor(BLACK, WHITE);
             display->setCursor(0, 36);
