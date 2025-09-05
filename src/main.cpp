@@ -751,7 +751,36 @@ void loop()
                               }
                           #endif // LED_ENABLE
                           break;
- //wei13102 add end                         
+ //wei13102 add end
+ //wei134102 add start
+                         
+                        case FW_Const::PauseMode_LowButtonToggle:
+                          if(!OF_Serial::serialMode) {
+                              Serial.println("Toggling Low Button Mode!");
+                          }
+                          OF_Prefs::toggles[OF_Const::lowButtonsMode] = !OF_Prefs::toggles[OF_Const::lowButtonsMode];
+                          if(!OF_Serial::serialMode) {
+                              Serial.print("Low Button Mode ");
+                              Serial.println(OF_Prefs::toggles[OF_Const::lowButtonsMode] ? "ON" : "OFF");
+                          }
+                          // Update display to show new state
+                          #ifdef USES_DISPLAY
+                              FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_LowButtonToggle);
+                          #endif // USES_DISPLAY
+                          // Provide visual feedback
+                          #ifdef LED_ENABLE
+                              for(uint i = 0; i < 2; ++i) {
+                                  OF_RGB::LedUpdate(255,165,0);
+                                  delay(150);
+                                  OF_RGB::LedOff();
+                                  delay(100);
+                              }
+                          #endif // LED_ENABLE
+                          OF_Prefs::SaveToggles();
+                          // 更新按钮绑定以应用Low Button模式变更
+                          FW_Common::UpdateBindings(false);
+                          break;
+ //wei134102 add end                             
                         #ifdef USES_RUMBLE
                         case FW_Const::PauseMode_RumbleToggle:
                           if(!OF_Serial::serialMode)
