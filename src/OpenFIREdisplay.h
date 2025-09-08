@@ -91,6 +91,7 @@ public:
         ScreenPause_Save,
         ScreenPause_Rumble,
         ScreenPause_Solenoid,
+        ScreenPause_AutofireToggle,//WEI134102 add
         ScreenPause_ModeChange,//wei134102 add
         ScreenPause_LowButtonToggle,//wei134102 add
         ScreenPause_EscapeKey

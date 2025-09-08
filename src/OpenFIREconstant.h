@@ -90,6 +90,7 @@ public:
         PauseMode_SolenoidToggle,
         //PauseMode_BurstFireToggle,
         #endif // USES_SOLENOID
+        PauseMode_AutofireToggle,//WEI134102 add
         PauseMode_ModeChange,//wei134102 add 模式切换
         PauseMode_LowButtonToggle,//wei13402 add  低按钮模式
         PauseMode_EscapeSignal
