@@ -93,9 +93,12 @@ public:
         PauseMode_AutofireToggle,//WEI134102 add
         PauseMode_ModeChange,//wei134102 add 模式切换
         PauseMode_LowButtonToggle,//wei13402 add  低按钮模式
+        PauseMode_LayoutToggle,//wei13402 add 布局切换
         PauseMode_EscapeSignal
     };
-
+    // Layout types
+    static const constexpr uint8_t layoutSquare = 0;
+    static const constexpr uint8_t layoutDiamond = 1;
     //// Button Masks
     // button combo to send an escape keypress
     static const constexpr uint32_t EscapeKeyBtnMask = BtnMask_Reload | BtnMask_Start;

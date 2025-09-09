@@ -94,6 +94,7 @@ public:
         ScreenPause_AutofireToggle,//WEI134102 add
         ScreenPause_ModeChange,//wei134102 add
         ScreenPause_LowButtonToggle,//wei134102 add
+        ScreenPause_LayoutToggle,//wei134102 add
         ScreenPause_EscapeKey
     };
 //wei134102 add start

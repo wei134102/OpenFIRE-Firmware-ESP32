@@ -245,9 +245,15 @@ void ExtDisplay::IdleOps()
               if(millis() - idleTimeStamp > OLED_IDLEUPD_INTERVAL) {
                   idleTimeStamp = millis();
                   if(showingTemp) {
-                      TopPanelUpdate("Prof: ", OF_Prefs::profiles[OF_Prefs::currentProfile].name);
-                      showingTemp = false;
-                  } else {
+                          // Create a temporary string with profile name and layout
+                          char profWithLayout[16]; // Make sure this is large enough
+                          strcpy(profWithLayout, OF_Prefs::profiles[OF_Prefs::currentProfile].name);
+                          strcat(profWithLayout, " ");
+                          strcat(profWithLayout, OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout == OF_Const::layoutDiamond ? "Diam" : "Squa");
+                          
+                          TopPanelUpdate("Prof: ", profWithLayout);
+                          showingTemp = false;
+                      } else {
                       idleTempStamp = idleTimeStamp;
                       ShowTemp();
                       showingTemp = true;
@@ -260,6 +266,21 @@ void ExtDisplay::IdleOps()
                       }
                   }
               }
+
+          } else {
+          #endif // USES_TEMP
+              // Always show profile with layout when no temperature sensor is available
+              if(millis() - idleTimeStamp > OLED_IDLEUPD_INTERVAL) {
+                  idleTimeStamp = millis();
+                  // Create a temporary string with profile name and layout
+                  char profWithLayout[16]; // Make sure this is large enough
+                  strcpy(profWithLayout, OF_Prefs::profiles[OF_Prefs::currentProfile].name);
+                  strcat(profWithLayout, " ");
+                  strcat(profWithLayout, OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout == OF_Const::layoutDiamond ? "Diam" : "Squa");
+                  
+                  TopPanelUpdate("Prof: ", profWithLayout);
+              }
+          #ifdef USES_TEMP              
           }
           #endif // USES_TEMP
           break;
@@ -473,6 +494,17 @@ void ExtDisplay::PauseListUpdate(const int &selection)
             }
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 47);
+            display->println(" Layout Toggle ");
+            break;
+          case ScreenPause_LayoutToggle:
+            display->setTextColor(WHITE, BLACK);
+            display->setCursor(0, 25);
+            display->println(" Low Button: " + String(OF_Prefs::toggles[OF_Const::lowButtonsMode] ? "ON" : "OFF"));
+            display->setTextColor(BLACK, WHITE);
+            display->setCursor(0, 36);
+            display->printf(" Layout: %s ", OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout == OF_Const::layoutDiamond ? "Diamond" : "Square");
+            display->setTextColor(WHITE, BLACK);
+            display->setCursor(0, 47);            
             display->println(" Send Escape Keypress ");
             break;
 //wei13402 add end                
