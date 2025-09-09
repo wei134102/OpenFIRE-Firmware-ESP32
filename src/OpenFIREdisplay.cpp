@@ -128,9 +128,17 @@ void ExtDisplay::ScreenModeChange(const int &screenMode, const bool &isAnalog)
                 if(TinyUSBDevices.onBattery) { display->drawBitmap(2, 46, btConnectIco, CONNECTION_WIDTH, CONNECTION_HEIGHT, WHITE); }
                 #endif
                 else { display->drawBitmap(2, 46, usbConnectIco, CONNECTION_WIDTH, CONNECTION_HEIGHT, WHITE); }
+                // 显示Rumble Force Feedback状态
+                #ifdef USES_RUMBLE
+                if(OF_Prefs::pins[OF_Const::rumblePin] >= 0 && OF_Prefs::toggles[OF_Const::rumbleFF]) {
+                    display->setCursor(46, 48);
+                    display->setTextSize(1);
+                    display->print("RF");
+                }
+                #endif                
                 //wei134102 add start 显示Low Button模式状态
                 if(OF_Prefs::toggles[OF_Const::lowButtonsMode]) {
-                    display->setCursor(70, 48);
+                    display->setCursor(64, 48);
                     display->setTextSize(1);
                     display->print("LOW");
                 }
@@ -194,6 +202,14 @@ void ExtDisplay::ScreenModeChange(const int &screenMode, const bool &isAnalog)
             #endif
             else { display->drawBitmap(2, 46, usbConnectIco, CONNECTION_WIDTH, CONNECTION_HEIGHT, WHITE); }
             //wei134102 add start
+            // 显示Rumble Force Feedback状态
+            #ifdef USES_RUMBLE
+            if(OF_Prefs::pins[OF_Const::rumblePin] >= 0 && OF_Prefs::toggles[OF_Const::rumbleFF]) {
+                display->setCursor(46, 48);
+                display->setTextSize(1);
+                display->print("RF");
+            }
+            #endif              
             // 显示Low Button模式状态
             if(OF_Prefs::toggles[OF_Const::lowButtonsMode]) {
                 display->setCursor(70, 48);
@@ -504,9 +520,34 @@ void ExtDisplay::PauseListUpdate(const int &selection)
             display->setCursor(0, 36);
             display->printf(" Layout: %s ", OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout == OF_Const::layoutDiamond ? "Diamond" : "Square");
             display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 47);            
+            display->setCursor(0, 47); 
+            #ifdef USES_RUMBLE
+            if(OF_Prefs::pins[OF_Const::rumblePin] >= 0) {
+              display->println(" Rumble FFB Toggle ");
+            } else {
+              display->println(" Send Escape Keypress ");
+            }
+            #else
+            display->println(" Send Escape Keypress ");
+            #endif
+            break;
+          #ifdef USES_RUMBLE
+          case ScreenPause_RumbleFFToggle:
+            display->setTextColor(WHITE, BLACK);
+            display->setCursor(0, 25);
+            display->printf(" Layout: %s ", OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout == OF_Const::layoutDiamond ? "Diamond" : "Square");
+            display->setTextColor(BLACK, WHITE);
+            display->setCursor(0, 36);
+            if(OF_Prefs::pins[OF_Const::rumblePin] >= 0) {
+              display->printf(" Rumble FFB: %s ", OF_Prefs::toggles[OF_Const::rumbleFF] ? "ON" : "OFF");
+            } else {
+              display->println(" Rumble FFB: N/A ");
+            }
+            display->setTextColor(WHITE, BLACK);
+            display->setCursor(0, 47);                       
             display->println(" Send Escape Keypress ");
             break;
+          #endif            
 //wei13402 add end                
 //wei134102 add start
           case ScreenPause_ModeChange:

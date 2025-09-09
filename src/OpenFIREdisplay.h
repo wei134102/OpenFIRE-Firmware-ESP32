@@ -148,6 +148,9 @@ public:
         ScreenPause_ModeChange,//wei134102 add
         ScreenPause_LowButtonToggle,//wei134102 add
         ScreenPause_LayoutToggle,//wei134102 add
+        #ifdef USES_RUMBLE
+        ScreenPause_RumbleFFToggle,
+        #endif // USES_RUMBLE        
         ScreenPause_EscapeKey
     };
 //wei134102 add start

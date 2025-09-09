@@ -94,6 +94,9 @@ public:
         PauseMode_ModeChange,//wei134102 add 模式切换
         PauseMode_LowButtonToggle,//wei13402 add  低按钮模式
         PauseMode_LayoutToggle,//wei13402 add 布局切换
+        #ifdef USES_RUMBLE
+        PauseMode_RumbleFFToggle,
+        #endif // USES_RUMBLE        
         PauseMode_EscapeSignal
     };
     // Layout types
