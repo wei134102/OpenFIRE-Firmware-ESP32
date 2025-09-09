@@ -698,12 +698,25 @@ void loop()
                           if(!OF_Serial::serialMode) {
                               Serial.println("Pick a profile!");
                               Serial.print("Current profile in use: ");
-                              Serial.println(OF_Prefs::profiles[OF_Prefs::currentProfile].name);
+                              Serial.print(OF_Prefs::profiles[OF_Prefs::currentProfile].name);
+                              Serial.print(" (");
+                              Serial.print(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout ? "Diamond" : "Square");
+                              Serial.println(")");
                           }
                           pauseModeSelectingProfile = true;
                           profileModeSelection = OF_Prefs::currentProfile;
                           #ifdef USES_DISPLAY
-                              FW_Common::OLED.PauseProfileUpdate(profileModeSelection, OF_Prefs::profiles[0].name, OF_Prefs::profiles[1].name, OF_Prefs::profiles[2].name, OF_Prefs::profiles[3].name);
+                              // 为每个配置文件名称添加布局类型信息
+                              char profileNames[4][20]; // 为每个配置文件创建带布局信息的名称
+                              for(int i = 0; i < PROFILE_COUNT; i++) {
+                                  // 根据irLayout值添加布局类型
+                                  if(OF_Prefs::profiles[i].irLayout) {
+                                      snprintf(profileNames[i], sizeof(profileNames[i]), "%s (Diamond)", OF_Prefs::profiles[i].name);
+                                  } else {
+                                      snprintf(profileNames[i], sizeof(profileNames[i]), "%s (Square)", OF_Prefs::profiles[i].name);
+                                  }
+                              }
+                              FW_Common::OLED.PauseProfileUpdate(profileModeSelection, profileNames[0], profileNames[1], profileNames[2], profileNames[3]);
                           #endif // USES_DISPLAY
                           #ifdef LED_ENABLE
                               OF_RGB::SetLedPackedColor(OF_Prefs::profiles[OF_Prefs::currentProfile].color);
@@ -803,6 +816,44 @@ void loop()
                           // 更新按钮绑定以应用Low Button模式变更
                           FW_Common::UpdateBindings(false);
                           break;
+                        case FW_Const::PauseMode_LayoutToggle:
+                          if(!OF_Serial::serialMode) {
+                              Serial.println("Toggling Layout Type!");
+                          }
+                          // Toggle between Diamond and Square layout
+                          if(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout == OF_Const::layoutDiamond) {
+                              OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout = OF_Const::layoutSquare;
+                          } else {
+                              OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout = OF_Const::layoutDiamond;
+                          }
+                          
+                          if(!OF_Serial::serialMode) {
+                              Serial.print("Layout changed to: ");
+                              Serial.println(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout == OF_Const::layoutDiamond ? "Diamond" : "Square");
+                          }
+                          
+                          // Update display to show new layout
+                          #ifdef USES_DISPLAY
+                              FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_LayoutToggle);
+                          #endif // USES_DISPLAY
+                          
+                          // Provide visual feedback with color corresponding to layout type
+                          #ifdef LED_ENABLE
+                              if(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout == OF_Const::layoutDiamond) {
+                                  // Diamond layout - purple
+                                  OF_RGB::LedUpdate(128,0,128);
+                              } else {
+                                  // Square layout - blue
+                                  OF_RGB::LedUpdate(0,0,255);
+                              }
+                              delay(500);
+                              OF_RGB::SetLedPackedColor(OF_Prefs::profiles[OF_Prefs::currentProfile].color);
+                          #endif // LED_ENABLE
+                          
+                          // Save the layout change
+                          OF_Prefs::SaveProfiles();
+                          
+                          break;                          
  //wei134102 add end                             
                         #ifdef USES_RUMBLE
                         case FW_Const::PauseMode_RumbleToggle:
@@ -1462,7 +1513,13 @@ void SetPauseModeSelection(const bool &isIncrement)
                 //wei134102 add start
                 if(FW_Common::pauseModeSelection == FW_Const::PauseMode_ModeChange) {
                     // ModeChange is always visible
-                }                
+                }
+                if(FW_Common::pauseModeSelection == FW_Const::PauseMode_LowButtonToggle) {
+                    // LowButtonToggle is always visible
+                }
+                if(FW_Common::pauseModeSelection == FW_Const::PauseMode_LayoutToggle) {
+                    // LayoutToggle is always visible
+                }                                
                 //wei134102 add end
             #else
                 #ifdef USES_RUMBLE
@@ -1504,7 +1561,10 @@ void SetPauseModeSelection(const bool &isIncrement)
                 //wei134102 add start
                 if(FW_Common::pauseModeSelection == FW_Const::PauseMode_ModeChange) {
                     // ModeChange is always visible
-                }                
+                }
+                if(FW_Common::pauseModeSelection == FW_Const::PauseMode_LayoutToggle) {
+                    // LayoutToggle is always visible
+                }                                
                 //wei134102 add end
                 if(FW_Common::pauseModeSelection == FW_Const::PauseMode_ModeChange) {
             #else
@@ -1553,7 +1613,24 @@ void SetPauseModeSelection(const bool &isIncrement)
           #ifdef LED_ENABLE
               OF_RGB::LedUpdate(0,255,255);
           #endif // LED_ENABLE
-          break;      
+          break; 
+        case FW_Const::PauseMode_LowButtonToggle:
+          Serial.println("Selecting: Low Button Toggle");
+          #ifdef LED_ENABLE
+              OF_RGB::LedUpdate(255,165,0);
+          #endif // LED_ENABLE
+          break;
+        case FW_Const::PauseMode_LayoutToggle:
+          Serial.println("Selecting: Layout Toggle");
+          #ifdef LED_ENABLE
+              // Show current layout color
+              if(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout == OF_Const::layoutDiamond) {
+                  OF_RGB::LedUpdate(128,0,128);
+              } else {
+                  OF_RGB::LedUpdate(0,0,255);
+              }
+          #endif // LED_ENABLE
+          break;     
         //wei134102 add end
         case FW_Const::PauseMode_Save:
           Serial.println("Selecting: Save Settings");
@@ -1625,11 +1702,24 @@ void SetProfileSelection(const bool &isIncrement)
     #endif // LED_ENABLE
 
     #ifdef USES_DISPLAY
-        FW_Common::OLED.PauseProfileUpdate(profileModeSelection, OF_Prefs::profiles[0].name, OF_Prefs::profiles[1].name, OF_Prefs::profiles[2].name, OF_Prefs::profiles[3].name);
+        // 为每个配置文件名称添加布局类型信息
+        char profileNames[4][20]; // 为每个配置文件创建带布局信息的名称
+        for(int i = 0; i < PROFILE_COUNT; i++) {
+            // 根据irLayout值添加布局类型
+            if(OF_Prefs::profiles[i].irLayout) {
+                snprintf(profileNames[i], sizeof(profileNames[i]), "%s (Diamond)", OF_Prefs::profiles[i].name);
+            } else {
+                snprintf(profileNames[i], sizeof(profileNames[i]), "%s (Square)", OF_Prefs::profiles[i].name);
+            }
+        }
+        FW_Common::OLED.PauseProfileUpdate(profileModeSelection, profileNames[0], profileNames[1], profileNames[2], profileNames[3]);
     #endif // USES_DISPLAY
 
     Serial.print("Selecting profile: ");
-    Serial.println(OF_Prefs::profiles[profileModeSelection].name);
+    Serial.print(OF_Prefs::profiles[profileModeSelection].name);
+    Serial.print(" (");
+    Serial.print(OF_Prefs::profiles[profileModeSelection].irLayout ? "Diamond" : "Square");
+    Serial.println(")");
 
     return;
 }
