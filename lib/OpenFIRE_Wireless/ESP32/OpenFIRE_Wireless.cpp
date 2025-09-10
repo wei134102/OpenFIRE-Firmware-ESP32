@@ -384,6 +384,12 @@ void SerialWireless_::begin() {
   esp_err_t err = esp_wifi_get_mac(WIFI_IF_STA, mac_esp_inteface);
   if (err != ESP_OK) {
     //Serial.println("Failed to read MAC address");
+  } else {
+    // 输出格式化的MAC地址
+    Serial.print("Device MAC Address: ");
+    Serial.printf("%02X:%02X:%02X:%02X:%02X:%02X\n", 
+                 mac_esp_inteface[0], mac_esp_inteface[1], mac_esp_inteface[2],
+                 mac_esp_inteface[3], mac_esp_inteface[4], mac_esp_inteface[5]);
   }
   
   err = esp_wifi_set_channel(espnow_wifi_channel, WIFI_SECOND_CHAN_NONE);
