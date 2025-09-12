@@ -16,7 +16,7 @@
 #endif // DONGLE
 
 
-#define ESPNOW_WIFI_CHANNEL_DEFAULT 12
+#define ESPNOW_WIFI_CHANNEL_DEFAULT 8
 
 // la potenza di trasmissione può andare da 8 a 84, dove 84 è il valore massimo che corrisponde a 20 db
 #define ESPNOW_WIFI_POWER_DEFAULT 84 
@@ -549,8 +549,8 @@ bool SerialWireless_::connection_dongle() {
 }
 
 bool SerialWireless_::connection_gun_at_last_dongle() {
-  #define TIMEOUT_TX_PACKET_LAST_DONGLE 300 // in millisecondi - tempo di invio pacchetti ogni millisecondi quindi 4-5 pacchetti
-  #define TIMEOUT_DIALOGUE_LAST_DONGLE 2000 // in millisecondi - tempo massimo per ricerca ultimo dongle
+  #define TIMEOUT_TX_PACKET_LAST_DONGLE 1000 // in millisecondi - tempo di invio pacchetti ogni millisecondi quindi 4-5 pacchetti
+  #define TIMEOUT_DIALOGUE_LAST_DONGLE 20000 // in millisecondi - tempo massimo per ricerca ultimo dongle
   unsigned long lastMillis_tx_packet_last_dongle = 0;
   unsigned long lastMillis_start_dialogue_last_dongle = millis ();
 

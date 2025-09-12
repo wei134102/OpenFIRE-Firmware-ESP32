@@ -277,24 +277,115 @@ void setup() {
         unsigned long lastMillis = millis ();
         while ((millis () - lastMillis <= MILLIS_TIMEOUT) && (!TinyUSBDevice.mounted())) { yield(); }
         if (!TinyUSBDevice.mounted()) {
+            // Show wireless initialization start
+            #ifdef USES_DISPLAY
+                FW_Common::OLED.TopPanelUpdate("Wireless: Init...");
+            #endif
+            
+            // Begin wireless initialization
             SerialWireless.begin(); // fare una sorta di prebegin, senza impostare peer e altro
+            
+            #ifdef USES_DISPLAY
+                FW_Common::OLED.TopPanelUpdate("Wireless: Starting...");
+            #endif
+            
             if (lastDongleSave) {
+                // Show connecting to last dongle
+                #ifdef USES_DISPLAY
+                    FW_Common::OLED.TopPanelUpdate("Wireless: Last conn...");
+                #endif
+                
                 // PROVA A CONNETTERTI AL PRECEDENTE DONGLE INVIANDO IL PACCHETTO CHECK_CONNECTION
                 if (SerialWireless.connection_gun_at_last_dongle()) {
-                } else SerialWireless.connection_gun();
+                    // Show last dongle connection success
+                    #ifdef USES_DISPLAY
+                        FW_Common::OLED.TopPanelUpdate("Wireless: Success!");
+                    #endif
+                } else {
+                    // Show last dongle connection failed
+                    #ifdef USES_DISPLAY
+                        FW_Common::OLED.TopPanelUpdate("Wireless: Failed  ");
+                        unsigned long failMillis = millis();
+                        while (millis() - failMillis < 500) { yield(); }
+                    #endif
+                    
+                    // Show searching for new dongle
+                    #ifdef USES_DISPLAY
+                        FW_Common::OLED.TopPanelUpdate("Wireless: New Dongle");
+                    #endif
+                    
+                    // Show scanning for dongle signals
+                    #ifdef USES_DISPLAY
+                        FW_Common::OLED.TopPanelUpdate("Wireless: Scanning...");
+                    #endif
+                    
+                    // Connect to new dongle and show result
+                    bool connectResult = SerialWireless.connection_gun();
+                    
+                    #ifdef USES_DISPLAY
+                        if (connectResult) {
+                            FW_Common::OLED.TopPanelUpdate("Wireless: Found!  ");
+                        } else {
+                            FW_Common::OLED.TopPanelUpdate("Wireless: Not found");
+                        }
+                    #endif
+                }
 
             }
             else {
+                // Show searching for first dongle
+                #ifdef USES_DISPLAY
+                    FW_Common::OLED.TopPanelUpdate("Wireless: First conn");
+                #endif
+                
+                // Show scanning for dongle signals
+                #ifdef USES_DISPLAY
+                    FW_Common::OLED.TopPanelUpdate("Wireless: Scanning...");
+                #endif
+                
+                // Connect to first dongle and show result
+                bool connectResult = SerialWireless.connection_gun();
+                
+                #ifdef USES_DISPLAY
+                    if (connectResult) {
+                        FW_Common::OLED.TopPanelUpdate("Wireless: Found!  ");
+                    } else {
+                        FW_Common::OLED.TopPanelUpdate("Wireless: Not found");
+                    }
+                #endif
+                
                 //TinyUSBDevices.onBattery = false; // lo imposta a true solo dopo che è stata stabilita e riconosciuta connessione tra dongle e gun
                 //uint8_t stato_wireless = 0;
-                SerialWireless.connection_gun();
             }
+            
+            // Show waiting for connection to establish
+            #ifdef USES_DISPLAY
+                FW_Common::OLED.TopPanelUpdate("Wireless: Waiting...");
+            #endif
         }
     #endif // OPENFIRE_WIRELESS_ENABLE
 
     while(!TinyUSBDevice.mounted() && !TinyUSBDevices.onBattery) { yield();}
 
     // arriva qui solo se e' stato connesso l'usb o e' stata negoziata e stabilita una connessione wireless
+
+    #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE) && defined(USES_DISPLAY)
+        if (TinyUSBDevices.onBattery) {
+            // Show wireless connection established
+            FW_Common::OLED.TopPanelUpdate("Wireless: Link Up!");
+            
+            // Brief pause to show connection established
+            unsigned long linkUpMillis = millis();
+            while (millis() - linkUpMillis < 500) { yield(); }
+            
+            // Show wireless connection status with MAC address
+            char mac_str[18];
+            sprintf(mac_str, "%02X:%02X:%02X:%02X:%02X:%02X", 
+                    peerAddress[0], peerAddress[1], peerAddress[2], 
+                    peerAddress[3], peerAddress[4], peerAddress[5]);
+            FW_Common::OLED.TopPanelUpdate("Wireless: Connected ", mac_str);
+        }
+    #endif
 
     if (TinyUSBDevice.mounted()) {
         Serial.begin(9600);
