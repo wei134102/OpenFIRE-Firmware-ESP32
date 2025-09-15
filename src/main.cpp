@@ -279,54 +279,134 @@ void setup() {
         if (!TinyUSBDevice.mounted()) {
             // Show wireless initialization start
             #ifdef USES_DISPLAY
-                FW_Common::OLED.TopPanelUpdate("Wireless: Init...");
+                FW_Common::OLED.TopPanelUpdate("Init...");
             #endif
             
             // Begin wireless initialization
             SerialWireless.begin(); // fare una sorta di prebegin, senza impostare peer e altro
             
             #ifdef USES_DISPLAY
-                FW_Common::OLED.TopPanelUpdate("Wireless: Starting...");
+                FW_Common::OLED.TopPanelUpdate("Starting...");
+            #endif
+            
+            // 频段选择功能
+            #ifdef USES_DISPLAY
+                // 显示频段选择提示
+                FW_Common::OLED.TopPanelUpdate("Press TRIGGER to change CH");
+                
+                unsigned long lastTriggerTime = millis();
+                int countdown = 5;
+                uint8_t currentChannel = espnow_wifi_channel;
+                bool channelChanged = false;
+                char lastStatusText[20] = "";
+                
+                // 等待5秒内没有检测到Trigger按键按下
+                // 直接读取Trigger按键的引脚状态，绕过LightgunButtons的状态管理
+                pinMode(OF_Prefs::pins[OF_Const::btnTrigger], INPUT_PULLUP);
+                bool lastTriggerState = HIGH;
+                
+                while (millis() - lastTriggerTime < 5000) {
+                    // 直接读取引脚状态
+                    bool currentTriggerState = digitalRead(OF_Prefs::pins[OF_Const::btnTrigger]);
+                    
+                    // 检测按键按下（从高到低变化）
+                    if (lastTriggerState == HIGH && currentTriggerState == LOW) {
+                        // 切换频段
+                        currentChannel++;
+                        if (currentChannel > 12) currentChannel = 1;
+                        channelChanged = true;
+                        
+                        // 重置倒计时
+                        lastTriggerTime = millis();
+                        
+                        // 提供视觉反馈
+                        #ifdef LED_ENABLE
+                            OF_RGB::LedUpdate(0,255,0);
+                            delay(100);
+                            OF_RGB::LedOff();
+                        #endif
+                    }
+                    
+                    // 保存当前状态用于下一次检测
+                    lastTriggerState = currentTriggerState;
+                    
+                    // 短暂延迟避免过于频繁的检测
+                    delay(20);
+                    
+                    // 更新倒计时
+                    int newCountdown = 5 - ((millis() - lastTriggerTime) / 1000);
+                    
+                    // 仅在倒计时改变或状态改变时更新显示
+                    if (newCountdown != countdown || channelChanged) {
+                        countdown = newCountdown;
+                        char statusText[20];
+                        sprintf(statusText, "CH:%d (T:%ds)", currentChannel, countdown);
+                        
+                        // 只有当文本内容变化时才更新显示，避免闪屏
+                        if (strcmp(statusText, lastStatusText) != 0) {
+                            FW_Common::OLED.TopPanelUpdate(statusText);
+                            strcpy(lastStatusText, statusText);
+                            channelChanged = false;
+                        }
+                    }
+                    
+                    // 短暂延迟避免过于频繁的按键检测
+                    delay(50);
+                }
+                
+                // 更新频段设置
+                espnow_wifi_channel = currentChannel;
+                
+                // 保存新的频段设置
+                OF_Prefs::SaveWireless(&espnow_wifi_channel, &espnow_wifi_power);
+                
+                // 显示最终选择的频段
+                char finalChannelText[20];
+                sprintf(finalChannelText, "CH:%d", currentChannel);
+                FW_Common::OLED.TopPanelUpdate(finalChannelText);
+                delay(500);
             #endif
             
             if (lastDongleSave) {
                 // Show connecting to last dongle
                 #ifdef USES_DISPLAY
-                    FW_Common::OLED.TopPanelUpdate("Wireless: Last conn...");
+                    FW_Common::OLED.TopPanelUpdate("Last conn...");
                 #endif
                 
                 // PROVA A CONNETTERTI AL PRECEDENTE DONGLE INVIANDO IL PACCHETTO CHECK_CONNECTION
                 if (SerialWireless.connection_gun_at_last_dongle()) {
                     // Show last dongle connection success
                     #ifdef USES_DISPLAY
-                        FW_Common::OLED.TopPanelUpdate("Wireless: Success!");
+                        FW_Common::OLED.TopPanelUpdate("Success!");
                     #endif
                 } else {
                     // Show last dongle connection failed
                     #ifdef USES_DISPLAY
-                        FW_Common::OLED.TopPanelUpdate("Wireless: Failed  ");
+                        FW_Common::OLED.TopPanelUpdate("last connection Failed");
                         unsigned long failMillis = millis();
                         while (millis() - failMillis < 500) { yield(); }
                     #endif
                     
                     // Show searching for new dongle
                     #ifdef USES_DISPLAY
-                        FW_Common::OLED.TopPanelUpdate("Wireless: New Dongle");
+                        FW_Common::OLED.TopPanelUpdate("New Dongle");
                     #endif
                     
-                    // Show scanning for dongle signals
-                    #ifdef USES_DISPLAY
-                        FW_Common::OLED.TopPanelUpdate("Wireless: Scanning...");
-                    #endif
+                    // Show scanning for dongle signals with channel info
+                        #ifdef USES_DISPLAY
+                            char scanningText[30];
+                            sprintf(scanningText, "Scanning... CH:%d", espnow_wifi_channel);
+                            FW_Common::OLED.TopPanelUpdate(scanningText);
+                        #endif
                     
                     // Connect to new dongle and show result
                     bool connectResult = SerialWireless.connection_gun();
                     
                     #ifdef USES_DISPLAY
                         if (connectResult) {
-                            FW_Common::OLED.TopPanelUpdate("Wireless: Found!  ");
+                            FW_Common::OLED.TopPanelUpdate("new dongle Found!");
                         } else {
-                            FW_Common::OLED.TopPanelUpdate("Wireless: Not found");
+                            FW_Common::OLED.TopPanelUpdate("Not found");
                         }
                     #endif
                 }
@@ -335,33 +415,37 @@ void setup() {
             else {
                 // Show searching for first dongle
                 #ifdef USES_DISPLAY
-                    FW_Common::OLED.TopPanelUpdate("Wireless: First conn");
+                    FW_Common::OLED.TopPanelUpdate("First conn");
                 #endif
                 
-                // Show scanning for dongle signals
-                #ifdef USES_DISPLAY
-                    FW_Common::OLED.TopPanelUpdate("Wireless: Scanning...");
-                #endif
+                // Show scanning for dongle signals with channel info
+                        #ifdef USES_DISPLAY
+                            char scanningText[30];
+                            sprintf(scanningText, "Scanning... CH:%d", espnow_wifi_channel);
+                            FW_Common::OLED.TopPanelUpdate(scanningText);
+                        #endif
                 
                 // Connect to first dongle and show result
                 bool connectResult = SerialWireless.connection_gun();
                 
                 #ifdef USES_DISPLAY
-                    if (connectResult) {
-                        FW_Common::OLED.TopPanelUpdate("Wireless: Found!  ");
-                    } else {
-                        FW_Common::OLED.TopPanelUpdate("Wireless: Not found");
-                    }
-                #endif
+                        if (connectResult) {
+                            FW_Common::OLED.TopPanelUpdate("Found!  ");
+                        } else {
+                            FW_Common::OLED.TopPanelUpdate("Not found");
+                        }
+                    #endif
                 
                 //TinyUSBDevices.onBattery = false; // lo imposta a true solo dopo che è stata stabilita e riconosciuta connessione tra dongle e gun
                 //uint8_t stato_wireless = 0;
             }
             
-            // Show waiting for connection to establish
-            #ifdef USES_DISPLAY
-                FW_Common::OLED.TopPanelUpdate("Wireless: Waiting...");
-            #endif
+            // Show waiting for connection to establish with channel info
+                #ifdef USES_DISPLAY
+                    char waitingText[30];
+                    sprintf(waitingText, "Waiting... CH:%d", espnow_wifi_channel);
+                    FW_Common::OLED.TopPanelUpdate(waitingText);
+                #endif
         }
     #endif // OPENFIRE_WIRELESS_ENABLE
 
@@ -372,7 +456,7 @@ void setup() {
     #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE) && defined(USES_DISPLAY)
         if (TinyUSBDevices.onBattery) {
             // Show wireless connection established
-            FW_Common::OLED.TopPanelUpdate("Wireless: Link Up!");
+            FW_Common::OLED.TopPanelUpdate("Link Up!");
             
             // Brief pause to show connection established
             unsigned long linkUpMillis = millis();
@@ -383,7 +467,7 @@ void setup() {
             sprintf(mac_str, "%02X:%02X:%02X:%02X:%02X:%02X", 
                     peerAddress[0], peerAddress[1], peerAddress[2], 
                     peerAddress[3], peerAddress[4], peerAddress[5]);
-            FW_Common::OLED.TopPanelUpdate("Wireless: Connected ", mac_str);
+            FW_Common::OLED.TopPanelUpdate("Connected ", mac_str);
         }
     #endif
 

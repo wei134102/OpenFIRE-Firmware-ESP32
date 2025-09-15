@@ -550,7 +550,7 @@ bool SerialWireless_::connection_dongle() {
 
 bool SerialWireless_::connection_gun_at_last_dongle() {
   #define TIMEOUT_TX_PACKET_LAST_DONGLE 1000 // in millisecondi - tempo di invio pacchetti ogni millisecondi quindi 4-5 pacchetti
-  #define TIMEOUT_DIALOGUE_LAST_DONGLE 20000 // in millisecondi - tempo massimo per ricerca ultimo dongle
+  #define TIMEOUT_DIALOGUE_LAST_DONGLE 10000 // in millisecondi - tempo massimo per ricerca ultimo dongle
   unsigned long lastMillis_tx_packet_last_dongle = 0;
   unsigned long lastMillis_start_dialogue_last_dongle = millis ();
 
