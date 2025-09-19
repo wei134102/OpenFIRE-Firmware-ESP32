@@ -25,6 +25,9 @@
 #include "OpenFIREFeedback.h"
 #include "OpenFIREDefines.h"
 #include "OpenFIREcommon.h" //wei134102 add
+// 外部变量声明
+extern uint8_t currentChannel;//用于显示当前信道
+
 bool ExtDisplay::Begin()
 {
     if(display != nullptr) {
@@ -123,7 +126,15 @@ void ExtDisplay::ScreenModeChange(const int &screenMode, const bool &isAnalog)
             if(mister) display->drawBitmap(48, 23, misterIco, MISTERKUN_WIDTH, MISTERKUN_HEIGHT, WHITE);
             else {
                 #ifdef ARDUINO_ARCH_ESP32
-                if(TinyUSBDevices.onBattery) { display->drawBitmap(2, 46, wifiConnectIco, CONNECTION_WIDTH, CONNECTION_HEIGHT, WHITE); }
+                if(TinyUSBDevices.onBattery) { 
+                    display->drawBitmap(2, 46, wifiConnectIco, CONNECTION_WIDTH, CONNECTION_HEIGHT, WHITE); 
+                    // 显示当前WiFi信道
+                    #ifdef OPENFIRE_WIRELESS_ENABLE
+                    display->setCursor(12, 36);
+                    display->setTextSize(1);
+                    display->printf("CH%d", currentChannel);
+                    #endif
+                }
                 #else //rp2040
                 if(TinyUSBDevices.onBattery) { display->drawBitmap(2, 46, btConnectIco, CONNECTION_WIDTH, CONNECTION_HEIGHT, WHITE); }
                 #endif
@@ -196,7 +207,15 @@ void ExtDisplay::ScreenModeChange(const int &screenMode, const bool &isAnalog)
             break;
           case Screen_Mamehook_Single:
             #ifdef ARDUINO_ARCH_ESP32  
-            if(TinyUSBDevices.onBattery) { display->drawBitmap(2, 46, wifiConnectIco, CONNECTION_WIDTH, CONNECTION_HEIGHT, WHITE); }
+            if(TinyUSBDevices.onBattery) { 
+                display->drawBitmap(2, 46, wifiConnectIco, CONNECTION_WIDTH, CONNECTION_HEIGHT, WHITE); 
+                // 显示当前WiFi信道
+                #ifdef OPENFIRE_WIRELESS_ENABLE
+                display->setCursor(12, 36);
+                display->setTextSize(1);
+                display->printf("CH%d", currentChannel);
+                #endif
+            }
             #else //rp2040
             if(TinyUSBDevices.onBattery) { display->drawBitmap(2, 46, btConnectIco, CONNECTION_WIDTH, CONNECTION_HEIGHT, WHITE); }
             #endif

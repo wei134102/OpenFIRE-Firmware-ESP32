@@ -23,7 +23,8 @@
 #include "OpenFIREFeedback.h"
 #include "OpenFIREprefs.h"
 #include "OpenFIREconstant.h"
-
+// 全局变量定义 - 用于频道显示
+uint8_t currentChannel;
 
 // =======696969===== GESTIONE DUAL CORE PER ESP32 CHE USA FREERTOS ===  INIZIALIZZAZIONE ========
 #if defined(ARDUINO_ARCH_ESP32) && defined(DUAL_CORE)
@@ -296,7 +297,7 @@ void setup() {
                 
                 unsigned long lastTriggerTime = millis();
                 int countdown = 5;
-                uint8_t currentChannel = espnow_wifi_channel;
+                currentChannel = espnow_wifi_channel;
                 bool channelChanged = false;
                 char lastStatusText[20] = "";
                 
