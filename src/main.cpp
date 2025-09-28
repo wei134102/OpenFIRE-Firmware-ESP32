@@ -220,6 +220,10 @@ void setup() {
     FW_Common::buttons.Begin();
     FW_Common::FeedbackSet();
 
+    // Load saved input mode settings
+    FW_Common::buttons.analogOutput = OF_Prefs::toggles[OF_Const::analogOutputMode];
+    FW_Common::OLED.mister = OF_Prefs::toggles[OF_Const::misterMode];
+    
     #ifdef LED_ENABLE
         OF_RGB::LedInit();
     #endif // LED_ENABLE
@@ -883,6 +887,12 @@ void loop()
                               if(!OF_Serial::serialMode)
                                   Serial.println("Mode changed to: Mouse/Keyboard");
                           }
+                          
+                          // Save the new mode settings
+                          OF_Prefs::toggles[OF_Const::analogOutputMode] = FW_Common::buttons.analogOutput;
+                          OF_Prefs::toggles[OF_Const::misterMode] = FW_Common::OLED.mister;
+                          OF_Prefs::SaveToggles();
+                          
                           // Update display to show new mode
                           #ifdef USES_DISPLAY
                               FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_ModeChange);
