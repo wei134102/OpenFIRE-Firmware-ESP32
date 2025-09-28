@@ -287,13 +287,6 @@ void setup() {
                 FW_Common::OLED.TopPanelUpdate("Init...");
             #endif
             
-            // Begin wireless initialization
-            SerialWireless.begin(); // fare una sorta di prebegin, senza impostare peer e altro
-            
-            #ifdef USES_DISPLAY
-                FW_Common::OLED.TopPanelUpdate("Starting...");
-            #endif
-            
             // 频段选择功能
             #ifdef USES_DISPLAY
                 // 显示频段选择提示
@@ -364,6 +357,7 @@ void setup() {
                 
                 // 保存新的频段设置
                 OF_Prefs::SaveWireless(&espnow_wifi_channel, &espnow_wifi_power);
+
                 
                 // 显示最终选择的频段
                 char finalChannelText[20];
@@ -371,7 +365,13 @@ void setup() {
                 FW_Common::OLED.TopPanelUpdate(finalChannelText);
                 delay(500);
             #endif
-            
+
+            // 显示初始化完成            
+            // Begin wireless initialization after channel selection
+            #ifdef USES_DISPLAY
+                FW_Common::OLED.TopPanelUpdate("Starting...");
+            #endif
+            SerialWireless.begin();            
             if (lastDongleSave) {
                 // Show connecting to last dongle
                 #ifdef USES_DISPLAY
