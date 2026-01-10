@@ -18,7 +18,7 @@
 
 #include <stdint.h>
 #include <unordered_map>
-//#include <FS.h> // non serve, viene richiamata direttamente da littlefs
+//#include <FS.h> // 696969 //non serve, viene richiamata direttamente da littlefs
 
 // = 696969 = per la compilazione su esp32 - la libreria exfatlib che viene chiamata da Arduino TinyUSB
 // =========== definisce quelle costanti e ricevo un warning in quanto anche LittleFS le definisce  ===
@@ -109,7 +109,7 @@ public:
     static inline uint32_t settings[OF_Const::settingsTypesCount] = {
         255,                        // rumble strength
         150,                        // rumble length
-        45,                         // solenoid on length
+        20, // 696969 // 45,                         // solenoid on length
         80,                         // solenoid off length
         500,                        // solenoid hold length
         2500,                       // hold-to-pause length
@@ -222,10 +222,10 @@ public:
         static int SaveWireless(uint8_t *channel, uint8_t *power);  
 
         /// @brief Carica le impostazione dell'ultimo DONGLE a cui è stato connesso // canale e mac addres
-        static int LoadLastDongleWireless(uint8_t *address);
+        static int LoadLastDongleWireless(uint8_t *address, uint8_t *channel);
         
         /// @brief Salva le le impostazione dell'ultimo DONGLE a cui è stato connesso // canale e mac addres
-        static int SaveLastDongleWireless(uint8_t *address);  
+        static int SaveLastDongleWireless(uint8_t *address, uint8_t *channel);  
 
     #endif //ARDUINO_ARCH_ESP32
 

@@ -18,6 +18,10 @@
   #include <PicoBluetoothHID.h>
 #endif // ARDUINO_RASPBERRY_PI_PICO_W
 
+#ifdef ARDUINO_ARCH_ESP32  // 696969
+    #define delay(ms) vTaskDelay(pdMS_TO_TICKS(ms))                    
+#endif //ARDUINO_ARCH_ESP32
+
 /*****************************
  *   GLOBAL SECTION
  *****************************/
@@ -389,7 +393,7 @@ void Gamepad16_::moveStick(uint16_t origX, uint16_t origY) {
       gamepad16Report.ry = map(_y, 0, 4095, 32767, -32767);
     } else {
       gamepad16Report.x = map(_x, 0, 4095, 32767, -32767);
-      gamepad16Report.x = map(_y, 0, 4095, 32767, -32767);
+      gamepad16Report.y = map(_y, 0, 4095, 32767, -32767);
     }
     TinyUSBDevices.newReport[TinyUSBDevices_::reportGamepad] = true;
     //report();

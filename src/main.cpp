@@ -24,6 +24,32 @@
 #include "OpenFIREprefs.h"
 #include "OpenFIREconstant.h"
 
+#ifdef ARDUINO_ARCH_ESP32  // 696969
+    #define delay(ms) vTaskDelay(pdMS_TO_TICKS(ms))                    
+#endif //ARDUINO_ARCH_ESP32
+
+
+// ================= parte poi da rimuovere ==================
+#ifdef CLOCK_CAM_WII
+uint32_t tone_freq_main = 0;
+uint32_t tone_duty_main = 0;
+#endif //CLOCK_CAM_WII
+// ================= fine parte poi da rimuovere =============
+
+// ========== serve per usare display da parte wireless =============
+#ifdef USES_DISPLAY
+    #ifdef USE_LOVYAN_GFX
+        //LGFX_SSD1306 *display_OLED  = nullptr;   
+        LGFX_SSD1306 *&display_OLED  = FW_Common::OLED.display;   //aggiunto inline per condividerla
+    #else
+        //Adafruit_SSD1306 *display_OLED  = nullptr; 
+        Adafruit_SSD1306 *&display_OLED  = FW_Common::OLED.display; //aggiunto inline per condividerla
+    #endif
+#endif // USES_DISPLAY
+// ========== fine serve per usare display da parte wireless =============
+
+
+
 
 // =======696969===== GESTIONE DUAL CORE PER ESP32 CHE USA FREERTOS ===  INIZIALIZZAZIONE ========
 #if defined(ARDUINO_ARCH_ESP32) && defined(DUAL_CORE)
@@ -110,6 +136,7 @@ void setup() {
         OF_Prefs::Load();
         
         #if defined(OPENFIRE_WIRELESS_ENABLE) && defined(ARDUINO_ARCH_ESP32)
+           ////////////////// MAI USATO //////////////////////////////
             uint8_t aux_espnow_wifi_channel, aux_espnow_wifi_power;
             if (OF_Prefs::LoadWireless(&aux_espnow_wifi_channel, &aux_espnow_wifi_power) == OF_Prefs::Error_Success) {
                 espnow_wifi_channel = aux_espnow_wifi_channel;
@@ -120,7 +147,8 @@ void setup() {
                 OF_Prefs::SaveWireless(&espnow_wifi_channel, &espnow_wifi_power)
             }
             */
-            if (OF_Prefs::LoadLastDongleWireless(lastDongleAddress) == OF_Prefs::Error_Success) lastDongleSave = true;
+            //////////////////////////////// FINE MAI USATO //////////////////////////////////////
+            if (OF_Prefs::LoadLastDongleWireless(lastDongleAddress, &lastDongleChannel) == OF_Prefs::Error_Success) lastDongleSave = true;
                 else lastDongleSave = false;
 
         #endif // defined(OPENFIRE_WIRELESS_ENABLE) && defined(ARDUINO_ARCH_ESP32)
@@ -200,22 +228,58 @@ void setup() {
     // scrive sulla parte superiore del diplay "connessione"
     #ifdef ARDUINO_ARCH_ESP32
     #ifdef USES_DISPLAY
+        // ========== serve per usare display da parte wireless =============
+        //////////////////////////////////////////////////////////////////////////display_OLED=FW_Common::OLED.display;
+        // ========== fine serve per usare display da parte wireless =============
+
         //FW_Common::OLED.ScreenModeChange(ExtDisplay::Screen_Init);
-        FW_Common::OLED.TopPanelUpdate(" ... CONNECTION ...");
+        ////////////////////////FW_Common::OLED.TopPanelUpdate(" ... CONNECTION ...");
+        
+        // =================== parte poi da rimuovere ====================
+        #ifdef CLOCK_CAM_WII
+        // char buffer[50];
+        // sprintf(buffer, "Hz: %d - DC: %d ", tone_freq_main, tone_duty_main);
+        // FW_Common::OLED.TopPanelUpdate(buffer);
+        #endif // CLOCK_CAM_WII
+        // ================== fine parte da rimovere =====================
+
     #endif // USES_DISPLAY
     #endif //ARDUINO_ARCH_ESP32
 
 
-
+    /// SPOSTARE DOPO INZIALIZZAZIONE
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // 696969 == CODICE PER CALIBRARE LEVETTA STICK IN POSIZIONE CENTRALE =============
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     #if defined(ARDUINO_ARCH_ESP32) && defined(USES_ANALOG)   // la facciamo solo per ESP32 e lasciamo RP2040 come gestione originale
+        
+    #ifdef USES_DISPLAY
+        unsigned long lastChange = 0;
+        int8_t currentIndex = 0;
+        int8_t direzione = 1;
+        const char* word = "...CALIBRATION...";
+        const uint8_t baseX = 10;
+        const uint8_t baseY = 2;
+        const uint8_t charWidth = 6;
+        uint8_t len_word;
+    if(display_OLED != nullptr) {    
+        display_OLED->setCursor(baseX, baseY);
+        display_OLED->setTextSize(1);
+        display_OLED->setTextColor(WHITE, BLACK);
+        display_OLED->fillRect(0, 0, 128, 16, BLACK);
+        display_OLED->drawFastHLine(0, 15, 128, WHITE);
+        display_OLED->print(word);
+        display_OLED->display();
+        len_word=strlen(word);
+    }
+    #endif // USES_DISPLAY
+    
     uint16_t analogValueX;
     uint16_t analogValueY;
+       
     //unsigned long startTime = 0;
     unsigned long startTime = millis();
-    while ((millis()-startTime) < 2000)
+    while ((millis()-startTime) < 2000) // 2000
     {
         analogValueX = analogRead(OF_Prefs::pins[OF_Const::analogX]);
         analogValueY = analogRead(OF_Prefs::pins[OF_Const::analogY]);
@@ -223,8 +287,30 @@ void setup() {
         if (analogValueX < ANALOG_STICK_DEADZONE_X_MIN) ANALOG_STICK_DEADZONE_X_MIN = analogValueX;
         if (analogValueY > ANALOG_STICK_DEADZONE_Y_MAX) ANALOG_STICK_DEADZONE_Y_MAX = analogValueY;
         if (analogValueY < ANALOG_STICK_DEADZONE_Y_MIN) ANALOG_STICK_DEADZONE_Y_MIN = analogValueY;
+
+        #ifdef USES_DISPLAY
+        if(display_OLED != nullptr) {
+            if (millis() - lastChange > 50) {
+                display_OLED->setTextColor(BLACK, BLACK);
+                display_OLED->setCursor(baseX + (currentIndex * charWidth), baseY);
+                display_OLED->write(word[currentIndex]);
+                if ((currentIndex > 0) && (currentIndex < (len_word-1)))  {
+                    display_OLED->setCursor(baseX + ((currentIndex-direzione) * charWidth), baseY);
+                    display_OLED->setTextColor(WHITE, BLACK); 
+                    display_OLED->write(word[currentIndex-direzione]);
+                }
+                display_OLED->display();
+                currentIndex = currentIndex + direzione;
+                if ((currentIndex == (len_word-1)) || (currentIndex == 0)) direzione *= -1;
+                lastChange = millis();
+            }
+        }
+        #endif // USES_DISPLAY
     }
-    
+    #ifdef USES_DISPLAY
+        FW_Common::OLED.TopPanelUpdate(" CALIBRATION READY "); 
+    #endif //USES_DISPLAY
+
     ANALOG_STICK_DEADZONE_X_CENTER = (ANALOG_STICK_DEADZONE_X_MIN + ANALOG_STICK_DEADZONE_X_MAX) / 2; 
     ANALOG_STICK_DEADZONE_Y_CENTER = (ANALOG_STICK_DEADZONE_Y_MIN + ANALOG_STICK_DEADZONE_Y_MAX) / 2; 
     
@@ -277,12 +363,17 @@ void setup() {
         unsigned long lastMillis = millis ();
         while ((millis () - lastMillis <= MILLIS_TIMEOUT) && (!TinyUSBDevice.mounted())) { yield(); }
         if (!TinyUSBDevice.mounted()) {
+            SerialWireless.init_wireless();
             SerialWireless.begin(); // fare una sorta di prebegin, senza impostare peer e altro
             if (lastDongleSave) {
                 // PROVA A CONNETTERTI AL PRECEDENTE DONGLE INVIANDO IL PACCHETTO CHECK_CONNECTION
                 if (SerialWireless.connection_gun_at_last_dongle()) {
-                } else SerialWireless.connection_gun();
-
+                } else {
+                    //lastDongleSave=false;
+                    //SerialWireless.end();
+                    //SerialWireless.begin();
+                    SerialWireless.connection_gun();
+                }
             }
             else {
                 //TinyUSBDevices.onBattery = false; // lo imposta a true solo dopo che è stata stabilita e riconosciuta connessione tra dongle e gun
@@ -294,13 +385,21 @@ void setup() {
 
     while(!TinyUSBDevice.mounted() && !TinyUSBDevices.onBattery) { yield();}
 
+
     // arriva qui solo se e' stato connesso l'usb o e' stata negoziata e stabilita una connessione wireless
+    #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
+        #ifdef USES_DISPLAY
+            FW_Common::OLED.TopPanelUpdate("  !! LINK READY !! "); 
+            vTaskDelay(pdMS_TO_TICKS(1000));
+        #endif //USES_DISPLAY
+    #endif // defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
 
     if (TinyUSBDevice.mounted()) {
         Serial.begin(9600);
         Serial.setTimeout(0);
         #if defined(ARDUINO_ARCH_ESP32)
-            Serial.setTxTimeoutMs(0); // default è 250ms // serve per fare come in arduino pico rp2040
+            //// tolto perchè con nuova versione arduino-esp32 o tinyUSB non funziona più bene ///// Serial.setTxTimeoutMs(0);
+            //////////////////////Serial.setTxTimeoutMs(0); // default è 250ms // serve per fare come in arduino pico rp2040
             //Serial.setRxBufferSize(64); // impostato con per arduino pico .. se non si imposta è 256 di default
             //Serial.setRxBufferSize(usbPackageSize + 128);
             //Serial.setTxBufferSize(64);
@@ -320,7 +419,7 @@ void setup() {
     #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
     else {     
         if (!lastDongleSave || 
-            (lastDongleSave && !(memcmp(lastDongleAddress, peerAddress,6) == 0))) OF_Prefs::SaveLastDongleWireless(peerAddress);
+            (lastDongleSave && (!(memcmp(lastDongleAddress, peerAddress,6) == 0) || !(lastDongleChannel == espnow_wifi_channel)))) OF_Prefs::SaveLastDongleWireless(peerAddress, &espnow_wifi_channel);
         // CHIUDI TUTTO CIO' CHE E' USB SE E' DA CHIUDERE
         TinyUSBDevice.clearConfiguration();
         TinyUSBDevice.detach();
@@ -343,8 +442,17 @@ void setup() {
     #endif // USES_DISPLAY
     #endif //ARDUINO_ARCH_ESP32
 
-
-
+    #ifdef COMMENTO
+    ////// 696969 ///////////// PROVA SOLENOIDE //////////////////////////////////////
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    for (;;) {
+        digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], HIGH);
+        vTaskDelay(pdMS_TO_TICKS(15));
+        digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], LOW);
+        vTaskDelay(pdMS_TO_TICKS(85));
+    }
+    ////// 696969 ///////////// FINE PROVA SOLENOIDE /////////////////////////////////
+    #endif // COMMENTO
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////// 696969 ////////////////////////////////////////////////
