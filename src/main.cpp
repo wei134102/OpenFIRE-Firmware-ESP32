@@ -356,10 +356,11 @@ void setup() {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     // === 696969 === NUOVA GESTIONE INIZIALIZZAIZONE USB O CONNESSIONE WIRELESS =============================
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+    FW_Common::OLED.TopPanelUpdate(" go in usb mode "); // 696969 inserito da me
     TinyUSBDevices.begin(POLL_RATE);
+    FW_Common::OLED.TopPanelUpdate(" wait for usb mount ");
     #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)// SE WIRELESS
-        #define MILLIS_TIMEOUT  1000 //1 secondi
+        #define MILLIS_TIMEOUT  3000 //1 secondi  检测USB是否连接的时间！！！1秒
         unsigned long lastMillis = millis ();
         while ((millis () - lastMillis <= MILLIS_TIMEOUT) && (!TinyUSBDevice.mounted())) { yield(); }
         if (!TinyUSBDevice.mounted()) {
@@ -397,6 +398,7 @@ void setup() {
     if (TinyUSBDevice.mounted()) {
         Serial.begin(9600);
         Serial.setTimeout(0);
+        FW_Common::OLED.TopPanelUpdate(" USB mounted "); 
         #if defined(ARDUINO_ARCH_ESP32)
             //// tolto perchè con nuova versione arduino-esp32 o tinyUSB non funziona più bene ///// Serial.setTxTimeoutMs(0);
             //////////////////////Serial.setTxTimeoutMs(0); // default è 250ms // serve per fare come in arduino pico rp2040
