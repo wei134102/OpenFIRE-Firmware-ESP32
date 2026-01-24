@@ -8,10 +8,13 @@ class LGFX_SSD1306 : public lgfx::LGFX_Device
 {
   lgfx::Panel_SSD1306 _panel_instance; // Pannello SSD1306
   lgfx::Bus_I2C _bus_instance;         // Bus I2C
+  uint16_t _height;                     // 保存高度用于后续配置
 
 public:
-  LGFX_SSD1306(uint8_t i2c_port, int16_t sda, int16_t scl, uint8_t i2c_addr, uint16_t width, uint16_t height) //IN AUTOMATICO DAL PANNELLO 128X64
+  LGFX_SSD1306(uint8_t i2c_port, int16_t sda, int16_t scl, uint8_t i2c_addr, uint16_t width, uint16_t height) //支持128x64(0.96寸)和128x32(0.91寸)
   { 
+    _height = height;  // 保存高度
+    
     {   // configurazione del bus I2C
         auto cfg = _bus_instance.config();
         cfg.i2c_port = i2c_port;  // Porta I2C (0 o 1)
@@ -47,5 +50,23 @@ public:
     }
 
     setPanel(&_panel_instance); // Associa il pannello alla classe
+  }
+  
+  // 配置SSD1306驱动参数的方法，应在init()之后调用
+  // 根据屏幕高度配置SSD1306驱动参数
+  // 0.96寸(128x64): 驱动路数0x3F(64 duty), com pin配置0x12
+  // 0.91寸(128x32): 驱动路数0x1F(32 duty), com pin配置0x02
+  void configureSSD1306Params() {
+    if (_height == 32) {
+      // 0.91寸OLED配置
+      // 通过I2C总线发送命令：0xA8 0x1F (设置驱动路数为32)
+      // 然后发送：0xDA 0x02 (设置com pin配置)
+      uint8_t cmd1[] = {0xA8, 0x1F};
+      uint8_t cmd2[] = {0xDA, 0x02};
+      _bus_instance.writeBytes(cmd1, 2, false, true);
+      delay(1);
+      _bus_instance.writeBytes(cmd2, 2, false, true);
+    }
+    // 0.96寸使用默认配置，LovyanGFX应该已经自动配置了
   }
 };

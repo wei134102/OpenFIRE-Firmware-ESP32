@@ -75,8 +75,18 @@ bool ExtDisplay::Begin()
 
     #ifdef USE_LOVYAN_GFX
     if(display->init()) {
+        // 配置SSD1306驱动参数（针对0.91寸的特殊配置）
+        #ifdef OLED_091_INCH
+        ((LGFX_SSD1306*)display)->configureSSD1306Params();
+        #endif
     #else
     if(display->begin(SSD1306_SWITCHCAPVCC, OF_Prefs::toggles[OF_Const::i2cOLEDaltAddr] ? 0x3D : 0x3C)) {
+        // Adafruit库的SSD1306需要手动配置0.91寸的参数
+        #ifdef OLED_091_INCH
+        // 0.91寸OLED配置：驱动路数0x1F(32 duty), com pin配置0x02
+        // 注意：Adafruit_SSD1306库可能需要通过命令接口设置这些参数
+        // 如果库不支持，可能需要修改库或使用其他方法
+        #endif
     #endif    
         display->clearDisplay();
         ScreenModeChange(Screen_None);
@@ -92,6 +102,20 @@ void ExtDisplay::Stop()
     }
 }
 
+// void ExtDisplay::TopPanelUpdate(const char *textPrefix, const char *profText)
+// {
+//     if(display != nullptr) {
+//         display->fillRect(0, 0, 128, 16, BLACK);
+//         display->drawFastHLine(0, 15, 128, WHITE);
+//         display->setCursor(2, 2);
+//         display->setTextSize(1);
+//         display->setTextColor(WHITE, BLACK);
+//         display->print(textPrefix);
+//         if(profText != nullptr)
+//             display->println(profText);
+//         display->display();
+//     }
+// }
 void ExtDisplay::TopPanelUpdate(const char *textPrefix, const char *profText)
 {
     if(display != nullptr) {
@@ -106,12 +130,11 @@ void ExtDisplay::TopPanelUpdate(const char *textPrefix, const char *profText)
         display->display();
     }
 }
-
 void ExtDisplay::ScreenModeChange(const int &screenMode, const bool &isAnalog)
 {
     if(display != nullptr) {
         idleTimeStamp = millis();
-        display->fillRect(0, 16, 128, 48, BLACK);
+        display->fillRect(0, 16, 128, SCREEN_CONTENT_HEIGHT, BLACK);
         if(screenState >= Screen_Mamehook_Single &&
            screenMode == Screen_Normal) {
             currentAmmo = 0, currentLife = 0;
@@ -122,6 +145,7 @@ void ExtDisplay::ScreenModeChange(const int &screenMode, const bool &isAnalog)
           case Screen_Normal:
             if(mister) display->drawBitmap(48, 23, misterIco, MISTERKUN_WIDTH, MISTERKUN_HEIGHT, WHITE);
             else {
+                #ifndef OLED_091_INCH  // 0.91寸屏幕不显示底部图标
                 #ifdef ARDUINO_ARCH_ESP32
                 if(TinyUSBDevices.onBattery) { display->drawBitmap(2, 46, wifiConnectIco, CONNECTION_WIDTH, CONNECTION_HEIGHT, WHITE); }
                 #else //rp2040
@@ -151,6 +175,7 @@ void ExtDisplay::ScreenModeChange(const int &screenMode, const bool &isAnalog)
                 //wei134102 add end                
                 if(isAnalog) { display->drawBitmap(108, 49, gamepadIco, GAMEPAD_WIDTH, GAMEPAD_HEIGHT, WHITE); }
                 else { display->drawBitmap(109, 48, mouseIco, MOUSE_WIDTH, MOUSE_HEIGHT, WHITE); }
+                #endif // OLED_091_INCH
             }
             break;
           case Screen_None:
@@ -161,6 +186,14 @@ void ExtDisplay::ScreenModeChange(const int &screenMode, const bool &isAnalog)
             display->display();
             break;
           case Screen_Init:
+            #ifdef OLED_091_INCH
+            // 0.91寸屏幕：简化显示
+            display->setTextSize(1);
+            display->setCursor(20, 18);
+            display->println("Welcome!");
+            display->setCursor(12, 24);
+            display->println("Pull trigger");
+            #else
             display->setTextSize(2);
             display->setCursor(20, 18);
             display->println("Welcome!");
@@ -169,6 +202,7 @@ void ExtDisplay::ScreenModeChange(const int &screenMode, const bool &isAnalog)
             display->println(" Pull trigger to");
             display->setCursor(12, 52);
             display->println("start calibration!");
+            #endif
             break;
           case Screen_IRTest:
             TopPanelUpdate("", "IR Test");
@@ -195,6 +229,7 @@ void ExtDisplay::ScreenModeChange(const int &screenMode, const bool &isAnalog)
             display->println("failed");
             break;
           case Screen_Mamehook_Single:
+            #ifndef OLED_091_INCH  // 0.91寸屏幕不显示底部图标
             #ifdef ARDUINO_ARCH_ESP32  
             if(TinyUSBDevices.onBattery) { display->drawBitmap(2, 46, wifiConnectIco, CONNECTION_WIDTH, CONNECTION_HEIGHT, WHITE); }
             #else //rp2040
@@ -225,6 +260,7 @@ void ExtDisplay::ScreenModeChange(const int &screenMode, const bool &isAnalog)
             //wei134102 add end
             if(isAnalog) { display->drawBitmap(108, 49, gamepadIco, GAMEPAD_WIDTH, GAMEPAD_HEIGHT, WHITE); }
             else { display->drawBitmap(109, 48, mouseIco, MOUSE_WIDTH, MOUSE_HEIGHT, WHITE); }
+            #endif // OLED_091_INCH
             if(serialDisplayType == ScreenSerial_Life && lifeBar) {
               display->drawBitmap(52, 23, lifeBarBanner, LIFEBAR_BANNER_WIDTH, LIFEBAR_BANNER_HEIGHT, WHITE);
               display->drawBitmap(11, 35, lifeBarLarge, LIFEBAR_LARGE_WIDTH, LIFEBAR_LARGE_HEIGHT, WHITE);
@@ -338,11 +374,11 @@ void ExtDisplay::ShowTemp()
 void ExtDisplay::DrawVisibleIR(int *pointX, int *pointY)
 {
     if(display != nullptr) {
-        display->fillRect(0, 16, 128, 48, BLACK);
+        display->fillRect(0, 16, 128, SCREEN_CONTENT_HEIGHT, BLACK);
         for(int i = 0; i < 4; ++i) {
           pointX[i] = map(pointX[i], 0, 1920, 0, 128);
-          pointY[i] = map(pointY[i], 0, 1080, 16, 64);
-          pointY[i] = constrain(pointY[i], 16, 64);
+          pointY[i] = map(pointY[i], 0, 1080, 16, SCREEN_HEIGHT);
+          pointY[i] = constrain(pointY[i], 16, SCREEN_HEIGHT);
           display->fillCircle(pointX[i], pointY[i], 1, WHITE);
         }
         display->display();
@@ -354,7 +390,7 @@ void ExtDisplay::PauseScreenShow(const int &currentProf, const char* name1, cons
     if(display != nullptr) {
         const char* namesList[] = { name1, name2, name3, name4 };
         TopPanelUpdate("Using ", namesList[currentProf]); // names are placeholder
-        display->fillRect(0, 16, 128, 48, BLACK);
+        display->fillRect(0, 16, 128, SCREEN_CONTENT_HEIGHT, BLACK);
         display->setTextSize(1);
         display->setCursor(0, 17);
         display->print(" A > ");
@@ -375,15 +411,23 @@ void ExtDisplay::PauseScreenShow(const int &currentProf, const char* name1, cons
 void ExtDisplay::PauseListUpdate(const int &selection)
 {
     if(display != nullptr) {
-        display->fillRect(0, 16, 128, 48, BLACK);
+        display->fillRect(0, 16, 128, SCREEN_CONTENT_HEIGHT, BLACK);
         display->drawBitmap(60, 18, upArrowGlyph, ARROW_WIDTH, ARROW_HEIGHT, WHITE);
+        #ifndef OLED_091_INCH  // 0.91寸屏幕不显示底部箭头
         display->drawBitmap(60, 59, downArrowGlyph, ARROW_WIDTH, ARROW_HEIGHT, WHITE);
+        #endif
         display->setTextSize(1);
         // Seong Note: Yeah, some of these are pretty out-of-bounds-esque behavior,
         // but pause mode selection in actual use would prevent some of these extremes from happening.
         // Just covering our asses.
         switch(selection) {
           case ScreenPause_Calibrate:
+            #ifdef OLED_091_INCH
+            // 0.91寸屏幕：只显示当前选中的项目
+            display->setTextColor(BLACK, WHITE);
+            display->setCursor(0, 20);
+            display->println(" Calibrate ");
+            #else
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 25);
             display->println(" Send Escape Keypress");
@@ -393,8 +437,15 @@ void ExtDisplay::PauseListUpdate(const int &selection)
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 47);
             display->println(" Profile Select ");
+            #endif
             break;
           case ScreenPause_ProfileSelect:
+            #ifdef OLED_091_INCH
+            // 0.91寸屏幕：只显示当前选中的项目
+            display->setTextColor(BLACK, WHITE);
+            display->setCursor(0, 20);
+            display->println(" Profile Select ");
+            #else
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 25);
             display->println(" Calibrate ");
@@ -404,6 +455,7 @@ void ExtDisplay::PauseListUpdate(const int &selection)
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 47);
             display->println(" Save Gun Settings ");
+            #endif
             break;
           case ScreenPause_Save:
             display->setTextColor(WHITE, BLACK);
@@ -614,9 +666,11 @@ void ExtDisplay::PauseListUpdate(const int &selection)
 void ExtDisplay::PauseProfileUpdate(const int &selection, const char* name1, const char* name2, const char* name3, const char* name4)
 {
     if(display != nullptr) {
-        display->fillRect(0, 16, 128, 48, BLACK);
+        display->fillRect(0, 16, 128, SCREEN_CONTENT_HEIGHT, BLACK);
         display->drawBitmap(60, 18, upArrowGlyph, ARROW_WIDTH, ARROW_HEIGHT, WHITE);
+        #ifndef OLED_091_INCH  // 0.91寸屏幕不显示底部箭头
         display->drawBitmap(60, 59, downArrowGlyph, ARROW_WIDTH, ARROW_HEIGHT, WHITE);
+        #endif
         display->setTextSize(1);
         switch(selection) {
           case 0: // Profile #0, etc.
@@ -671,7 +725,7 @@ void ExtDisplay::PauseProfileUpdate(const int &selection, const char* name1, con
 void ExtDisplay::SaveScreen(const int &status)
 {
     if(display != nullptr) {
-        display->fillRect(0, 16, 128, 48, BLACK);
+        display->fillRect(0, 16, 128, SCREEN_CONTENT_HEIGHT, BLACK);
         display->setTextColor(WHITE, BLACK);
         display->setTextSize(2);
         display->setCursor(24, 24);
@@ -712,6 +766,18 @@ void ExtDisplay::PrintLife(const uint &life)
         lifeEmpty = life ? false : true;
         if(screenState == Screen_Mamehook_Single) {
             if(lifeBar) {
+                #ifdef OLED_091_INCH
+                // 0.91寸屏幕：简化生命值显示
+                display->fillRect(14, 20, 100, 6, BLACK);
+                display->fillRect(14, 20, life, 6, WHITE);
+                if(life) {
+                  display->setTextSize(1);
+                  display->setCursor(52, 20);
+                  display->setTextColor(WHITE, BLACK);
+                  display->print(life);
+                  display->println("%");
+                }
+                #else
                 display->fillRect(14, 37, 100, 9, BLACK);
                 display->fillRect(52, 51, 30, 8, BLACK);
                 display->fillRect(14, 37, life, 9, WHITE);
@@ -723,9 +789,49 @@ void ExtDisplay::PrintLife(const uint &life)
                   display->print(life);
                   display->println(" %");
                 }
-
+                #endif
                 display->display();
             } else {
+                #ifdef OLED_091_INCH
+                // 0.91寸屏幕：简化生命值显示，只显示单行
+                display->fillRect(22, 19, HEART_LARGE_WIDTH*5+4, HEART_LARGE_HEIGHT, BLACK);
+                switch(life) {
+                  case 5:
+                    display->drawBitmap(22, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
+                    display->drawBitmap(22+HEART_LARGE_WIDTH, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
+                    display->drawBitmap(22+HEART_LARGE_WIDTH*2, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
+                    display->drawBitmap(22+HEART_LARGE_WIDTH*3, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
+                    display->drawBitmap(22+HEART_LARGE_WIDTH*4, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
+                    break;
+                  case 4:
+                    display->drawBitmap(30, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
+                    display->drawBitmap(30+1+HEART_LARGE_WIDTH, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
+                    display->drawBitmap(30+2+HEART_LARGE_WIDTH*2, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
+                    display->drawBitmap(30+3+HEART_LARGE_WIDTH*3, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
+                    break;
+                  case 3:
+                    display->drawBitmap(39, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
+                    display->drawBitmap(39+1+HEART_LARGE_WIDTH, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
+                    display->drawBitmap(39+2+HEART_LARGE_WIDTH*2, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
+                    break;
+                  case 2:
+                    display->drawBitmap(48, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
+                    display->drawBitmap(48+1+HEART_LARGE_WIDTH, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
+                    break;
+                  case 1:
+                    display->drawBitmap(56, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
+                    break;
+                  case 0:
+                    break;
+                  default: // 6+
+                    display->drawBitmap(22, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
+                    display->drawBitmap(22+1+HEART_LARGE_WIDTH, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
+                    display->drawBitmap(22+2+HEART_LARGE_WIDTH*2, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
+                    display->drawBitmap(22+3+HEART_LARGE_WIDTH*3, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
+                    display->drawBitmap(22+4+HEART_LARGE_WIDTH*4, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
+                    break;
+                }
+                #else
                 display->fillRect(22, 19, HEART_LARGE_WIDTH*5+4, HEART_LARGE_HEIGHT+22+HEART_LARGE_HEIGHT, BLACK);
                 switch(life) {
                   case 9:
@@ -811,9 +917,11 @@ void ExtDisplay::PrintLife(const uint &life)
                     display->drawBitmap(22+4+HEART_LARGE_WIDTH*4, 41, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
                     break;
                 }
+                #endif // OLED_091_INCH
                 display->display();
             }
         } else if(screenState == Screen_Mamehook_Dual) {
+            #ifndef OLED_091_INCH  // 0.91寸屏幕不支持双屏模式
             if(lifeBar) {
                 display->fillRect(4, 39, 55, 5, BLACK);
                 display->fillRect(20, 51, 30, 8, BLACK);
@@ -916,6 +1024,7 @@ void ExtDisplay::PrintLife(const uint &life)
                 }
                 display->display();
             }
+            #endif // OLED_091_INCH
         }
     }
 }

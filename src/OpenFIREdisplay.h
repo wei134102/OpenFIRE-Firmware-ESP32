@@ -23,7 +23,15 @@
 #include "OpenFIREDefines.h"
 
 #define SCREEN_WIDTH 128
-#define SCREEN_HEIGHT 64
+// 支持0.91寸(128x32)和0.96寸(128x64)OLED显示屏
+// 在platformio.ini中添加 -D OLED_091_INCH 来启用0.91寸支持
+#ifdef OLED_091_INCH
+  #define SCREEN_HEIGHT 32
+  #define SCREEN_CONTENT_HEIGHT 16  // 内容区高度（总高度-标题栏16像素）
+#else
+  #define SCREEN_HEIGHT 64  // 默认0.96寸
+  #define SCREEN_CONTENT_HEIGHT 48  // 内容区高度（总高度-标题栏16像素）
+#endif
 class ExtDisplay {
 public:
     /// @brief Attempt to start display using current pin numbers from SamcoPreferences
@@ -307,7 +315,11 @@ private:
     };
 
     #define DIVIDER_WIDTH 1
-    #define DIVIDER_HEIGHT 48
+    #ifdef OLED_091_INCH
+      #define DIVIDER_HEIGHT 16  // 0.91寸屏幕：内容区高度
+    #else
+      #define DIVIDER_HEIGHT 48  // 0.96寸屏幕：内容区高度
+    #endif
     // if only we could draw this vertically, sigh
     static constexpr uint8_t dividerLine[] = {
         0x40, 0x80, 0x00, 0x00, 0x80, 0x80, 0x00, 0x00, 0x80, 0x80, 0x00, 0x00, 0x80, 0x80, 0x00, 0x00, 

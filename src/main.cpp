@@ -270,8 +270,8 @@ void setup() {
         display_OLED->setCursor(baseX, baseY);
         display_OLED->setTextSize(1);
         display_OLED->setTextColor(WHITE, BLACK);
-        display_OLED->fillRect(0, 0, 128, 16, BLACK);
-        display_OLED->drawFastHLine(0, 15, 128, WHITE);
+        display_OLED->fillRect(0, 0, SCREEN_WIDTH, 16, BLACK);  // 使用SCREEN_WIDTH宏以适应不同尺寸
+        display_OLED->drawFastHLine(0, 15, SCREEN_WIDTH, WHITE);  // 使用SCREEN_WIDTH宏
         display_OLED->print(word);
         display_OLED->display();
         len_word=strlen(word);
