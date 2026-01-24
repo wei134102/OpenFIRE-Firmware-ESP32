@@ -145,7 +145,39 @@ void ExtDisplay::ScreenModeChange(const int &screenMode, const bool &isAnalog)
           case Screen_Normal:
             if(mister) display->drawBitmap(48, 23, misterIco, MISTERKUN_WIDTH, MISTERKUN_HEIGHT, WHITE);
             else {
-                #ifndef OLED_091_INCH  // 0.91寸屏幕不显示底部图标
+                #ifdef OLED_091_INCH  // 0.91寸屏幕显示底部图标在下半部分
+                // 为0.91寸屏幕显示连接图标在屏幕下半部分（Y=16-31区域）
+                #ifdef ARDUINO_ARCH_ESP32
+                if(TinyUSBDevices.onBattery) { display->drawBitmap(2, 24, wifiConnectIco, CONNECTION_WIDTH, CONNECTION_HEIGHT, WHITE); }
+                #else //rp2040
+                if(TinyUSBDevices.onBattery) { display->drawBitmap(2, 24, btConnectIco, CONNECTION_WIDTH, CONNECTION_HEIGHT, WHITE); }
+                #endif
+                else { display->drawBitmap(2, 18, usbConnectIco, CONNECTION_WIDTH, CONNECTION_HEIGHT, WHITE); }
+                
+                // 显示Rumble Force Feedback状态
+                #ifdef USES_RUMBLE
+                if(OF_Prefs::pins[OF_Const::rumblePin] >= 0 && OF_Prefs::toggles[OF_Const::rumbleFF]) {
+                    display->setCursor(46, 20);
+                    display->setTextSize(1);
+                    display->print("RF");
+                }
+                #endif                
+                //wei134102 add start 显示Low Button模式状态
+                if(OF_Prefs::toggles[OF_Const::lowButtonsMode]) {
+                    display->setCursor(64, 20);
+                    display->setTextSize(1);
+                    display->print("LOW");
+                }
+                // 显示Autofire状态
+                if(OF_Prefs::toggles[OF_Const::autofire]) {
+                    display->setCursor(82, 20);
+                    display->setTextSize(1);
+                    display->print(" AF");
+                }                
+                //wei134102 add end                
+                if(isAnalog) { display->drawBitmap(108, 20, gamepadIco, GAMEPAD_WIDTH, GAMEPAD_HEIGHT, WHITE); }
+                else { display->drawBitmap(109, 20, mouseIco, MOUSE_WIDTH, MOUSE_HEIGHT, WHITE); }
+                #else // 非0.91寸屏幕的原代码
                 #ifdef ARDUINO_ARCH_ESP32
                 if(TinyUSBDevices.onBattery) { display->drawBitmap(2, 46, wifiConnectIco, CONNECTION_WIDTH, CONNECTION_HEIGHT, WHITE); }
                 #else //rp2040
@@ -175,14 +207,22 @@ void ExtDisplay::ScreenModeChange(const int &screenMode, const bool &isAnalog)
                 //wei134102 add end                
                 if(isAnalog) { display->drawBitmap(108, 49, gamepadIco, GAMEPAD_WIDTH, GAMEPAD_HEIGHT, WHITE); }
                 else { display->drawBitmap(109, 48, mouseIco, MOUSE_WIDTH, MOUSE_HEIGHT, WHITE); }
-                #endif // OLED_091_INCH
+                #endif // 非0.91寸屏幕的原代码
             }
             break;
           case Screen_None:
           case Screen_Docked:
             display->fillRect(0, 0, 128, 16, BLACK);
             display->drawBitmap(24, 0, customSplashBanner, CUSTSPLASHBANN_WIDTH, CUSTSPLASHBANN_HEIGHT, WHITE);
+            #ifdef OLED_091_INCH
+            // 0.91寸屏幕：适配较小的logo位置
+            // display->drawBitmap(56, 16, customSplash, CUSTSPLASH_WIDTH, CUSTSPLASH_HEIGHT, WHITE);
+            display->setCursor(10, 17);
+            display->setTextSize(2);
+            display->print("Open FIRE");
+            #else
             display->drawBitmap(40, 16, customSplash, CUSTSPLASH_WIDTH, CUSTSPLASH_HEIGHT, WHITE);
+            #endif
             display->display();
             break;
           case Screen_Init:
@@ -229,7 +269,39 @@ void ExtDisplay::ScreenModeChange(const int &screenMode, const bool &isAnalog)
             display->println("failed");
             break;
           case Screen_Mamehook_Single:
-            #ifndef OLED_091_INCH  // 0.91寸屏幕不显示底部图标
+            #ifdef OLED_091_INCH  // 0.91寸屏幕显示底部图标在下半部分
+            // 为0.91寸屏幕显示连接图标在屏幕下半部分（Y=16-31区域）
+            #ifdef ARDUINO_ARCH_ESP32
+            if(TinyUSBDevices.onBattery) { display->drawBitmap(2, 24, wifiConnectIco, CONNECTION_WIDTH, CONNECTION_HEIGHT, WHITE); }
+            #else //rp2040
+            if(TinyUSBDevices.onBattery) { display->drawBitmap(2, 24, btConnectIco, CONNECTION_WIDTH, CONNECTION_HEIGHT, WHITE); }
+            #endif
+            else { display->drawBitmap(2, 24, usbConnectIco, CONNECTION_WIDTH, CONNECTION_HEIGHT, WHITE); }
+            
+            // 显示Rumble Force Feedback状态
+            #ifdef USES_RUMBLE
+            if(OF_Prefs::pins[OF_Const::rumblePin] >= 0 && OF_Prefs::toggles[OF_Const::rumbleFF]) {
+                display->setCursor(46, 26);
+                display->setTextSize(1);
+                display->print("RF");
+            }
+            #endif                
+            // 显示Low Button模式状态
+            if(OF_Prefs::toggles[OF_Const::lowButtonsMode]) {
+                display->setCursor(70, 26);
+                display->setTextSize(1);
+                display->print("LOW");
+            }
+            // 显示Autofire状态
+            if(OF_Prefs::toggles[OF_Const::autofire]) {
+                display->setCursor(82, 26);
+                display->setTextSize(1);
+                display->print(" AF");
+            }                        
+            //wei134102 add end
+            if(isAnalog) { display->drawBitmap(108, 27, gamepadIco, GAMEPAD_WIDTH, GAMEPAD_HEIGHT, WHITE); }
+            else { display->drawBitmap(109, 26, mouseIco, MOUSE_WIDTH, MOUSE_HEIGHT, WHITE); }
+            #else // 非0.91寸屏幕的原代码
             #ifdef ARDUINO_ARCH_ESP32  
             if(TinyUSBDevices.onBattery) { display->drawBitmap(2, 46, wifiConnectIco, CONNECTION_WIDTH, CONNECTION_HEIGHT, WHITE); }
             #else //rp2040
@@ -260,7 +332,7 @@ void ExtDisplay::ScreenModeChange(const int &screenMode, const bool &isAnalog)
             //wei134102 add end
             if(isAnalog) { display->drawBitmap(108, 49, gamepadIco, GAMEPAD_WIDTH, GAMEPAD_HEIGHT, WHITE); }
             else { display->drawBitmap(109, 48, mouseIco, MOUSE_WIDTH, MOUSE_HEIGHT, WHITE); }
-            #endif // OLED_091_INCH
+            #endif // 非0.91寸屏幕的原代码
             if(serialDisplayType == ScreenSerial_Life && lifeBar) {
               display->drawBitmap(52, 23, lifeBarBanner, LIFEBAR_BANNER_WIDTH, LIFEBAR_BANNER_HEIGHT, WHITE);
               display->drawBitmap(11, 35, lifeBarLarge, LIFEBAR_LARGE_WIDTH, LIFEBAR_LARGE_HEIGHT, WHITE);
@@ -458,6 +530,12 @@ void ExtDisplay::PauseListUpdate(const int &selection)
             #endif
             break;
           case ScreenPause_Save:
+            #ifdef OLED_091_INCH
+            // 0.91寸屏幕：只显示当前选中的项目
+            display->setTextColor(BLACK, WHITE);
+            display->setCursor(0, 20);
+            display->println(" Save Gun Settings ");
+            #else
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 25);
             display->println(" Profile Select ");
@@ -473,8 +551,21 @@ void ExtDisplay::PauseListUpdate(const int &selection)
             } else {
               display->println(" Send Escape Keypress");
             }
+            #endif
             break;
           case ScreenPause_Rumble:
+            #ifdef OLED_091_INCH
+            // 0.91寸屏幕：只显示当前选中的项目
+            display->setTextColor(BLACK, WHITE);
+            display->setCursor(0, 20);
+            if(OF_Prefs::pins[OF_Const::rumblePin] >= 0 && OF_Prefs::pins[OF_Const::rumbleSwitch] == -1) {
+              display->println(" Rumble Toggle ");
+            } else if(OF_Prefs::pins[OF_Const::solenoidPin] >= 0 && OF_Prefs::pins[OF_Const::solenoidSwitch] == -1) {
+              display->println(" Solenoid Toggle ");
+            } else {
+              display->println(" Send Escape Keypress");
+            }
+            #else
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 25);
             display->println(" Save Gun Settings ");
@@ -500,8 +591,21 @@ void ExtDisplay::PauseListUpdate(const int &selection)
               display->setCursor(0, 47);
               display->println(" Calibrate ");
             }
+            #endif
             break;
           case ScreenPause_Solenoid:
+            #ifdef OLED_091_INCH
+            // 0.91寸屏幕：只显示当前选中的项目
+            display->setTextColor(BLACK, WHITE);
+            display->setCursor(0, 20);
+            if(OF_Prefs::pins[OF_Const::rumblePin] >= 0 && OF_Prefs::pins[OF_Const::rumbleSwitch] == -1) {
+              display->println(" Solenoid Toggle ");
+            } else if(OF_Prefs::pins[OF_Const::solenoidPin] >= 0 && OF_Prefs::pins[OF_Const::solenoidSwitch] == -1) {
+              display->println(" Solenoid Toggle ");
+            } else {
+              display->println(" Mode Change");
+            }
+            #else
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 25);
             if(OF_Prefs::pins[OF_Const::rumblePin] >= 0 && OF_Prefs::pins[OF_Const::rumbleSwitch] == -1) {
@@ -536,8 +640,15 @@ void ExtDisplay::PauseListUpdate(const int &selection)
               display->setCursor(0, 47);
               display->println(" Profile Select ");
             }
+            #endif
             break;
           case ScreenPause_AutofireToggle:
+            #ifdef OLED_091_INCH
+            // 0.91寸屏幕：只显示当前选中的项目
+            display->setTextColor(BLACK, WHITE);
+            display->setCursor(0, 20);
+            display->println(" Autofire Toggle ");
+            #else
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 25);
             display->println(" Autofire Toggle ");
@@ -547,9 +658,16 @@ void ExtDisplay::PauseListUpdate(const int &selection)
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 47);
             display->println(" Send Escape Keypress ");
+            #endif
             break;            
 //wei13402 add start
           case ScreenPause_LowButtonToggle:
+            #ifdef OLED_091_INCH
+            // 0.91寸屏幕：只显示当前选中的项目
+            display->setTextColor(BLACK, WHITE);
+            display->setCursor(0, 20);
+            display->println(" Mode Change ");
+            #else
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 25);
             display->println(" Mode Change ");
@@ -563,8 +681,15 @@ void ExtDisplay::PauseListUpdate(const int &selection)
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 47);
             display->println(" Layout Toggle ");
+            #endif
             break;
           case ScreenPause_LayoutToggle:
+            #ifdef OLED_091_INCH
+            // 0.91寸屏幕：只显示当前选中的项目
+            display->setTextColor(BLACK, WHITE);
+            display->setCursor(0, 20);
+            display->printf(" Layout: %s ", OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout == OF_Const::layoutDiamond ? "Diamond" : "Square");
+            #else
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 25);
             display->println(" Low Button: " + String(OF_Prefs::toggles[OF_Const::lowButtonsMode] ? "ON" : "OFF"));
@@ -582,9 +707,20 @@ void ExtDisplay::PauseListUpdate(const int &selection)
             #else
             display->println(" Send Escape Keypress ");
             #endif
+            #endif
             break;
           #ifdef USES_RUMBLE
           case ScreenPause_RumbleFFToggle:
+            #ifdef OLED_091_INCH
+            // 0.91寸屏幕：只显示当前选中的项目
+            display->setTextColor(BLACK, WHITE);
+            display->setCursor(0, 20);
+            if(OF_Prefs::pins[OF_Const::rumblePin] >= 0) {
+              display->printf(" Rumble FFB: %s ", OF_Prefs::toggles[OF_Const::rumbleFF] ? "ON" : "OFF");
+            } else {
+              display->println(" Rumble FFB: N/A ");
+            }
+            #else
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 25);
             display->printf(" Layout: %s ", OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout == OF_Const::layoutDiamond ? "Diamond" : "Square");
@@ -598,11 +734,18 @@ void ExtDisplay::PauseListUpdate(const int &selection)
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 47);                       
             display->println(" Send Escape Keypress ");
+            #endif
             break;
           #endif            
 //wei13402 add end                
 //wei134102 add start
           case ScreenPause_ModeChange:
+            #ifdef OLED_091_INCH
+            // 0.91寸屏幕：只显示当前选中的项目
+            display->setTextColor(BLACK, WHITE);
+            display->setCursor(0, 20);
+            display->println(" Mode Change ");
+            #else
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 25);
             if(OF_Prefs::pins[OF_Const::solenoidPin] >= 0 && OF_Prefs::pins[OF_Const::solenoidSwitch] == -1) {
@@ -627,9 +770,16 @@ void ExtDisplay::PauseListUpdate(const int &selection)
             } else {
               display->println(" Current: Mouse/KB ");
             }
+            #endif
             break;
 //wei134102 add end                        
           case ScreenPause_EscapeKey:
+            #ifdef OLED_091_INCH
+            // 0.91寸屏幕：只显示当前选中的项目
+            display->setTextColor(BLACK, WHITE);
+            display->setCursor(0, 20);
+            display->println(" Send Escape Keypress");
+            #else
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 25);
             if(OF_Prefs::pins[OF_Const::solenoidPin] >= 0 && OF_Prefs::pins[OF_Const::solenoidSwitch] == -1) {
@@ -657,6 +807,7 @@ void ExtDisplay::PauseListUpdate(const int &selection)
               display->setCursor(0, 47);
               display->println(" Calibrate ");
             }
+            #endif
             break;
         }
         display->display();
@@ -672,6 +823,25 @@ void ExtDisplay::PauseProfileUpdate(const int &selection, const char* name1, con
         display->drawBitmap(60, 59, downArrowGlyph, ARROW_WIDTH, ARROW_HEIGHT, WHITE);
         #endif
         display->setTextSize(1);
+        #ifdef OLED_091_INCH  // 0.91寸屏幕优化
+        // 为0.91寸屏幕简化显示，只显示当前选中的配置文件
+        display->setTextColor(BLACK, WHITE);
+        display->setCursor(4, 20);
+        switch(selection) {
+          case 0:
+            display->println(name1);
+            break;
+          case 1:
+            display->println(name2);
+            break;
+          case 2:
+            display->println(name3);
+            break;
+          case 3:
+            display->println(name4);
+            break;
+        }
+        #else
         switch(selection) {
           case 0: // Profile #0, etc.
             display->setTextColor(WHITE, BLACK);
@@ -718,6 +888,7 @@ void ExtDisplay::PauseProfileUpdate(const int &selection, const char* name1, con
             display->println(name1);
             break;
         }
+        #endif
         display->display();
     }
 }
