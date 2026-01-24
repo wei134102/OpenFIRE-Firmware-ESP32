@@ -851,6 +851,9 @@ void loop()
                               Serial.println(OF_Prefs::toggles[OF_Const::autofire] ? "ON" : "OFF");
                           }
                           #ifdef USES_DISPLAY
+                              // 显示状态栏提示
+                              FW_Common::OLED.TopPanelUpdate(OF_Prefs::toggles[OF_Const::autofire] ? "Autofire: ON" : "Autofire: OFF");
+                              delay(1000); // 显示1秒状态提示
                               FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_AutofireToggle);
                           #endif // USES_DISPLAY
                           #ifdef LED_ENABLE
@@ -895,6 +898,16 @@ void loop()
                           
                           // Update display to show new mode
                           #ifdef USES_DISPLAY
+                              // 显示状态栏提示
+                              if(FW_Common::OLED.mister) {
+                                  FW_Common::OLED.TopPanelUpdate("Mode Changed: MiSTer");
+                              } else if(FW_Common::buttons.analogOutput) {
+                                  FW_Common::OLED.TopPanelUpdate("Mode Changed: Gamepad");
+                              } else {
+                                  FW_Common::OLED.TopPanelUpdate("Mode Changed: Mouse/KB");
+                              }
+                              // 短暂显示状态后再更新菜单
+                              delay(1000); // 显示1秒状态提示
                               FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_ModeChange);
                           #endif // USES_DISPLAY
                           // Provide visual feedback
@@ -921,6 +934,9 @@ void loop()
                           }
                           // Update display to show new state
                           #ifdef USES_DISPLAY
+                              // 显示状态栏提示
+                              FW_Common::OLED.TopPanelUpdate(OF_Prefs::toggles[OF_Const::lowButtonsMode] ? "Low Button: ON" : "Low Button: OFF");
+                              delay(1000); // 显示1秒状态提示
                               FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_LowButtonToggle);
                           #endif // USES_DISPLAY
                           // Provide visual feedback
@@ -954,6 +970,9 @@ void loop()
                           
                           // Update display to show new layout
                           #ifdef USES_DISPLAY
+                              // 显示状态栏提示
+                              FW_Common::OLED.TopPanelUpdate(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout == OF_Const::layoutDiamond ? "Layout: Diamond" : "Layout: Square");
+                              delay(1000); // 显示1秒状态提示
                               FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_LayoutToggle);
                           #endif // USES_DISPLAY
                           
@@ -987,6 +1006,9 @@ void loop()
                           
                           // Update display
                           #ifdef USES_DISPLAY
+                              // 显示状态栏提示
+                              FW_Common::OLED.TopPanelUpdate(OF_Prefs::toggles[OF_Const::rumbleFF] ? "Rumble FFB: ON" : "Rumble FFB: OFF");
+                              delay(1000); // 显示1秒状态提示
                               FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_RumbleFFToggle);
                           #endif // USES_DISPLAY
                           

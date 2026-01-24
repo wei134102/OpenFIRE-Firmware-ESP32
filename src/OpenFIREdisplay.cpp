@@ -666,11 +666,11 @@ void ExtDisplay::PauseListUpdate(const int &selection)
             // 0.91寸屏幕：只显示当前选中的项目
             display->setTextColor(BLACK, WHITE);
             display->setCursor(0, 20);
-            display->println(" Mode Change ");
+            display->println(" Low Button Toggle ");
             #else
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 25);
-            display->println(" Mode Change ");
+            display->println(" Low Button Toggle ");
             display->setTextColor(BLACK, WHITE);
             display->setCursor(0, 36);
             if(OF_Prefs::toggles[OF_Const::lowButtonsMode]) {
@@ -741,7 +741,7 @@ void ExtDisplay::PauseListUpdate(const int &selection)
 //wei134102 add start
           case ScreenPause_ModeChange:
             #ifdef OLED_091_INCH
-            // 0.91寸屏幕：只显示当前选中的项目
+            // 0.91寸屏幕：显示当前选中的项目和当前模式
             display->setTextColor(BLACK, WHITE);
             display->setCursor(0, 20);
             display->println(" Mode Change ");
@@ -770,7 +770,7 @@ void ExtDisplay::PauseListUpdate(const int &selection)
             } else {
               display->println(" Current: Mouse/KB ");
             }
-            #endif
+            #endif  // 这个 endif 对应第743行的 ifdef OLED_091_INCH
             break;
 //wei134102 add end                        
           case ScreenPause_EscapeKey:
