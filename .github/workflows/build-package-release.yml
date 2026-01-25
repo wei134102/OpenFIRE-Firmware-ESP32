@@ -86,7 +86,7 @@ jobs:
             flash_size: '4MB'
             flash_mode: 'dio'
             flash_freq: '80m'
-            address_littleFS: '0xc90000'
+            address_littleFS: '0x300000'
 
     steps:
       - name: Checkout repository OpenFIRE-Firmware-Esp32 with submodules
@@ -170,7 +170,7 @@ jobs:
             flash_size: '4MB'
             flash_mode: 'dio'
             flash_freq: '80m'
-            address_littleFS: '0xc90000'        
+            address_littleFS: '0x300000'       
         os_config:
           - name: windows-64bit
             runner: windows-latest
