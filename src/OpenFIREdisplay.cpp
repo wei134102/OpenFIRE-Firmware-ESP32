@@ -697,7 +697,24 @@ void ExtDisplay::PauseListUpdate(const int &selection)
             display->setCursor(0, 36);
             display->printf(" Layout: %s ", OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout == OF_Const::layoutDiamond ? "Diamond" : "Square");
             display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 47); 
+            display->setCursor(0, 47);
+            display->println(" Gun ID (P1-P4) ");
+            #endif
+            break;
+          case ScreenPause_GunId:
+            #ifdef OLED_091_INCH
+            display->setTextColor(BLACK, WHITE);
+            display->setCursor(0, 20);
+            display->printf(" Gun ID: P%d ", (int)(OF_Prefs::settings[OF_Const::gunId] % 4) + 1);
+            #else
+            display->setTextColor(WHITE, BLACK);
+            display->setCursor(0, 25);
+            display->println(" Layout Toggle ");
+            display->setTextColor(BLACK, WHITE);
+            display->setCursor(0, 36);
+            display->printf(" Gun ID: P%d ", (int)(OF_Prefs::settings[OF_Const::gunId] % 4) + 1);
+            display->setTextColor(WHITE, BLACK);
+            display->setCursor(0, 47);
             #ifdef USES_RUMBLE
             if(OF_Prefs::pins[OF_Const::rumblePin] >= 0) {
               display->println(" Rumble FFB Toggle ");
@@ -723,7 +740,7 @@ void ExtDisplay::PauseListUpdate(const int &selection)
             #else
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 25);
-            display->printf(" Layout: %s ", OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout == OF_Const::layoutDiamond ? "Diamond" : "Square");
+            display->printf(" Gun ID: P%d ", (int)(OF_Prefs::settings[OF_Const::gunId] % 4) + 1);
             display->setTextColor(BLACK, WHITE);
             display->setCursor(0, 36);
             if(OF_Prefs::pins[OF_Const::rumblePin] >= 0) {

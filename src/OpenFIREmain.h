@@ -50,6 +50,10 @@
 uint8_t profileModeSelection = 0;
 // Flag to tell if we're in the profile selector submenu of the simple pause menu.
 bool pauseModeSelectingProfile = false;
+// Flag for gun ID (P1-P4) selector submenu in pause menu.
+bool pauseModeSelectingGunId = false;
+// Current selection in gun ID submenu (0=P1, 1=P2, 2=P3, 3=P4).
+uint8_t gunIdModeSelection = 0;
 
 // Timestamp of when we started holding a buttons combo.
 unsigned long pauseHoldStartstamp;

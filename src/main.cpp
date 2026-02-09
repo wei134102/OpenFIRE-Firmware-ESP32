@@ -135,6 +135,13 @@ void setup() {
 
         OF_Prefs::Load();
         
+        // 如果USB ID未设置但gunId已设置，根据gunId更新USB ID
+        if(OF_Prefs::usb.devicePID == 0 && OF_Prefs::settings[OF_Const::gunId] < 4) {
+            OF_Prefs::usb.devicePID = OF_Prefs::settings[OF_Const::gunId] + 1;
+            OF_Prefs::usb.deviceName[9] = '1' + OF_Prefs::settings[OF_Const::gunId];
+            OF_Prefs::SaveUSBID();
+        }
+        
         #if defined(OPENFIRE_WIRELESS_ENABLE) && defined(ARDUINO_ARCH_ESP32)
            ////////////////// MAI USATO //////////////////////////////
             uint8_t aux_espnow_wifi_channel, aux_espnow_wifi_power;
@@ -743,6 +750,7 @@ void loop()
 
         pauseHoldStarted = false;
         pauseModeSelectingProfile = false;
+        pauseModeSelectingGunId = false;
     }
 
     #ifdef MAMEHOOKER
@@ -794,6 +802,49 @@ void loop()
                         #ifdef USES_DISPLAY
                             FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_Calibrate);
                         #endif // USES_DISPLAY
+                    }
+                } else if(pauseModeSelectingGunId) {
+                    if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_A) {
+                        gunIdModeSelection = (gunIdModeSelection == 0) ? 3 : (gunIdModeSelection - 1);
+                        #ifdef USES_DISPLAY
+                            FW_Common::OLED.PauseProfileUpdate(gunIdModeSelection, "P1", "P2", "P3", "P4");
+                        #endif
+                    } else if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_B) {
+                        gunIdModeSelection = (gunIdModeSelection >= 3) ? 0 : (gunIdModeSelection + 1);
+                        #ifdef USES_DISPLAY
+                            FW_Common::OLED.PauseProfileUpdate(gunIdModeSelection, "P1", "P2", "P3", "P4");
+                        #endif
+                    } else if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_Trigger) {
+                        OF_Prefs::settings[OF_Const::gunId] = gunIdModeSelection;
+                        // 更新USB设备PID和名称
+                        OF_Prefs::usb.devicePID = gunIdModeSelection + 1; // P1=1, P2=2, P3=3, P4=4
+                        OF_Prefs::usb.deviceName[9] = '1' + gunIdModeSelection; // 更新名称中的P后面的数字
+                        OF_Prefs::SaveSettings();
+                        OF_Prefs::SaveUSBID();
+                        pauseModeSelectingGunId = false;
+                        FW_Common::pauseModeSelection = FW_Const::PauseMode_Calibrate;
+                        if(!OF_Serial::serialMode) {
+                            Serial.print("Gun ID set to P");
+                            Serial.print((int)gunIdModeSelection + 1);
+                            Serial.print(", USB PID: ");
+                            Serial.println(OF_Prefs::usb.devicePID);
+                            Serial.println("Please reconnect USB to apply changes.");
+                        }
+                        #ifdef USES_DISPLAY
+                            {
+                                char gunIdBuf[16];
+                                snprintf(gunIdBuf, sizeof(gunIdBuf), "Gun ID: P%d", (int)gunIdModeSelection + 1);
+                                FW_Common::OLED.TopPanelUpdate(gunIdBuf);
+                            }
+                            delay(800);
+                            FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_Calibrate);
+                        #endif
+                    } else if(FW_Common::buttons.pressedReleased & FW_Const::ExitPauseModeBtnMask) {
+                        pauseModeSelectingGunId = false;
+                        FW_Common::pauseModeSelection = FW_Const::PauseMode_Calibrate;
+                        #ifdef USES_DISPLAY
+                            FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_Calibrate);
+                        #endif
                     }
                 } else if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_A) {
                     SetPauseModeSelection(false);
@@ -992,7 +1043,17 @@ void loop()
                           // Save the layout change
                           OF_Prefs::SaveProfiles();
                           
-                          break;                          
+                          break;
+                        case FW_Const::PauseMode_GunId:
+                          pauseModeSelectingGunId = true;
+                          gunIdModeSelection = (uint8_t)(OF_Prefs::settings[OF_Const::gunId] % 4);
+                          if(!OF_Serial::serialMode) {
+                              Serial.println("Gun ID: select P1-P4");
+                          }
+                          #ifdef USES_DISPLAY
+                              FW_Common::OLED.PauseProfileUpdate(gunIdModeSelection, "P1", "P2", "P3", "P4");
+                          #endif
+                          break;
  //wei134102 add end                             
                         #ifdef USES_RUMBLE
                         case FW_Const::PauseMode_RumbleFFToggle:
