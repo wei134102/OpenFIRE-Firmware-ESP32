@@ -124,9 +124,35 @@ void ExtDisplay::TopPanelUpdate(const char *textPrefix, const char *profText)
         display->setCursor(2, 2);
         display->setTextSize(1);
         display->setTextColor(WHITE, BLACK);
-        display->print(textPrefix);
-        if(profText != nullptr)
-            display->println(profText);
+
+        // 简化 Profile 前缀为 "Pro" 并在末尾附加当前枪ID P1-P4
+        bool isProfileBar = (textPrefix != nullptr && strcmp(textPrefix, "Prof: ") == 0);
+
+        if(isProfileBar) {
+            // 固定使用简写前缀
+            display->print("Pro: ");
+        } else if(textPrefix != nullptr) {
+            display->print(textPrefix);
+        }
+
+        if(profText != nullptr) {
+            const char* namePtr = profText;
+            // 对 Pro 状态栏，去掉前缀 "Profile "，避免太长
+            if(isProfileBar && strncmp(profText, "Profile ", 8) == 0) {
+                namePtr = profText + 8;
+            }
+            display->print(namePtr);
+
+            if(isProfileBar) {
+                // 从全局设置中读取当前 GunId（0=P1,1=P2,2=P3,3=P4）
+                uint8_t gunIndex = (uint8_t)(OF_Prefs::settings[OF_Const::gunId] % 4);
+                display->print("  P");
+                display->println((int)(gunIndex + 1));
+            } else {
+                display->println();
+            }
+        }
+
         display->display();
     }
 }
@@ -927,11 +953,34 @@ void ExtDisplay::PrintAmmo(const uint &ammo)
     if(display != nullptr) {
         currentAmmo = ammo;
 
-        // use the rounding error to get the left & right digits
+        ammoEmpty = ammo ? false : true;
+
+        #ifdef OLED_091_INCH
+        // 0.91寸屏幕：使用单行小字号文本显示弹药，避免超出16像素内容高度
+        char buf[8];
+        snprintf(buf, sizeof(buf), "%3u", ammo);
+
+        if(screenState == Screen_Mamehook_Single) {
+            // 顶部弹药区
+            display->fillRect(0, AMMO_DISPLAY_AREA_Y, SCREEN_WIDTH, AMMO_DISPLAY_HEIGHT, BLACK);
+            display->setTextSize(COMPACT_FONT_SIZE);
+            display->setTextColor(WHITE, BLACK);
+            display->setCursor(AMMO_SINGLE_POS_X, AMMO_DISPLAY_AREA_Y + 3);
+            display->print("AM:");
+            display->print(buf);
+        } else if(screenState == Screen_Mamehook_Dual) {
+            // 双布局时，把弹药挪到右侧上半区
+            display->fillRect(0, AMMO_DISPLAY_AREA_Y, SCREEN_WIDTH, AMMO_DISPLAY_HEIGHT, BLACK);
+            display->setTextSize(COMPACT_FONT_SIZE);
+            display->setTextColor(WHITE, BLACK);
+            display->setCursor(AMMO_DUAL_POS_X, AMMO_DISPLAY_AREA_Y + 3);
+            display->print("AM:");
+            display->print(buf);
+        }
+        #else
+        // 0.96寸屏幕：保留原来的大号数字弹药显示
         uint ammoLeft = ammo / 10;
         uint ammoRight = ammo - (ammoLeft * 10);
-
-        ammoEmpty = ammo ? false : true;
 
         if(screenState == Screen_Mamehook_Single) {
             display->fillRect(40, 22, (NUMBER_GLYPH_WIDTH*2)+6, NUMBER_GLYPH_HEIGHT, BLACK);
@@ -942,6 +991,7 @@ void ExtDisplay::PrintAmmo(const uint &ammo)
             display->drawBitmap(72,                      22, numbers[ammoLeft],  NUMBER_GLYPH_WIDTH, NUMBER_GLYPH_HEIGHT, WHITE);
             display->drawBitmap(72+6+NUMBER_GLYPH_WIDTH, 22, numbers[ammoRight], NUMBER_GLYPH_WIDTH, NUMBER_GLYPH_HEIGHT, WHITE);
         }
+        #endif
 
         display->display();
     }

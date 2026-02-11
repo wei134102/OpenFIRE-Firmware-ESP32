@@ -28,6 +28,21 @@
 #ifdef OLED_091_INCH
   #define SCREEN_HEIGHT 32
   #define SCREEN_CONTENT_HEIGHT 16  // 内容区高度（总高度-标题栏16像素）
+  
+  // 0.91寸屏幕优化布局定义
+  #define AMMO_DISPLAY_AREA_Y 0        // 弹药显示在顶部
+  #define AMMO_DISPLAY_HEIGHT 16       // 弹药区域高度
+  #define LIFE_DISPLAY_AREA_Y 16       // 生命值显示在底部
+  #define LIFE_DISPLAY_HEIGHT 16        // 生命值区域高度
+  
+  // 缩小字体和位置定义
+  #define COMPACT_FONT_SIZE 1          // 缩小字体大小
+  #define AMMO_SINGLE_POS_X 30        // 单人弹药X位置
+  #define AMMO_DUAL_POS_X 60         // 双人弹药X位置
+  #define LIFE_BAR_POS_X 30           // 生命条X位置
+  #define HEART_POS_X 80              // 心形X位置
+  #define LIFE_BAR_WIDTH 60            // 生命条宽度
+  #define LIFE_BAR_HEIGHT 4            // 生命条高度
 #else
   #define SCREEN_HEIGHT 64  // 默认0.96寸
   #define SCREEN_CONTENT_HEIGHT 48  // 内容区高度（总高度-标题栏16像素）
