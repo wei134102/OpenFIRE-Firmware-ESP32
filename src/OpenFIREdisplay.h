@@ -330,6 +330,13 @@ private:
         // RELOAD
     };
 
+    // 0.91寸弹药显示用：横置子弹图标 8x8 (弹头朝右)
+    #define AMMO_BULLET_ICON_WIDTH  8
+    #define AMMO_BULLET_ICON_HEIGHT 8
+    static constexpr uint8_t ammoBulletIcon[] = {
+        0x0F, 0x3F, 0xFF, 0xFF, 0xFF, 0x3F, 0x0F, 0x00
+    };
+
     #define DIVIDER_WIDTH 1
     #ifdef OLED_091_INCH
       #define DIVIDER_HEIGHT 16  // 0.91寸屏幕：内容区高度

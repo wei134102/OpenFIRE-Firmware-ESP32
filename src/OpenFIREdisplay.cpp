@@ -956,25 +956,24 @@ void ExtDisplay::PrintAmmo(const uint &ammo)
         ammoEmpty = ammo ? false : true;
 
         #ifdef OLED_091_INCH
-        // 0.91寸屏幕：使用单行小字号文本显示弹药，避免超出16像素内容高度
+        // 0.91寸屏幕：弹药在下面区域显示（与血量同区），子弹图标 + 数量
         char buf[8];
-        snprintf(buf, sizeof(buf), "%3u", ammo);
+        snprintf(buf, sizeof(buf), "%u", ammo);
+        const int iconY = LIFE_DISPLAY_AREA_Y + (LIFE_DISPLAY_HEIGHT - AMMO_BULLET_ICON_HEIGHT) / 2;
 
         if(screenState == Screen_Mamehook_Single) {
-            // 顶部弹药区
-            display->fillRect(0, AMMO_DISPLAY_AREA_Y, SCREEN_WIDTH, AMMO_DISPLAY_HEIGHT, BLACK);
+            display->fillRect(0, LIFE_DISPLAY_AREA_Y, SCREEN_WIDTH, LIFE_DISPLAY_HEIGHT, BLACK);
+            display->drawBitmap(2, iconY, ammoBulletIcon, AMMO_BULLET_ICON_WIDTH, AMMO_BULLET_ICON_HEIGHT, WHITE);
             display->setTextSize(COMPACT_FONT_SIZE);
             display->setTextColor(WHITE, BLACK);
-            display->setCursor(AMMO_SINGLE_POS_X, AMMO_DISPLAY_AREA_Y + 3);
-            display->print("AM:");
+            display->setCursor(2 + AMMO_BULLET_ICON_WIDTH + 2, LIFE_DISPLAY_AREA_Y + 3);
             display->print(buf);
         } else if(screenState == Screen_Mamehook_Dual) {
-            // 双布局时，把弹药挪到右侧上半区
-            display->fillRect(0, AMMO_DISPLAY_AREA_Y, SCREEN_WIDTH, AMMO_DISPLAY_HEIGHT, BLACK);
+            display->fillRect(0, LIFE_DISPLAY_AREA_Y, SCREEN_WIDTH, LIFE_DISPLAY_HEIGHT, BLACK);
+            display->drawBitmap(AMMO_DUAL_POS_X - AMMO_BULLET_ICON_WIDTH - 4, iconY, ammoBulletIcon, AMMO_BULLET_ICON_WIDTH, AMMO_BULLET_ICON_HEIGHT, WHITE);
             display->setTextSize(COMPACT_FONT_SIZE);
             display->setTextColor(WHITE, BLACK);
-            display->setCursor(AMMO_DUAL_POS_X, AMMO_DISPLAY_AREA_Y + 3);
-            display->print("AM:");
+            display->setCursor(AMMO_DUAL_POS_X, LIFE_DISPLAY_AREA_Y + 3);
             display->print(buf);
         }
         #else
@@ -1031,44 +1030,15 @@ void ExtDisplay::PrintLife(const uint &life)
                 display->display();
             } else {
                 #ifdef OLED_091_INCH
-                // 0.91寸屏幕：简化生命值显示，只显示单行
-                display->fillRect(22, 19, HEART_LARGE_WIDTH*5+4, HEART_LARGE_HEIGHT, BLACK);
-                switch(life) {
-                  case 5:
-                    display->drawBitmap(22, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
-                    display->drawBitmap(22+HEART_LARGE_WIDTH, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
-                    display->drawBitmap(22+HEART_LARGE_WIDTH*2, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
-                    display->drawBitmap(22+HEART_LARGE_WIDTH*3, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
-                    display->drawBitmap(22+HEART_LARGE_WIDTH*4, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
-                    break;
-                  case 4:
-                    display->drawBitmap(30, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
-                    display->drawBitmap(30+1+HEART_LARGE_WIDTH, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
-                    display->drawBitmap(30+2+HEART_LARGE_WIDTH*2, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
-                    display->drawBitmap(30+3+HEART_LARGE_WIDTH*3, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
-                    break;
-                  case 3:
-                    display->drawBitmap(39, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
-                    display->drawBitmap(39+1+HEART_LARGE_WIDTH, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
-                    display->drawBitmap(39+2+HEART_LARGE_WIDTH*2, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
-                    break;
-                  case 2:
-                    display->drawBitmap(48, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
-                    display->drawBitmap(48+1+HEART_LARGE_WIDTH, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
-                    break;
-                  case 1:
-                    display->drawBitmap(56, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
-                    break;
-                  case 0:
-                    break;
-                  default: // 6+
-                    display->drawBitmap(22, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
-                    display->drawBitmap(22+1+HEART_LARGE_WIDTH, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
-                    display->drawBitmap(22+2+HEART_LARGE_WIDTH*2, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
-                    display->drawBitmap(22+3+HEART_LARGE_WIDTH*3, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
-                    display->drawBitmap(22+4+HEART_LARGE_WIDTH*4, 19, lifeIcoLarge, HEART_LARGE_WIDTH, HEART_LARGE_HEIGHT, WHITE);
-                    break;
-                }
+                // 0.91寸屏幕：一颗心形 + 数量，如 ♥: 3
+                const int lifeAreaY = LIFE_DISPLAY_AREA_Y + (LIFE_DISPLAY_HEIGHT - HEART_SMALL_HEIGHT) / 2;
+                display->fillRect(0, LIFE_DISPLAY_AREA_Y, SCREEN_WIDTH, LIFE_DISPLAY_HEIGHT, BLACK);
+                display->drawBitmap(2, lifeAreaY, lifeIcoSmall, HEART_SMALL_WIDTH, HEART_SMALL_HEIGHT, WHITE);
+                display->setTextSize(COMPACT_FONT_SIZE);
+                display->setTextColor(WHITE, BLACK);
+                display->setCursor(2 + HEART_SMALL_WIDTH + 2, LIFE_DISPLAY_AREA_Y + 3);
+                display->print(": ");
+                display->print((int)life);
                 #else
                 display->fillRect(22, 19, HEART_LARGE_WIDTH*5+4, HEART_LARGE_HEIGHT+22+HEART_LARGE_HEIGHT, BLACK);
                 switch(life) {
