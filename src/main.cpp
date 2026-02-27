@@ -927,6 +927,7 @@ void loop()
                           if(!FW_Common::buttons.analogOutput && !FW_Common::OLED.mister) {
                               // Current: Mouse/KB -> Switch to Gamepad
                               FW_Common::buttons.analogOutput = true;
+                              FW_Common::UpdateBindings(false);  // Apply custom button mappings
                               if(!OF_Serial::serialMode)
                                   Serial.println("Mode changed to: Gamepad");
                           } else if(FW_Common::buttons.analogOutput && !FW_Common::OLED.mister) {
@@ -938,6 +939,7 @@ void loop()
                               // Current: MiSTer Optimized -> Switch to Mouse/KB
                               FW_Common::buttons.analogOutput = false;
                               FW_Common::OLED.mister = false;
+                              FW_Common::UpdateBindings(false);  // Apply custom button mappings
                               if(!OF_Serial::serialMode)
                                   Serial.println("Mode changed to: Mouse/Keyboard");
                           }
