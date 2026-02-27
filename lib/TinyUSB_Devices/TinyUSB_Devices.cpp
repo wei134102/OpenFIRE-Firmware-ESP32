@@ -376,18 +376,18 @@ void Gamepad16_::moveCam(uint16_t origX, uint16_t origY) {
   if(stickRight) {
       // 摄像头使用主摇杆或右摇杆，按设置选择有符号/无符号输出
       if (unsignedAxis) {
-        // Unsigned 模式下反转 X/Y 方向
-        gamepad16Report.x = map(origX, 0, 32767, 32767, 0);
-        gamepad16Report.y = map(origY, 0, 32767, 32767, 0);
+        // Unsigned 模式：摄像头右摇杆不反转（保持 0->max 的正向变化）
+        gamepad16Report.x = map(origX, 0, 32767, 0, 32767);
+        gamepad16Report.y = map(origY, 0, 32767, 0, 32767);
       } else {
         gamepad16Report.x = map(origX, 0, 32767, 32767, -32767);
         gamepad16Report.y = map(origY, 0, 32767, 32767, -32767);
       }
   } else {
       if (unsignedAxis) {
-        // Unsigned 模式下反转 Z/Rz 方向
-        gamepad16Report.z  = map(origX, 0, 32767, 32767, 0);
-        gamepad16Report.rz = map(origY, 0, 32767, 32767, 0);
+        // Unsigned 模式：摄像头右摇杆不反转（保持 0->max 的正向变化）
+        gamepad16Report.z  = map(origX, 0, 32767, 0, 32767);
+        gamepad16Report.rz = map(origY, 0, 32767, 0, 32767);
       } else {
         gamepad16Report.z  = map(origX, 0, 32767, 32767, -32767);
         gamepad16Report.rz = map(origY, 0, 32767, 32767, -32767);
@@ -426,6 +426,24 @@ void Gamepad16_::moveStick(uint16_t origX, uint16_t origY) {
 }
 
 void Gamepad16_::press(uint8_t buttonNum) {
+  // Unsigned 模式：把 LT/RT 当作线性扳机轴（rx/ry），不再占用 buttons bit
+  if (unsignedAxis) {
+    if (buttonNum == PAD_LT) {
+      if (gamepad16Report.rx != 32767) {
+        gamepad16Report.rx = 32767;
+        TinyUSBDevices.newReport[TinyUSBDevices_::reportGamepad] = true;
+      }
+      return;
+    }
+    if (buttonNum == PAD_RT) {
+      if (gamepad16Report.ry != 32767) {
+        gamepad16Report.ry = 32767;
+        TinyUSBDevices.newReport[TinyUSBDevices_::reportGamepad] = true;
+      }
+      return;
+    }
+  }
+
   if(!(gamepad16Report.buttons & (1 << buttonNum))) {
     bitSet(gamepad16Report.buttons, buttonNum);
     TinyUSBDevices.newReport[TinyUSBDevices_::reportGamepad] = true;
@@ -434,6 +452,24 @@ void Gamepad16_::press(uint8_t buttonNum) {
 }
 
 void Gamepad16_::release(uint8_t buttonNum) {
+  // Unsigned 模式：LT/RT 释放时把线性扳机轴回到 0
+  if (unsignedAxis) {
+    if (buttonNum == PAD_LT) {
+      if (gamepad16Report.rx != 0) {
+        gamepad16Report.rx = 0;
+        TinyUSBDevices.newReport[TinyUSBDevices_::reportGamepad] = true;
+      }
+      return;
+    }
+    if (buttonNum == PAD_RT) {
+      if (gamepad16Report.ry != 0) {
+        gamepad16Report.ry = 0;
+        TinyUSBDevices.newReport[TinyUSBDevices_::reportGamepad] = true;
+      }
+      return;
+    }
+  }
+
   if(gamepad16Report.buttons & (1 << buttonNum)) {
     bitClear(gamepad16Report.buttons, buttonNum);
     TinyUSBDevices.newReport[TinyUSBDevices_::reportGamepad] = true;
@@ -490,6 +526,11 @@ void Gamepad16_::report()
 void Gamepad16_::releaseAll() {
   tu_memclr(&gamepad16Report, sizeof(gamepad16Report));
   _x = 2048, _y = 2048;
+  // Unsigned 模式下，线性扳机轴默认回到 0（已被 memclr 清零），这里显式保持语义清晰
+  if (unsignedAxis) {
+    gamepad16Report.rx = 0;
+    gamepad16Report.ry = 0;
+  }
   TinyUSBDevices.newReport[TinyUSBDevices_::reportGamepad] = true;
   //report();
 }
