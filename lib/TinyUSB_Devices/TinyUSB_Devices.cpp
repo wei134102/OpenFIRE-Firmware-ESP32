@@ -377,8 +377,8 @@ void Gamepad16_::moveCam(uint16_t origX, uint16_t origY) {
       gamepad16Report.x = map(origX, 0, 32767, -32767, 32767);
       gamepad16Report.y = map(origY, 0, 32767, -32767, 32767);
   } else {
-      gamepad16Report.rx = map(origX, 0, 32767, -32767, 32767);
-      gamepad16Report.ry = map(origY, 0, 32767, -32767, 32767);
+      gamepad16Report.z = map(origX, 0, 32767, -32767, 32767);
+      gamepad16Report.rz = map(origY, 0, 32767, -32767, 32767);
   }
   TinyUSBDevices.newReport[TinyUSBDevices_::reportGamepad] = true;
   //report(); 
@@ -389,8 +389,8 @@ void Gamepad16_::moveStick(uint16_t origX, uint16_t origY) {
   if(origX != _x || origY != _y) {
     _x = origX, _y = origY;
     if(stickRight) {
-      gamepad16Report.rx = map(_x, 0, 4095, 32767, -32767);
-      gamepad16Report.ry = map(_y, 0, 4095, 32767, -32767);
+      gamepad16Report.z = map(_x, 0, 4095, 32767, -32767);
+      gamepad16Report.rz = map(_y, 0, 4095, 32767, -32767);
     } else {
       gamepad16Report.x = map(_x, 0, 4095, 32767, -32767);
       gamepad16Report.y = map(_y, 0, 4095, 32767, -32767);

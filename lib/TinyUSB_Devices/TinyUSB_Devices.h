@@ -374,19 +374,19 @@ extern Keyboard_ Keyboard;
 // OpenFIRE define       TinyUSB define in hid.h    
 #define PAD_A      0    // GAMEPAD_BUTTON_A  GAMEPAD_BUTTON_SOUTH
 #define PAD_B      1    // GAMEPAD_BUTTON_B  GAMEPAD_BUTTON_EAST
-#define PAD_C      2    // GAMEPAD_BUTTON_C
-#define PAD_X      3    // GAMEPAD_BUTTON_X  GAMEPAD_BUTTON_NORTH 
-#define PAD_Y      4    // GAMEPAD_BUTTON_Y  GAMEPAD_BUTTON_WEST
-#define PAD_Z      5    // GAMEPAD_BUTTON_Z
-#define PAD_LB     6    // GAMEPAD_BUTTON_TL
-#define PAD_RB     7    // GAMEPAD_BUTTON_TR
-#define PAD_LT     8    // GAMEPAD_BUTTON_TL2
-#define PAD_RT     9    // GAMEPAD_BUTTON_TR2
-#define PAD_SELECT 10   // GAMEPAD_BUTTON_SELECT
-#define PAD_START  11   // GAMEPAD_BUTTON_START
+#define PAD_C      42    // GAMEPAD_BUTTON_C   2
+#define PAD_X      2    // GAMEPAD_BUTTON_X  GAMEPAD_BUTTON_NORTH 
+#define PAD_Y      3    // GAMEPAD_BUTTON_Y  GAMEPAD_BUTTON_WEST  3
+#define PAD_Z      45    // GAMEPAD_BUTTON_Z  5
+#define PAD_LB     4    // GAMEPAD_BUTTON_TL     6
+#define PAD_RB     5    // GAMEPAD_BUTTON_TR  7
+#define PAD_LT     6    // GAMEPAD_BUTTON_TL2    8
+#define PAD_RT     7    // GAMEPAD_BUTTON_TR2  9
+#define PAD_SELECT 8   // GAMEPAD_BUTTON_SELECT 10
+#define PAD_START  9   // GAMEPAD_BUTTON_START  11
 #define PAD_HOME   12   // GAMEPAD_BUTTON_MODE
-#define PAD_LS     13   // GAMEPAD_BUTTON_THUMBL
-#define PAD_RS     14   // GAMEPAD_BUTTON_THUMBR   // qui finiscono i 15 bottoni standard
+#define PAD_LS     10   // GAMEPAD_BUTTON_THUMBL
+#define PAD_RS     11   // GAMEPAD_BUTTON_THUMBR   // qui finiscono i 15 bottoni standard
 #define PAD_15     15   // GAMEPAD_BUTTON_15      // TUTTI QUELLI DA ORA IN SEGUITO SONO bottoni CUSTOM
 #define PAD_16     16   // GAMEPAD_BUTTON_16
 #define PAD_17     17   // GAMEPAD_BUTTON_17
