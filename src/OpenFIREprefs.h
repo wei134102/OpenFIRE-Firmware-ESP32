@@ -123,6 +123,7 @@ public:
         OF_Const::analogModeStick,  // analog stick mode
         0,                          // gun ID (0=P1, 1=P2, 2=P3, 3=P4)
         5,                          // analogDeadzone (%), 默认 5%
+        0,                          // axisUnsigned (0=标准有符号轴, 1=Joypad-OS 兼容无符号轴)
     };
 
     typedef struct USBMap_s {

@@ -134,6 +134,11 @@ void setup() {
             FW_Common::runMode = (FW_Const::RunMode_e)OF_Prefs::profiles[OF_Prefs::currentProfile].runMode;
 
         OF_Prefs::Load();
+
+        // 根据设置初始化轴输出模式（有符号/无符号）
+        if (OF_Const::settingsTypesCount > OF_Const::axisUnsigned) {
+            Gamepad16.unsignedAxis = (OF_Prefs::settings[OF_Const::axisUnsigned] != 0);
+        }
         
         // 如果USB ID未设置但gunId已设置，根据gunId更新USB ID
         if(OF_Prefs::usb.devicePID == 0 && OF_Prefs::settings[OF_Const::gunId] < 4) {
@@ -1098,7 +1103,30 @@ void loop()
                                 FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_AnalogDeadzone);
                             #endif
                         }
-                        break;                          
+                        break;
+                        case FW_Const::PauseMode_AxisUnsignedToggle:
+                        {
+                            // 切换轴输出模式：Signed(-32767~32767) / Unsigned(0~max)
+                            uint32_t mode = 0;
+                            if (OF_Const::settingsTypesCount > OF_Const::axisUnsigned) {
+                                mode = OF_Prefs::settings[OF_Const::axisUnsigned];
+                            }
+                            mode = mode ? 0 : 1; // 0 -> 1, 1 -> 0
+                            OF_Prefs::settings[OF_Const::axisUnsigned] = mode;
+                            OF_Prefs::SaveSettings();
+
+                            Gamepad16.unsignedAxis = (mode != 0);
+
+                            if (!OF_Serial::serialMode) {
+                                Serial.print("Axis mode set to ");
+                                Serial.println(mode ? "Unsigned (Joypad-OS)" : "Signed");
+                            }
+                            #ifdef USES_DISPLAY
+                                FW_Common::OLED.TopPanelUpdate(mode ? "Axis: Unsigned" : "Axis: Signed");
+                                FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_AxisUnsignedToggle);
+                            #endif
+                        }
+                        break;
  //wei134102 add end                             
                         #ifdef USES_RUMBLE
                         case FW_Const::PauseMode_RumbleFFToggle:

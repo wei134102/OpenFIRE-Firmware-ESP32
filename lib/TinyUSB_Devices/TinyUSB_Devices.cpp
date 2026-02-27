@@ -374,11 +374,24 @@ size_t Keyboard_::write(const uint8_t *buffer, size_t size)
 
 void Gamepad16_::moveCam(uint16_t origX, uint16_t origY) {
   if(stickRight) {
-      gamepad16Report.x = map(origX, 0, 32767, -32767, 32767);
-      gamepad16Report.y = map(origY, 0, 32767, -32767, 32767);
+      // 摄像头使用主摇杆或右摇杆，按设置选择有符号/无符号输出
+      if (unsignedAxis) {
+        // Unsigned 模式下反转 X/Y 方向
+        gamepad16Report.x = map(origX, 0, 32767, 32767, 0);
+        gamepad16Report.y = map(origY, 0, 32767, 32767, 0);
+      } else {
+        gamepad16Report.x = map(origX, 0, 32767, 32767, -32767);
+        gamepad16Report.y = map(origY, 0, 32767, 32767, -32767);
+      }
   } else {
-      gamepad16Report.z = map(origX, 0, 32767, -32767, 32767);
-      gamepad16Report.rz = map(origY, 0, 32767, -32767, 32767);
+      if (unsignedAxis) {
+        // Unsigned 模式下反转 Z/Rz 方向
+        gamepad16Report.z  = map(origX, 0, 32767, 32767, 0);
+        gamepad16Report.rz = map(origY, 0, 32767, 32767, 0);
+      } else {
+        gamepad16Report.z  = map(origX, 0, 32767, 32767, -32767);
+        gamepad16Report.rz = map(origY, 0, 32767, 32767, -32767);
+      }
   }
   TinyUSBDevices.newReport[TinyUSBDevices_::reportGamepad] = true;
   //report(); 
@@ -389,11 +402,23 @@ void Gamepad16_::moveStick(uint16_t origX, uint16_t origY) {
   if(origX != _x || origY != _y) {
     _x = origX, _y = origY;
     if(stickRight) {
-      gamepad16Report.z = map(_x, 0, 4095, 32767, -32767);
-      gamepad16Report.rz = map(_y, 0, 4095, 32767, -32767);
+      if (unsignedAxis) {
+        // Unsigned 模式下反转右摇杆方向
+        gamepad16Report.z  = map(_x, 0, 4095, 32767, 0);
+        gamepad16Report.rz = map(_y, 0, 4095, 32767, 0);
+      } else {
+        gamepad16Report.z  = map(_x, 0, 4095, 32767, -32767);
+        gamepad16Report.rz = map(_y, 0, 4095, 32767, -32767);
+      }
     } else {
-      gamepad16Report.x = map(_x, 0, 4095, 32767, -32767);
-      gamepad16Report.y = map(_y, 0, 4095, 32767, -32767);
+      if (unsignedAxis) {
+        // Unsigned 模式下反转左摇杆方向
+        gamepad16Report.x = map(_x, 0, 4095, 32767, 0);
+        gamepad16Report.y = map(_y, 0, 4095, 32767, 0);
+      } else {
+        gamepad16Report.x = map(_x, 0, 4095, 32767, -32767);
+        gamepad16Report.y = map(_y, 0, 4095, 32767, -32767);
+      }
     }
     TinyUSBDevices.newReport[TinyUSBDevices_::reportGamepad] = true;
     //report();

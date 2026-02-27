@@ -427,6 +427,7 @@ class Gamepad16_ {
     void report(void);
     void releaseAll(void);
     bool stickRight;
+    bool unsignedAxis = false; // false = 有符号轴(-32767~32767), true = 无符号轴(0~max) 供 Joypad-OS 兼容
   };
   extern Gamepad16_ Gamepad16;
 
