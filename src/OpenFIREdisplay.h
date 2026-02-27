@@ -119,6 +119,7 @@ public:
         ScreenPause_LowButtonToggle,//wei134102 add
         ScreenPause_LayoutToggle,//wei134102 add
         ScreenPause_GunId,       // 枪ID设置 P1-P4
+        ScreenPause_AnalogDeadzone, // 模拟摇杆死区设置
         #ifdef USES_RUMBLE
         ScreenPause_RumbleFFToggle,
         #endif // USES_RUMBLE        

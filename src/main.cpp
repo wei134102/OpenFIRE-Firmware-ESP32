@@ -1054,6 +1054,49 @@ void loop()
                               FW_Common::OLED.PauseProfileUpdate(gunIdModeSelection, "P1", "P2", "P3", "P4");
                           #endif
                           break;
+                        // 在这里插入新的 死区 case
+                        case FW_Const::PauseMode_AnalogDeadzone:
+                        // 死区步进：0,5,10,15,20,25,30%，用 Trigger 循环切换
+                        {
+                            // 当前值
+                            uint32_t dz = OF_Prefs::settings[OF_Const::analogDeadzone];
+                            if (dz > 30) dz = 30;
+
+                            // 进入该选项时先显示当前死区值，避免画面空白
+                            #ifdef USES_DISPLAY
+                                {
+                                    char buf[24];
+                                    snprintf(buf, sizeof(buf), "Deadzone: %u%%", (unsigned)dz);
+                                    FW_Common::OLED.TopPanelUpdate(buf);
+                                    FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_AnalogDeadzone);
+                                }
+                            #endif
+
+                            // 这里已经是 Trigger 的一次“按下并松开”事件，不需要再检测 pressed
+                            static const uint8_t steps[] = {0,5,10,15,20,25,30};
+                            int index = 0;
+                            for (int i = 0; i < 7; ++i) {
+                                if (dz <= steps[i]) { index = i; break; }
+                            }
+                            // 下一档，循环
+                            index = (index + 1) % 7;
+                            dz = steps[index];
+                            OF_Prefs::settings[OF_Const::analogDeadzone] = dz;
+                            OF_Prefs::SaveSettings();
+
+                            if (!OF_Serial::serialMode) {
+                                Serial.print("Analog deadzone set to ");
+                                Serial.print(dz);
+                                Serial.println("%");
+                            }
+                            #ifdef USES_DISPLAY
+                                char buf[24];
+                                snprintf(buf, sizeof(buf), "Deadzone: %u%%", (unsigned)dz);
+                                FW_Common::OLED.TopPanelUpdate(buf);
+                                FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_AnalogDeadzone);
+                            #endif
+                        }
+                        break;                          
  //wei134102 add end                             
                         #ifdef USES_RUMBLE
                         case FW_Const::PauseMode_RumbleFFToggle:
@@ -1658,13 +1701,26 @@ void AnalogStickPoll()
     int analogValueY = analogRead(OF_Prefs::pins[OF_Const::analogY]);
     
     if(OF_Prefs::settings[OF_Const::analogMode] == OF_Const::analogModeStick) {
-        // Analog stick deadzone should help mitigate overwriting USB commands for the other input channels.
-        if((analogValueX < ANALOG_STICK_DEADZONE_X_MIN || analogValueX > ANALOG_STICK_DEADZONE_X_MAX) ||
-        (analogValueY < ANALOG_STICK_DEADZONE_Y_MIN || analogValueY > ANALOG_STICK_DEADZONE_Y_MAX)) {
-            Gamepad16.moveStick(analogValueX, analogValueY);
-        } else {
-            // Duplicate coords won't be reported, so no worries.
+        // -------- 可配置死区（0–30%）：以中心为基准 --------
+        // 读取百分比（由暂停菜单写入），限制在 0–30 之间
+        uint32_t dzPercent = 0;
+        if (OF_Const::settingsTypesCount > OF_Const::analogDeadzone) {
+            dzPercent = OF_Prefs::settings[OF_Const::analogDeadzone];
+        }
+        if (dzPercent > 30) dzPercent = 30;
+
+        // 按整个量程的一半计算死区范围（4095/2 ≈ 2048）
+        int32_t halfRange = (ANALOG_STICK_MAX_X - ANALOG_STICK_MIN_X) / 2; // 理论上约 2047
+        int32_t dzValue   = (int32_t)halfRange * (int32_t)dzPercent / 100; // ADC 单位
+
+        int32_t dx = analogValueX - (int32_t)ANALOG_STICK_CENTER_X;
+        int32_t dy = analogValueY - (int32_t)ANALOG_STICK_CENTER_Y;
+
+        // 如果 X/Y 都在死区内，则强制输出中心；否则输出真实值
+        if (abs(dx) < dzValue && abs(dy) < dzValue) {
             Gamepad16.moveStick(ANALOG_STICK_CENTER_X, ANALOG_STICK_CENTER_Y);
+        } else {
+            Gamepad16.moveStick(analogValueX, analogValueY);
         }
     } else {
         uint32_t newPos = 0;

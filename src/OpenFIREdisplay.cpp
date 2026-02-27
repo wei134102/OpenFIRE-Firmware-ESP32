@@ -729,8 +729,11 @@ void ExtDisplay::PauseListUpdate(const int &selection)
             break;
           case ScreenPause_GunId:
             #ifdef OLED_091_INCH
-            display->setTextColor(BLACK, WHITE);
+            display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 20);
+            display->println(" Layout Toggle ");
+            display->setTextColor(BLACK, WHITE);
+            display->setCursor(0, 31);
             display->printf(" Gun ID: P%d ", (int)(OF_Prefs::settings[OF_Const::gunId] % 4) + 1);
             #else
             display->setTextColor(WHITE, BLACK);
@@ -739,6 +742,23 @@ void ExtDisplay::PauseListUpdate(const int &selection)
             display->setTextColor(BLACK, WHITE);
             display->setCursor(0, 36);
             display->printf(" Gun ID: P%d ", (int)(OF_Prefs::settings[OF_Const::gunId] % 4) + 1);
+            display->setTextColor(WHITE, BLACK);
+            display->setCursor(0, 47);
+            display->println(" Analog Deadzone ");
+            #endif
+            break;
+          case ScreenPause_AnalogDeadzone:
+            #ifdef OLED_091_INCH
+            display->setTextColor(BLACK, WHITE);
+            display->setCursor(0, 20);
+            display->printf(" Deadzone: %u%% ", (unsigned)(OF_Prefs::settings[OF_Const::analogDeadzone] > 30 ? 30 : OF_Prefs::settings[OF_Const::analogDeadzone]));
+            #else
+            display->setTextColor(WHITE, BLACK);
+            display->setCursor(0, 25);
+            display->printf(" Gun ID: P%d ", (int)(OF_Prefs::settings[OF_Const::gunId] % 4) + 1);
+            display->setTextColor(BLACK, WHITE);
+            display->setCursor(0, 36);
+            display->printf(" Deadzone: %u%% ", (unsigned)(OF_Prefs::settings[OF_Const::analogDeadzone] > 30 ? 30 : OF_Prefs::settings[OF_Const::analogDeadzone]));
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 47);
             #ifdef USES_RUMBLE

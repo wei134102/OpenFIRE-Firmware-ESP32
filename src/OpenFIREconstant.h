@@ -95,6 +95,7 @@ public:
         PauseMode_LowButtonToggle,//wei13402 add  低按钮模式
         PauseMode_LayoutToggle,//wei13402 add 布局切换
         PauseMode_GunId,        // 枪ID设置 P1-P4
+        PauseMode_AnalogDeadzone, // 新增：模拟摇杆死区设置
         #ifdef USES_RUMBLE
         PauseMode_RumbleFFToggle,
         #endif // USES_RUMBLE        

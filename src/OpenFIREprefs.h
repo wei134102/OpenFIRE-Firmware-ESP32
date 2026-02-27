@@ -122,6 +122,7 @@ public:
         45,                         // temp shutoff
         OF_Const::analogModeStick,  // analog stick mode
         0,                          // gun ID (0=P1, 1=P2, 2=P3, 3=P4)
+        5,                          // analogDeadzone (%), 默认 5%
     };
 
     typedef struct USBMap_s {
