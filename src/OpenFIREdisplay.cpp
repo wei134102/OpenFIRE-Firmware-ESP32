@@ -528,7 +528,7 @@ void ExtDisplay::PauseListUpdate(const int &selection)
             #else
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 25);
-            display->println(" Send Escape Keypress");
+            display->println(" Save Gun Settings ");
             display->setTextColor(BLACK, WHITE);
             display->setCursor(0, 36);
             display->println(" Calibrate ");
@@ -564,19 +564,13 @@ void ExtDisplay::PauseListUpdate(const int &selection)
             #else
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 25);
-            display->println(" Profile Select ");
+            display->println(" Center Calibrate ");
             display->setTextColor(BLACK, WHITE);
             display->setCursor(0, 36);
             display->println(" Save Gun Settings ");
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 47);
-            if(OF_Prefs::pins[OF_Const::rumblePin] >= 0 && OF_Prefs::pins[OF_Const::rumbleSwitch] == -1) {
-              display->println(" Rumble Toggle ");
-            } else if(OF_Prefs::pins[OF_Const::solenoidPin] >= 0 && OF_Prefs::pins[OF_Const::solenoidSwitch] == -1) {
-              display->println(" Solenoid Toggle ");
-            } else {
-              display->println(" Send Escape Keypress");
-            }
+            display->println(" Calibrate ");
             #endif
             break;
           case ScreenPause_Rumble:
@@ -761,7 +755,7 @@ void ExtDisplay::PauseListUpdate(const int &selection)
             display->printf(" Deadzone: %u%% ", (unsigned)(OF_Prefs::settings[OF_Const::analogDeadzone] > 30 ? 30 : OF_Prefs::settings[OF_Const::analogDeadzone]));
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 47);
-            display->println(" Axis Mode Toggle ");
+            display->println(" Center Calibrate ");
             #endif
             break;
           case ScreenPause_AxisUnsignedToggle:
@@ -772,7 +766,7 @@ void ExtDisplay::PauseListUpdate(const int &selection)
             #else
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 25);
-            display->printf(" Deadzone: %u%% ", (unsigned)(OF_Prefs::settings[OF_Const::analogDeadzone] > 30 ? 30 : OF_Prefs::settings[OF_Const::analogDeadzone]));
+            display->printf(" Center Calibrate ");
             display->setTextColor(BLACK, WHITE);
             display->setCursor(0, 36);
             display->printf(" Axis: %s ", OF_Prefs::settings[OF_Const::axisUnsigned] ? "Unsigned" : "Signed");
@@ -787,6 +781,23 @@ void ExtDisplay::PauseListUpdate(const int &selection)
             #else
             display->println(" Send Escape Keypress ");
             #endif
+            #endif
+            break;
+          case ScreenPause_AnalogCenterCal:
+            #ifdef OLED_091_INCH
+            display->setTextColor(BLACK, WHITE);
+            display->setCursor(0, 20);
+            display->println(" Center Calibrate ");
+            #else
+            display->setTextColor(WHITE, BLACK);
+            display->setCursor(0, 25);
+            display->println(" Send Escape Keypress");
+            display->setTextColor(BLACK, WHITE);
+            display->setCursor(0, 36);
+            display->println(" Center Calibrate ");
+            display->setTextColor(WHITE, BLACK);
+            display->setCursor(0, 47);
+            display->println(" Save Gun Settings ");
             #endif
             break;
           #ifdef USES_RUMBLE

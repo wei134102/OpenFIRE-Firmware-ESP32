@@ -256,7 +256,7 @@ void FW_Common::CameraSet()
                     tone_duty_main = ledcRead(gpio_pin);
                 }
             } else {
-                log_e("Clock non attivato (GPIO %d non valido: <= -1).\n", gpio_pin);
+                log_i("Wii IR camera clock not used (GPIO not set, pin=%d).", gpio_pin);
             }
         #endif // CLOCK_CAM_WII
     #endif // ARDUINO_ARCH_ESP32

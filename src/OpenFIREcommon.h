@@ -207,6 +207,7 @@ public:
     #ifdef USES_ANALOG
         static inline bool analogIsValid;                          // Flag set true if analog stick is mapped to valid nums
         static inline uint32_t aStickADCLastPos = 0;               // Analog-to-digital direction mask for digital outputs when settings[OF_Const::analogMode] is > 0
+        static inline bool analogCenterJustCalibrated = false;     // 中心校准后置 true，AnalogStickPoll 会重置 IIR 滤波并清空
     #endif // USES_ANALOG
 
     #ifdef FOURPIN_LED

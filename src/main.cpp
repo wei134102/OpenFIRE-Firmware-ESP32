@@ -773,7 +773,7 @@ void loop()
                     } else if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_Trigger) {
                         FW_Common::SelectCalProfile(profileModeSelection);
                         pauseModeSelectingProfile = false;
-                        FW_Common::pauseModeSelection = FW_Const::PauseMode_Calibrate;
+                        FW_Common::pauseModeSelection = FW_Const::PauseMode_AnalogCenterCal;
 
                         if(!OF_Serial::serialMode) {
                             Serial.print("Switched to profile: ");
@@ -783,7 +783,7 @@ void loop()
                         }
 
                         #ifdef USES_DISPLAY
-                            FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_Calibrate);
+                            FW_Common::OLED.PauseListUpdate((int)FW_Common::pauseModeSelection);
                         #endif // USES_DISPLAY
 
                     } else if(FW_Common::buttons.pressedReleased & FW_Const::ExitPauseModeBtnMask) {
@@ -802,10 +802,10 @@ void loop()
                             OF_RGB::LedUpdate(255,0,0);
                         #endif // LED_ENABLE
 
-                        FW_Common::pauseModeSelection = FW_Const::PauseMode_Calibrate;
+                        FW_Common::pauseModeSelection = FW_Const::PauseMode_AnalogCenterCal;
 
                         #ifdef USES_DISPLAY
-                            FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_Calibrate);
+                            FW_Common::OLED.PauseListUpdate((int)FW_Common::pauseModeSelection);
                         #endif // USES_DISPLAY
                     }
                 } else if(pauseModeSelectingGunId) {
@@ -827,7 +827,7 @@ void loop()
                         OF_Prefs::SaveSettings();
                         OF_Prefs::SaveUSBID();
                         pauseModeSelectingGunId = false;
-                        FW_Common::pauseModeSelection = FW_Const::PauseMode_Calibrate;
+                        FW_Common::pauseModeSelection = FW_Const::PauseMode_AnalogCenterCal;
                         if(!OF_Serial::serialMode) {
                             Serial.print("Gun ID set to P");
                             Serial.print((int)gunIdModeSelection + 1);
@@ -842,13 +842,13 @@ void loop()
                                 FW_Common::OLED.TopPanelUpdate(gunIdBuf);
                             }
                             delay(800);
-                            FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_Calibrate);
+                            FW_Common::OLED.PauseListUpdate((int)FW_Common::pauseModeSelection);
                         #endif
                     } else if(FW_Common::buttons.pressedReleased & FW_Const::ExitPauseModeBtnMask) {
                         pauseModeSelectingGunId = false;
-                        FW_Common::pauseModeSelection = FW_Const::PauseMode_Calibrate;
+                        FW_Common::pauseModeSelection = FW_Const::PauseMode_AnalogCenterCal;
                         #ifdef USES_DISPLAY
-                            FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_Calibrate);
+                            FW_Common::OLED.PauseListUpdate((int)FW_Common::pauseModeSelection);
                         #endif
                     }
                 } else if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_A) {
@@ -1101,6 +1101,54 @@ void loop()
                                 snprintf(buf, sizeof(buf), "Deadzone: %u%%", (unsigned)dz);
                                 FW_Common::OLED.TopPanelUpdate(buf);
                                 FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_AnalogDeadzone);
+                            #endif
+                        }
+                        break;
+                        case FW_Const::PauseMode_AnalogCenterCal:
+                        {
+                            int pinX = OF_Prefs::pins[OF_Const::analogX];
+                            int pinY = OF_Prefs::pins[OF_Const::analogY];
+                            if (pinX < 0 || pinY < 0) {
+                                if (!OF_Serial::serialMode)
+                                    Serial.println("CenterCal: analog pins not set (analogX/analogY)");
+                                break;
+                            }
+                            // 读取当前模拟值，以当前物理位置作为“新中心”
+                            int analogValueX = analogRead(pinX);
+                            int analogValueY = analogRead(pinY);
+
+                            int32_t offsetX = (int32_t)ANALOG_STICK_CENTER_X - (int32_t)analogValueX;
+                            int32_t offsetY = (int32_t)ANALOG_STICK_CENTER_Y - (int32_t)analogValueY;
+
+                            // 限制最大校正量，防止极端错误
+                            const int32_t maxOffset = 512;
+                            if (offsetX < -maxOffset) offsetX = -maxOffset;
+                            if (offsetX >  maxOffset) offsetX =  maxOffset;
+                            if (offsetY < -maxOffset) offsetY = -maxOffset;
+                            if (offsetY >  maxOffset) offsetY =  maxOffset;
+
+                            OF_Prefs::settings[OF_Const::analogCenterOffsetX] = (uint32_t)offsetX;
+                            OF_Prefs::settings[OF_Const::analogCenterOffsetY] = (uint32_t)offsetY;
+                            int saveErr = OF_Prefs::SaveSettings();
+                            #ifdef USES_ANALOG
+                            FW_Common::analogCenterJustCalibrated = true;  // 下次 AnalogStickPoll 会重置 IIR 滤波，中心立即生效
+                            #endif
+
+                            if (!OF_Serial::serialMode) {
+                                Serial.print("CenterCal: rawX=");
+                                Serial.print(analogValueX);
+                                Serial.print(" rawY=");
+                                Serial.print(analogValueY);
+                                Serial.print(" -> offsetX=");
+                                Serial.print(offsetX);
+                                Serial.print(" offsetY=");
+                                Serial.print(offsetY);
+                                Serial.print(" Save=");
+                                Serial.println(saveErr == 0 ? "OK" : "FAIL");
+                            }
+                            #ifdef USES_DISPLAY
+                                FW_Common::OLED.TopPanelUpdate("Center calibrated");
+                                FW_Common::OLED.PauseListUpdate((int)FW_Common::pauseModeSelection);
                             #endif
                         }
                         break;
@@ -1739,32 +1787,82 @@ void AnalogStickPoll()
         }
         if (dzPercent > 30) dzPercent = 30;
 
+        // 轻量滤波（IIR），抑制 ADC 抖动导致的“跳动”
+        // 只影响 analogX/analogY（左摇杆），不影响摄像头/IR 映射
+        static int32_t filtX = ANALOG_STICK_CENTER_X;
+        static int32_t filtY = ANALOG_STICK_CENTER_Y;
+        if (FW_Common::analogCenterJustCalibrated) {
+            filtX = analogValueX;
+            filtY = analogValueY;
+            FW_Common::analogCenterJustCalibrated = false;
+        } else {
+            // alpha = 1/5 ≈ 0.2
+            filtX = (filtX * 4 + analogValueX) / 5;
+            filtY = (filtY * 4 + analogValueY) / 5;
+        }
+
+        // 应用用户可调的中心偏移（ADC 单位，可正可负），始终从 settings 读取
+        int32_t offsetX = (int32_t)OF_Prefs::settings[OF_Const::analogCenterOffsetX];
+        int32_t offsetY = (int32_t)OF_Prefs::settings[OF_Const::analogCenterOffsetY];
+
+        int32_t adjX = filtX + offsetX;
+        int32_t adjY = filtY + offsetY;
+
+        // 限制在 ADC 合法范围内
+        if (adjX < ANALOG_STICK_MIN_X) adjX = ANALOG_STICK_MIN_X;
+        if (adjX > ANALOG_STICK_MAX_X) adjX = ANALOG_STICK_MAX_X;
+        if (adjY < ANALOG_STICK_MIN_Y) adjY = ANALOG_STICK_MIN_Y;
+        if (adjY > ANALOG_STICK_MAX_Y) adjY = ANALOG_STICK_MAX_Y;
+
         // 按整个量程的一半计算死区范围（4095/2 ≈ 2048）
         int32_t halfRange = (ANALOG_STICK_MAX_X - ANALOG_STICK_MIN_X) / 2; // 理论上约 2047
-        int32_t dzValue   = (int32_t)halfRange * (int32_t)dzPercent / 100; // ADC 单位
+        int32_t dzIn      = (int32_t)halfRange * (int32_t)dzPercent / 100; // ADC 单位（进入死区阈值）
+        // 加一点回滞，避免在阈值附近来回“抖动切换”
+        int32_t dzHyst    = halfRange / 50; // ~2%
+        if (dzHyst < 8) dzHyst = 8;
+        int32_t dzOut     = dzIn + dzHyst;  // 离开死区阈值
 
-        int32_t dx = analogValueX - (int32_t)ANALOG_STICK_CENTER_X;
-        int32_t dy = analogValueY - (int32_t)ANALOG_STICK_CENTER_Y;
+        int32_t dx = adjX - (int32_t)ANALOG_STICK_CENTER_X;
+        int32_t dy = adjY - (int32_t)ANALOG_STICK_CENTER_Y;
 
-        // 如果 X/Y 都在死区内，则强制输出中心；否则输出真实值
-        if (abs(dx) < dzValue && abs(dy) < dzValue) {
-            Gamepad16.moveStick(ANALOG_STICK_CENTER_X, ANALOG_STICK_CENTER_Y);
+        // 按轴独立死区 + 回滞（比“X/Y 同时在死区”更稳定）
+        static bool inDeadX = true;
+        static bool inDeadY = true;
+
+        int32_t adx = abs(dx);
+        int32_t ady = abs(dy);
+
+        if (inDeadX) {
+            if (adx > dzOut) inDeadX = false;
         } else {
-            Gamepad16.moveStick(analogValueX, analogValueY);
+            if (adx < dzIn) inDeadX = true;
         }
+
+        if (inDeadY) {
+            if (ady > dzOut) inDeadY = false;
+        } else {
+            if (ady < dzIn) inDeadY = true;
+        }
+
+        uint16_t outX = (uint16_t)(inDeadX ? ANALOG_STICK_CENTER_X : (int)adjX);
+        uint16_t outY = (uint16_t)(inDeadY ? ANALOG_STICK_CENTER_Y : (int)adjY);
+        Gamepad16.moveStick(outX, outY);
     } else {
         uint32_t newPos = 0;
+        int32_t offX = (int32_t)OF_Prefs::settings[OF_Const::analogCenterOffsetX];
+        int32_t offY = (int32_t)OF_Prefs::settings[OF_Const::analogCenterOffsetY];
+        int32_t adjX = (int32_t)analogValueX + offX;
+        int32_t adjY = (int32_t)analogValueY + offY;
 
         // TODO: need to consider inverted axis toggle, currently assumes axises are inverted by default
-        // would this also benefit from custom Analog->Digital deadzone?
-        if(analogValueY < (ANALOG_STICK_DEADZONE_Y_MIN-700))
+        if(adjY < (ANALOG_STICK_DEADZONE_Y_MIN-700))
             newPos = 2; // down
-        else if(analogValueY > (ANALOG_STICK_DEADZONE_Y_MAX+700))
+        else if(adjY > (ANALOG_STICK_DEADZONE_Y_MAX+700))
             newPos = 1; // up
 
-        if(analogValueX < (ANALOG_STICK_DEADZONE_X_MIN-700))
+        if(adjX < (ANALOG_STICK_DEADZONE_X_MIN-700))
             newPos |= 8; // right
-        else if(analogValueX > (ANALOG_STICK_DEADZONE_X_MAX+700))
+        else if(adjX > (ANALOG_STICK_DEADZONE_X_MAX+700))
             newPos |= 4; // left
 
         switch(OF_Prefs::settings[OF_Const::analogMode]) {
@@ -1805,7 +1903,7 @@ void SetPauseModeSelection(const bool &isIncrement)
 {
     if(isIncrement) {
         if(FW_Common::pauseModeSelection == FW_Const::PauseMode_EscapeSignal) {
-            FW_Common::pauseModeSelection = FW_Const::PauseMode_Calibrate;
+            FW_Common::pauseModeSelection = FW_Const::PauseMode_AnalogCenterCal;
         } else {
             FW_Common::pauseModeSelection++;
             // If we use switches, and they ARE mapped to valid pins,
@@ -1866,7 +1964,7 @@ void SetPauseModeSelection(const bool &isIncrement)
             #endif // USES_SWITCHES
         }
     } else {
-        if(FW_Common::pauseModeSelection == FW_Const::PauseMode_Calibrate) {
+        if(FW_Common::pauseModeSelection == FW_Const::PauseMode_AnalogCenterCal) {
             FW_Common::pauseModeSelection = FW_Const::PauseMode_EscapeSignal;
         } else {
             FW_Common::pauseModeSelection--;
@@ -1927,6 +2025,12 @@ void SetPauseModeSelection(const bool &isIncrement)
     }
 
     switch(FW_Common::pauseModeSelection) {
+        case FW_Const::PauseMode_AnalogCenterCal:
+          Serial.println("Selecting: Center Calibrate");
+          #ifdef LED_ENABLE
+              OF_RGB::LedUpdate(255,0,0);
+          #endif // LED_ENABLE
+          break;
         case FW_Const::PauseMode_Calibrate:
           Serial.println("Selecting: Calibrate current profile");
           #ifdef LED_ENABLE

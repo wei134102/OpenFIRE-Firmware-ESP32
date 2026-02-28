@@ -80,9 +80,10 @@ public:
     };
 
     enum PauseModeSelection_e {
-        PauseMode_Calibrate = 0,
+        PauseMode_AnalogCenterCal = 0, // 第1项：模拟摇杆中心校准
+        PauseMode_Save,                // 第2项：保持设置
+        PauseMode_Calibrate,
         PauseMode_ProfileSelect,
-        PauseMode_Save,
         #ifdef USES_RUMBLE
         PauseMode_RumbleToggle,
         #endif // USES_RUMBLE

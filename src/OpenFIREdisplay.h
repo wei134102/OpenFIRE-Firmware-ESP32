@@ -109,9 +109,10 @@ public:
     };
 
     enum ScreenPauseList_e {
-        ScreenPause_Calibrate = 0,
+        ScreenPause_AnalogCenterCal = 0, // 第1项：中心校准
+        ScreenPause_Save,                // 第2项：保持设置
+        ScreenPause_Calibrate,
         ScreenPause_ProfileSelect,
-        ScreenPause_Save,
         ScreenPause_Rumble,
         ScreenPause_Solenoid,
         ScreenPause_AutofireToggle,//WEI134102 add
