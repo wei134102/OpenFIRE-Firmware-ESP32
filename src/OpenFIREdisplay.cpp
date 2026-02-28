@@ -519,6 +519,24 @@ void ExtDisplay::PauseListUpdate(const int &selection)
         // but pause mode selection in actual use would prevent some of these extremes from happening.
         // Just covering our asses.
         switch(selection) {
+          case ScreenPause_AnalogRangeCal:
+            #ifdef OLED_091_INCH
+            // 0.91寸屏幕：只显示当前选中的项目
+            display->setTextColor(BLACK, WHITE);
+            display->setCursor(0, 20);
+            display->println(" Range Calibrate ");
+            #else
+            display->setTextColor(WHITE, BLACK);
+            display->setCursor(0, 25);
+            display->println(" Save Gun Settings ");
+            display->setTextColor(BLACK, WHITE);
+            display->setCursor(0, 36);
+            display->println(" Range Calibrate ");
+            display->setTextColor(WHITE, BLACK);
+            display->setCursor(0, 47);
+            display->println(" Calibrate ");
+            #endif
+            break;
           case ScreenPause_Calibrate:
             #ifdef OLED_091_INCH
             // 0.91寸屏幕：只显示当前选中的项目
@@ -528,7 +546,7 @@ void ExtDisplay::PauseListUpdate(const int &selection)
             #else
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 25);
-            display->println(" Save Gun Settings ");
+            display->println(" Range Calibrate ");
             display->setTextColor(BLACK, WHITE);
             display->setCursor(0, 36);
             display->println(" Calibrate ");
@@ -570,7 +588,7 @@ void ExtDisplay::PauseListUpdate(const int &selection)
             display->println(" Save Gun Settings ");
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 47);
-            display->println(" Calibrate ");
+            display->println(" Range Calibrate ");
             #endif
             break;
           case ScreenPause_Rumble:

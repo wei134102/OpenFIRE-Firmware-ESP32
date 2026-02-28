@@ -102,7 +102,7 @@ void setup() {
     OF_Prefs::LoadPresets();
     
     if(OF_Prefs::InitFS() == OF_Prefs::Error_Success) {
-        //OF_Prefs::ResetPreferences(); // ============ FORMATTA IL FILE SYSTEM =================================
+        // OF_Prefs::ResetPreferences(); // ============ FORMATTA IL FILE SYSTEM =================================
         OF_Prefs::LoadProfiles();
     
         // Profile sanity checks
@@ -897,6 +897,111 @@ void loop()
                               Serial.println("Saving...");
                           FW_Common::SavePreferences();
                           break;
+                        case FW_Const::PauseMode_AnalogRangeCal:
+                        {
+                            int pinX = OF_Prefs::pins[OF_Const::analogX];
+                            int pinY = OF_Prefs::pins[OF_Const::analogY];
+                            if (pinX < 0 || pinY < 0) {
+                                if (!OF_Serial::serialMode)
+                                    Serial.println("RangeCal: analog pins not set (analogX/analogY)");
+                                break;
+                            }
+
+                            if (!OF_Serial::serialMode)
+                                Serial.println("RangeCal: rotate stick full circle for ~4s...");
+
+                            #ifdef USES_DISPLAY
+                                FW_Common::OLED.TopPanelUpdate("RangeCal: rotate");
+                            #endif
+
+                            uint16_t minX = 4095, maxX = 0, minY = 4095, maxY = 0;
+                            const uint32_t sampleMs = 4200;
+                            uint32_t t0 = millis();
+                            while (millis() - t0 < sampleMs) {
+                                int x = analogRead(pinX);
+                                int y = analogRead(pinY);
+                                if (x < (int)minX) minX = (uint16_t)x;
+                                if (x > (int)maxX) maxX = (uint16_t)x;
+                                if (y < (int)minY) minY = (uint16_t)y;
+                                if (y > (int)maxY) maxY = (uint16_t)y;
+                                delay(2);
+                            }
+
+                            #ifdef USES_DISPLAY
+                                FW_Common::OLED.TopPanelUpdate("Release to center");
+                            #endif
+
+                            delay(250); // 让摇杆回中后稍微稳定一下
+                            const int centerSamples = 64;
+                            uint32_t sumX = 0, sumY = 0;
+                            for (int i = 0; i < centerSamples; ++i) {
+                                sumX += (uint32_t)analogRead(pinX);
+                                sumY += (uint32_t)analogRead(pinY);
+                                delay(5);
+                            }
+                            uint16_t cenX = (uint16_t)(sumX / (uint32_t)centerSamples);
+                            uint16_t cenY = (uint16_t)(sumY / (uint32_t)centerSamples);
+
+                            // 计算“中心偏移”（复用原有 CenterCal 存储语义）
+                            int32_t offsetX = (int32_t)ANALOG_STICK_CENTER_X - (int32_t)cenX;
+                            int32_t offsetY = (int32_t)ANALOG_STICK_CENTER_Y - (int32_t)cenY;
+                            const int32_t maxOffset = 512;
+                            if (offsetX < -maxOffset) offsetX = -maxOffset;
+                            if (offsetX >  maxOffset) offsetX =  maxOffset;
+                            if (offsetY < -maxOffset) offsetY = -maxOffset;
+                            if (offsetY >  maxOffset) offsetY =  maxOffset;
+
+                            // 把采到的边缘范围平移到“应用中心偏移之后”的空间保存
+                            int32_t calMinX = (int32_t)minX + offsetX;
+                            int32_t calMaxX = (int32_t)maxX + offsetX;
+                            int32_t calMinY = (int32_t)minY + offsetY;
+                            int32_t calMaxY = (int32_t)maxY + offsetY;
+
+                            if (calMinX < ANALOG_STICK_MIN_X) calMinX = ANALOG_STICK_MIN_X;
+                            if (calMaxX > ANALOG_STICK_MAX_X) calMaxX = ANALOG_STICK_MAX_X;
+                            if (calMinY < ANALOG_STICK_MIN_Y) calMinY = ANALOG_STICK_MIN_Y;
+                            if (calMaxY > ANALOG_STICK_MAX_Y) calMaxY = ANALOG_STICK_MAX_Y;
+
+                            uint32_t ok = 0;
+                            // 简单有效性判断：范围太小就不启用缩放（仍然保存中心偏移）
+                            if ((calMaxX - calMinX) >= 600 && (calMaxY - calMinY) >= 600) ok = 1;
+
+                            OF_Prefs::settings[OF_Const::analogCenterOffsetX] = (uint32_t)offsetX;
+                            OF_Prefs::settings[OF_Const::analogCenterOffsetY] = (uint32_t)offsetY;
+                            OF_Prefs::settings[OF_Const::analogCalMinX] = (uint32_t)calMinX;
+                            OF_Prefs::settings[OF_Const::analogCalMaxX] = (uint32_t)calMaxX;
+                            OF_Prefs::settings[OF_Const::analogCalMinY] = (uint32_t)calMinY;
+                            OF_Prefs::settings[OF_Const::analogCalMaxY] = (uint32_t)calMaxY;
+                            OF_Prefs::settings[OF_Const::analogCalValid] = ok;
+
+                            int saveErr = OF_Prefs::SaveSettings();
+                            FW_Common::analogCenterJustCalibrated = true;
+
+                            if (!OF_Serial::serialMode) {
+                                Serial.print("RangeCal: rawMinX="); Serial.print(minX);
+                                Serial.print(" rawMaxX="); Serial.print(maxX);
+                                Serial.print(" rawMinY="); Serial.print(minY);
+                                Serial.print(" rawMaxY="); Serial.println(maxY);
+                                Serial.print("RangeCal: cenX="); Serial.print(cenX);
+                                Serial.print(" cenY="); Serial.print(cenY);
+                                Serial.print(" offX="); Serial.print(offsetX);
+                                Serial.print(" offY="); Serial.println(offsetY);
+                                Serial.print("RangeCal: calMinX="); Serial.print(calMinX);
+                                Serial.print(" calMaxX="); Serial.print(calMaxX);
+                                Serial.print(" calMinY="); Serial.print(calMinY);
+                                Serial.print(" calMaxY="); Serial.print(calMaxY);
+                                Serial.print(" OK="); Serial.print(ok ? "1" : "0");
+                                Serial.print(" Save=");
+                                Serial.println(saveErr == 0 ? "OK" : "FAIL");
+                            }
+
+                            #ifdef USES_DISPLAY
+                                FW_Common::OLED.TopPanelUpdate(ok ? "RangeCal: OK" : "RangeCal: weak");
+                                delay(900);
+                                FW_Common::OLED.PauseListUpdate((int)FW_Common::pauseModeSelection);
+                            #endif
+                        }
+                        break;
                         case FW_Const::PauseMode_AutofireToggle:
                           if(!OF_Serial::serialMode) {
                               Serial.println("Toggling autofire...");
@@ -1127,6 +1232,8 @@ void loop()
                             if (offsetY < -maxOffset) offsetY = -maxOffset;
                             if (offsetY >  maxOffset) offsetY =  maxOffset;
 
+                            // settings.conf 是二进制保存/加载：这里直接以 int32 语义写入即可（两补码会被原样保存）
+                            // 读取时再把 uint32_t 重新解释为 int32_t 使用
                             OF_Prefs::settings[OF_Const::analogCenterOffsetX] = (uint32_t)offsetX;
                             OF_Prefs::settings[OF_Const::analogCenterOffsetY] = (uint32_t)offsetY;
                             int saveErr = OF_Prefs::SaveSettings();
@@ -1143,6 +1250,10 @@ void loop()
                                 Serial.print(offsetX);
                                 Serial.print(" offsetY=");
                                 Serial.print(offsetY);
+                                Serial.print(" storedX=");
+                                Serial.print(OF_Prefs::settings[OF_Const::analogCenterOffsetX]);
+                                Serial.print(" storedY=");
+                                Serial.print(OF_Prefs::settings[OF_Const::analogCenterOffsetY]);
                                 Serial.print(" Save=");
                                 Serial.println(saveErr == 0 ? "OK" : "FAIL");
                             }
@@ -1779,6 +1890,18 @@ void AnalogStickPoll()
     int analogValueY = analogRead(OF_Prefs::pins[OF_Const::analogY]);
     
     if(OF_Prefs::settings[OF_Const::analogMode] == OF_Const::analogModeStick) {
+        auto scale_with_cal = [](int32_t v, uint32_t minU, uint32_t maxU) -> int32_t {
+            const int32_t minV = (int32_t)minU;
+            const int32_t maxV = (int32_t)maxU;
+            if (maxV <= minV) return v;
+            if (v <= minV) return ANALOG_STICK_MIN_X;
+            if (v >= maxV) return ANALOG_STICK_MAX_X;
+            const int64_t inSpan = (int64_t)(maxV - minV);
+            const int64_t outSpan = (int64_t)(ANALOG_STICK_MAX_X - ANALOG_STICK_MIN_X);
+            const int64_t num = ((int64_t)(v - minV) * outSpan) + (inSpan / 2); // 四舍五入
+            return (int32_t)(ANALOG_STICK_MIN_X + (num / inSpan));
+        };
+
         // -------- 可配置死区（0–30%）：以中心为基准 --------
         // 读取百分比（由暂停菜单写入），限制在 0–30 之间
         uint32_t dzPercent = 0;
@@ -1801,7 +1924,7 @@ void AnalogStickPoll()
             filtY = (filtY * 4 + analogValueY) / 5;
         }
 
-        // 应用用户可调的中心偏移（ADC 单位，可正可负），始终从 settings 读取
+        // 直接把存储的 uint32_t 按 int32_t 语义解释为偏移
         int32_t offsetX = (int32_t)OF_Prefs::settings[OF_Const::analogCenterOffsetX];
         int32_t offsetY = (int32_t)OF_Prefs::settings[OF_Const::analogCenterOffsetY];
 
@@ -1814,6 +1937,18 @@ void AnalogStickPoll()
         if (adjY < ANALOG_STICK_MIN_Y) adjY = ANALOG_STICK_MIN_Y;
         if (adjY > ANALOG_STICK_MAX_Y) adjY = ANALOG_STICK_MAX_Y;
 
+        // 如果启用了“画圈校准（范围+中心）”，则把校准后的边缘范围缩放到完整 0..4095
+        int32_t normX = adjX;
+        int32_t normY = adjY;
+        if (OF_Const::settingsTypesCount > OF_Const::analogCalValid &&
+            OF_Prefs::settings[OF_Const::analogCalValid]) {
+            normX = scale_with_cal(adjX, OF_Prefs::settings[OF_Const::analogCalMinX], OF_Prefs::settings[OF_Const::analogCalMaxX]);
+            normY = scale_with_cal(adjY, OF_Prefs::settings[OF_Const::analogCalMinY], OF_Prefs::settings[OF_Const::analogCalMaxY]);
+            // scale_with_cal 的输出范围是 ANALOG_STICK_MIN_X..MAX_X（与 X 相同的常量），对 Y 也适用
+            if (normY < ANALOG_STICK_MIN_Y) normY = ANALOG_STICK_MIN_Y;
+            if (normY > ANALOG_STICK_MAX_Y) normY = ANALOG_STICK_MAX_Y;
+        }
+
         // 按整个量程的一半计算死区范围（4095/2 ≈ 2048）
         int32_t halfRange = (ANALOG_STICK_MAX_X - ANALOG_STICK_MIN_X) / 2; // 理论上约 2047
         int32_t dzIn      = (int32_t)halfRange * (int32_t)dzPercent / 100; // ADC 单位（进入死区阈值）
@@ -1822,8 +1957,8 @@ void AnalogStickPoll()
         if (dzHyst < 8) dzHyst = 8;
         int32_t dzOut     = dzIn + dzHyst;  // 离开死区阈值
 
-        int32_t dx = adjX - (int32_t)ANALOG_STICK_CENTER_X;
-        int32_t dy = adjY - (int32_t)ANALOG_STICK_CENTER_Y;
+        int32_t dx = normX - (int32_t)ANALOG_STICK_CENTER_X;
+        int32_t dy = normY - (int32_t)ANALOG_STICK_CENTER_Y;
 
         // 按轴独立死区 + 回滞（比“X/Y 同时在死区”更稳定）
         static bool inDeadX = true;
@@ -1844,15 +1979,42 @@ void AnalogStickPoll()
             if (ady < dzIn) inDeadY = true;
         }
 
-        uint16_t outX = (uint16_t)(inDeadX ? ANALOG_STICK_CENTER_X : (int)adjX);
-        uint16_t outY = (uint16_t)(inDeadY ? ANALOG_STICK_CENTER_Y : (int)adjY);
+        uint16_t outX = (uint16_t)(inDeadX ? ANALOG_STICK_CENTER_X : (int)normX);
+        uint16_t outY = (uint16_t)(inDeadY ? ANALOG_STICK_CENTER_Y : (int)normY);
         Gamepad16.moveStick(outX, outY);
     } else {
         uint32_t newPos = 0;
+        // 与 analogModeStick 分支统一：settings 中保存的是“相对偏移量”（有符号），直接相加校正中心
         int32_t offX = (int32_t)OF_Prefs::settings[OF_Const::analogCenterOffsetX];
         int32_t offY = (int32_t)OF_Prefs::settings[OF_Const::analogCenterOffsetY];
         int32_t adjX = (int32_t)analogValueX + offX;
         int32_t adjY = (int32_t)analogValueY + offY;
+
+        // 限制在 ADC 合法范围内
+        if (adjX < ANALOG_STICK_MIN_X) adjX = ANALOG_STICK_MIN_X;
+        if (adjX > ANALOG_STICK_MAX_X) adjX = ANALOG_STICK_MAX_X;
+        if (adjY < ANALOG_STICK_MIN_Y) adjY = ANALOG_STICK_MIN_Y;
+        if (adjY > ANALOG_STICK_MAX_Y) adjY = ANALOG_STICK_MAX_Y;
+
+        // 画圈校准的范围缩放（让 DPad/Keys 的阈值判断也更稳定）
+        if (OF_Const::settingsTypesCount > OF_Const::analogCalValid &&
+            OF_Prefs::settings[OF_Const::analogCalValid]) {
+            // 复用上面的缩放逻辑（X/Y 都映射到 0..4095）
+            const int32_t minX = (int32_t)OF_Prefs::settings[OF_Const::analogCalMinX];
+            const int32_t maxX = (int32_t)OF_Prefs::settings[OF_Const::analogCalMaxX];
+            const int32_t minY = (int32_t)OF_Prefs::settings[OF_Const::analogCalMinY];
+            const int32_t maxY = (int32_t)OF_Prefs::settings[OF_Const::analogCalMaxY];
+            if (maxX > minX) {
+                if (adjX <= minX) adjX = ANALOG_STICK_MIN_X;
+                else if (adjX >= maxX) adjX = ANALOG_STICK_MAX_X;
+                else adjX = (int32_t)(ANALOG_STICK_MIN_X + (((int64_t)(adjX - minX) * (ANALOG_STICK_MAX_X - ANALOG_STICK_MIN_X) + (int64_t)(maxX - minX) / 2) / (int64_t)(maxX - minX)));
+            }
+            if (maxY > minY) {
+                if (adjY <= minY) adjY = ANALOG_STICK_MIN_Y;
+                else if (adjY >= maxY) adjY = ANALOG_STICK_MAX_Y;
+                else adjY = (int32_t)(ANALOG_STICK_MIN_Y + (((int64_t)(adjY - minY) * (ANALOG_STICK_MAX_Y - ANALOG_STICK_MIN_Y) + (int64_t)(maxY - minY) / 2) / (int64_t)(maxY - minY)));
+            }
+        }
 
         // TODO: need to consider inverted axis toggle, currently assumes axises are inverted by default
         if(adjY < (ANALOG_STICK_DEADZONE_Y_MIN-700))
@@ -2027,6 +2189,12 @@ void SetPauseModeSelection(const bool &isIncrement)
     switch(FW_Common::pauseModeSelection) {
         case FW_Const::PauseMode_AnalogCenterCal:
           Serial.println("Selecting: Center Calibrate");
+          #ifdef LED_ENABLE
+              OF_RGB::LedUpdate(255,0,0);
+          #endif // LED_ENABLE
+          break;
+        case FW_Const::PauseMode_AnalogRangeCal:
+          Serial.println("Selecting: Range Calibrate");
           #ifdef LED_ENABLE
               OF_RGB::LedUpdate(255,0,0);
           #endif // LED_ENABLE

@@ -111,6 +111,7 @@ public:
     enum ScreenPauseList_e {
         ScreenPause_AnalogCenterCal = 0, // 第1项：中心校准
         ScreenPause_Save,                // 第2项：保持设置
+        ScreenPause_AnalogRangeCal,      // 第3项：画圈校准（范围+中心）
         ScreenPause_Calibrate,
         ScreenPause_ProfileSelect,
         ScreenPause_Rumble,

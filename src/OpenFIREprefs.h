@@ -126,6 +126,11 @@ public:
         0,                          // axisUnsigned (0=标准有符号轴, 1=Joypad-OS 兼容无符号轴)
         0,                          // analogCenterOffsetX (默认无偏移)
         0,                          // analogCenterOffsetY
+        0,                          // analogCalMinX（默认不启用范围缩放）
+        4095,                       // analogCalMaxX
+        0,                          // analogCalMinY
+        4095,                       // analogCalMaxY
+        0,                          // analogCalValid（0=禁用，1=启用）
     };
 
     typedef struct USBMap_s {

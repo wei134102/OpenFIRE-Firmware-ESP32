@@ -82,6 +82,7 @@ public:
     enum PauseModeSelection_e {
         PauseMode_AnalogCenterCal = 0, // 第1项：模拟摇杆中心校准
         PauseMode_Save,                // 第2项：保持设置
+        PauseMode_AnalogRangeCal,      // 第3项：模拟摇杆画圈校准（范围+中心）
         PauseMode_Calibrate,
         PauseMode_ProfileSelect,
         #ifdef USES_RUMBLE
