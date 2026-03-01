@@ -121,6 +121,8 @@ public:
         ScreenPause_LowButtonToggle,//wei134102 add
         ScreenPause_LayoutToggle,//wei134102 add
         ScreenPause_GunId,       // 枪ID设置 P1-P4
+        ScreenPause_AnalogMode,  // 模拟摇杆输出类型（Stick / DPad / Keys）
+        ScreenPause_AnalogKeysLayout,  // 键盘布局：方向键 / WASD
         ScreenPause_AnalogDeadzone,     // 模拟摇杆死区设置
         ScreenPause_AxisUnsignedToggle, // 轴输出无符号模式开关
         #ifdef USES_RUMBLE

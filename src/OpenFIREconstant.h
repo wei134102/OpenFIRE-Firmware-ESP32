@@ -97,6 +97,8 @@ public:
         PauseMode_LowButtonToggle,//wei13402 add  低按钮模式
         PauseMode_LayoutToggle,//wei13402 add 布局切换
         PauseMode_GunId,        // 枪ID设置 P1-P4
+        PauseMode_AnalogMode,   // 模拟摇杆输出类型（Stick / DPad / Keys）
+        PauseMode_AnalogKeysLayout,    // 键盘模式下的按键布局（方向键 / WASD）
         PauseMode_AnalogDeadzone,      // 模拟摇杆死区设置
         PauseMode_AxisUnsignedToggle,  // 轴输出无符号模式开关（Joypad-OS 兼容）
         #ifdef USES_RUMBLE

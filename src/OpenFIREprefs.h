@@ -131,6 +131,7 @@ public:
         0,                          // analogCalMinY
         4095,                       // analogCalMaxY
         0,                          // analogCalValid（0=禁用，1=启用）
+        OF_Const::analogKeysLayoutArrows,  // analogKeysLayout（0=方向键，1=WASD）
     };
 
     typedef struct USBMap_s {

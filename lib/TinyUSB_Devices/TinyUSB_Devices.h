@@ -171,6 +171,10 @@ extern AbsMouse5_ AbsMouse5;
   #define KEY_DOWN_ARROW  0xD9
   #define KEY_LEFT_ARROW  0xD8
   #define KEY_RIGHT_ARROW 0xD7
+  #define KEY_W           0x1A   // HID usage 0x07 Keyboard W
+  #define KEY_A           0x04   // HID usage 0x07 Keyboard A
+  #define KEY_S           0x16   // HID usage 0x07 Keyboard S
+  #define KEY_D           0x07   // HID usage 0x07 Keyboard D
   #define KEY_BACKSPACE   0xB2
   #define KEY_TAB         0xB3
   #define KEY_RETURN      0xB0

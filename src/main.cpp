@@ -1166,7 +1166,64 @@ void loop()
                               FW_Common::OLED.PauseProfileUpdate(gunIdModeSelection, "P1", "P2", "P3", "P4");
                           #endif
                           break;
-                        // 在这里插入新的 死区 case
+                        // 在这里插入新的 “Send Analog Stick As” 选项
+                        case FW_Const::PauseMode_AnalogMode:
+                        {
+                            // 模式顺序：0=Stick, 1=DPad, 2=Keys
+                            uint32_t mode = OF_Prefs::settings[OF_Const::analogMode];
+                            mode = (mode + 1) % 3;
+                            OF_Prefs::settings[OF_Const::analogMode] = mode;
+                            OF_Prefs::SaveSettings();
+
+                            const char* modeStrSerial;
+                            const char* modeStrShort;
+                            switch (mode) {
+                                default:
+                                case OF_Const::analogModeStick:
+                                    modeStrSerial = "Gamepad Analog Stick";
+                                    modeStrShort  = "Stick: Gamepad";
+                                    break;
+                                case OF_Const::analogModeDpad:
+                                    modeStrSerial = "Gamepad D-Pad";
+                                    modeStrShort  = "Stick: D-Pad";
+                                    break;
+                                case OF_Const::analogModeKeys:
+                                    modeStrSerial = "Keyboard Arrows";
+                                    modeStrShort  = "Stick: Keys";
+                                    break;
+                            }
+
+                            if (!OF_Serial::serialMode) {
+                                Serial.print("Analog stick output mode set to ");
+                                Serial.println(modeStrSerial);
+                            }
+                            #ifdef USES_DISPLAY
+                                char buf[24];
+                                snprintf(buf, sizeof(buf), "%s", modeStrShort);
+                                FW_Common::OLED.TopPanelUpdate(buf);
+                                FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_AnalogMode);
+                            #endif
+                        }
+                        break;
+                        case FW_Const::PauseMode_AnalogKeysLayout:
+                        {
+                            uint32_t layout = OF_Prefs::settings[OF_Const::analogKeysLayout];
+                            layout = (layout == OF_Const::analogKeysLayoutWASD) ? OF_Const::analogKeysLayoutArrows : OF_Const::analogKeysLayoutWASD;
+                            OF_Prefs::settings[OF_Const::analogKeysLayout] = layout;
+                            OF_Prefs::SaveSettings();
+                            const char* layoutStr = (layout == OF_Const::analogKeysLayoutWASD) ? "WASD" : "Arrows";
+                            if (!OF_Serial::serialMode) {
+                                Serial.print("Stick keys layout: ");
+                                Serial.println(layoutStr);
+                            }
+                            #ifdef USES_DISPLAY
+                                char buf[24];
+                                snprintf(buf, sizeof(buf), "Stick Keys: %s", layoutStr);
+                                FW_Common::OLED.TopPanelUpdate(buf);
+                                FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_AnalogKeysLayout);
+                            #endif
+                        }
+                        break;
                         case FW_Const::PauseMode_AnalogDeadzone:
                         // 死区步进：0,5,10,15,20,25,30%，用 Trigger 循环切换
                         {
@@ -2030,15 +2087,21 @@ void AnalogStickPoll()
         switch(OF_Prefs::settings[OF_Const::analogMode]) {
         case OF_Const::analogModeDpad: Gamepad16.padUpdate(FW_Common::buttons.PadMaskConvert(newPos)); break;
         case OF_Const::analogModeKeys:
-            if(FW_Common::aStickADCLastPos ^ newPos) {
-                for(int i = 0; i < 4; ++i) {
-                    if(FW_Common::aStickADCLastPos ^ newPos & 1 << i)
-                        Keyboard.release(KEY_UP_ARROW-i);
+            {
+                // 方向顺序: i=0 上, i=1 下, i=2 左, i=3 右
+                static const uint8_t keysArrows[4] = { KEY_UP_ARROW, KEY_DOWN_ARROW, KEY_LEFT_ARROW, KEY_RIGHT_ARROW };
+                static const uint8_t keysWASD[4]   = { KEY_W, KEY_S, KEY_A, KEY_D };
+                const uint8_t* keys = (OF_Prefs::settings[OF_Const::analogKeysLayout] == OF_Const::analogKeysLayoutWASD) ? keysWASD : keysArrows;
+                if (FW_Common::aStickADCLastPos ^ newPos) {
+                    for (int i = 0; i < 4; ++i) {
+                        if (FW_Common::aStickADCLastPos ^ newPos & 1 << i)
+                            Keyboard.release(keys[i]);
+                    }
                 }
-            }
-            for(int i = 0; i < 4; ++i) {
-                if(newPos & 1 << i)
-                    Keyboard.press(KEY_UP_ARROW-i);
+                for (int i = 0; i < 4; ++i) {
+                    if (newPos & 1 << i)
+                        Keyboard.press(keys[i]);
+                }
             }
             break;
         }

@@ -756,9 +756,67 @@ void ExtDisplay::PauseListUpdate(const int &selection)
             display->printf(" Gun ID: P%d ", (int)(OF_Prefs::settings[OF_Const::gunId] % 4) + 1);
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 47);
-            display->println(" Analog Deadzone ");
+            display->println(" Stick Output Mode ");
             #endif
             break;
+          case ScreenPause_AnalogMode:
+          {
+            // 当前模拟输出模式字符串
+            const char* modeStr;
+            switch (OF_Prefs::settings[OF_Const::analogMode]) {
+              default:
+              case OF_Const::analogModeStick: modeStr = "Gamepad Stick"; break;
+              case OF_Const::analogModeDpad: modeStr = "Gamepad D-Pad"; break;
+              case OF_Const::analogModeKeys: modeStr = "Keyboard Arrows"; break;
+            }
+            #ifdef OLED_091_INCH
+            display->setTextColor(BLACK, WHITE);
+            display->setCursor(0, 20);
+            display->printf(" Stick: %s ", modeStr);
+            #else
+            display->setTextColor(WHITE, BLACK);
+            display->setCursor(0, 25);
+            display->printf(" Gun ID: P%d ", (int)(OF_Prefs::settings[OF_Const::gunId] % 4) + 1);
+            display->setTextColor(BLACK, WHITE);
+            display->setCursor(0, 36);
+            display->printf(" Stick: %s ", modeStr);
+            display->setTextColor(WHITE, BLACK);
+            display->setCursor(0, 47);
+            display->printf(" Deadzone: %u%% ",
+                            (unsigned)(OF_Prefs::settings[OF_Const::analogDeadzone] > 30 ? 30 : OF_Prefs::settings[OF_Const::analogDeadzone]));
+            #endif
+            break;
+          }
+          case ScreenPause_AnalogKeysLayout:
+          {
+            const char* layoutStr = (OF_Prefs::settings[OF_Const::analogKeysLayout] == OF_Const::analogKeysLayoutWASD) ? "WASD" : "Arrows";
+            #ifdef OLED_091_INCH
+            display->setTextColor(BLACK, WHITE);
+            display->setCursor(0, 20);
+            display->printf(" Stick Keys: %s ", layoutStr);
+            #else
+            {
+              const char* modeStr;
+              switch (OF_Prefs::settings[OF_Const::analogMode]) {
+                default:
+                case OF_Const::analogModeStick: modeStr = "Gamepad Stick"; break;
+                case OF_Const::analogModeDpad:  modeStr = "Gamepad D-Pad"; break;
+                case OF_Const::analogModeKeys:  modeStr = "Keyboard Keys"; break;
+              }
+              display->setTextColor(WHITE, BLACK);
+              display->setCursor(0, 25);
+              display->printf(" Stick: %s ", modeStr);
+              display->setTextColor(BLACK, WHITE);
+              display->setCursor(0, 36);
+              display->printf(" Keys: %s ", layoutStr);
+              display->setTextColor(WHITE, BLACK);
+              display->setCursor(0, 47);
+              display->printf(" Deadzone: %u%% ",
+                              (unsigned)(OF_Prefs::settings[OF_Const::analogDeadzone] > 30 ? 30 : OF_Prefs::settings[OF_Const::analogDeadzone]));
+            }
+            #endif
+            break;
+          }
           case ScreenPause_AnalogDeadzone:
             #ifdef OLED_091_INCH
             display->setTextColor(BLACK, WHITE);
@@ -767,13 +825,24 @@ void ExtDisplay::PauseListUpdate(const int &selection)
             #else
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 25);
-            display->printf(" Gun ID: P%d ", (int)(OF_Prefs::settings[OF_Const::gunId] % 4) + 1);
+            // 上一项为 Stick 输出模式
+            {
+              const char* modeStr;
+              switch (OF_Prefs::settings[OF_Const::analogMode]) {
+                default:
+                case OF_Const::analogModeStick: modeStr = "Gamepad Stick"; break;
+                case OF_Const::analogModeDpad: modeStr = "Gamepad D-Pad"; break;
+                case OF_Const::analogModeKeys: modeStr = "Keyboard Arrows"; break;
+              }
+              display->printf(" Stick: %s ", modeStr);
+            }
             display->setTextColor(BLACK, WHITE);
             display->setCursor(0, 36);
-            display->printf(" Deadzone: %u%% ", (unsigned)(OF_Prefs::settings[OF_Const::analogDeadzone] > 30 ? 30 : OF_Prefs::settings[OF_Const::analogDeadzone]));
+            display->printf(" Deadzone: %u%% ",
+                            (unsigned)(OF_Prefs::settings[OF_Const::analogDeadzone] > 30 ? 30 : OF_Prefs::settings[OF_Const::analogDeadzone]));
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 47);
-            display->println(" Center Calibrate ");
+            display->println(" Axis Mode ");
             #endif
             break;
           case ScreenPause_AxisUnsignedToggle:
