@@ -2089,8 +2089,9 @@ void AnalogStickPoll()
         case OF_Const::analogModeKeys:
             {
                 // 方向顺序: i=0 上, i=1 下, i=2 左, i=3 右
+                // 箭头键: 库要求 k>=136，传 (HID码+136)；字母键: 库用 k 当 ASCII 查表，故 WASD 传 'w'/'a'/'s'/'d'
                 static const uint8_t keysArrows[4] = { KEY_UP_ARROW, KEY_DOWN_ARROW, KEY_LEFT_ARROW, KEY_RIGHT_ARROW };
-                static const uint8_t keysWASD[4]   = { KEY_W, KEY_S, KEY_A, KEY_D };
+                static const uint8_t keysWASD[4]   = { (uint8_t)'w', (uint8_t)'s', (uint8_t)'a', (uint8_t)'d' };
                 const uint8_t* keys = (OF_Prefs::settings[OF_Const::analogKeysLayout] == OF_Const::analogKeysLayoutWASD) ? keysWASD : keysArrows;
                 if (FW_Common::aStickADCLastPos ^ newPos) {
                     for (int i = 0; i < 4; ++i) {
