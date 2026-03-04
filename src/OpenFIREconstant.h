@@ -104,6 +104,7 @@ public:
         #ifdef USES_RUMBLE
         PauseMode_RumbleFFToggle,
         #endif // USES_RUMBLE        
+        PauseMode_PlayTimer,           // 游戏时间限制（0/5/10/15/20分钟）
         PauseMode_EscapeSignal
     };
     // Layout types

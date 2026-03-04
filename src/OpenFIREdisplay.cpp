@@ -25,6 +25,7 @@
 #include "OpenFIREFeedback.h"
 #include "OpenFIREDefines.h"
 #include "OpenFIREcommon.h" //wei134102 add
+#include "OpenFIREPlayTimer.h"
 bool ExtDisplay::Begin()
 {
     if(display != nullptr) {
@@ -154,7 +155,50 @@ void ExtDisplay::TopPanelUpdate(const char *textPrefix, const char *profText)
         }
 
         display->display();
+
+        // 顶部栏其它内容可能会频繁刷新（例如红外检测/温度提示），
+        // 这里强制在最后重绘右侧倒计时/占位符，避免被覆盖。
+        UpdateTimerCountdown((uint16_t)PlayTimer::GetRemainingSecondsLive());
     }
+}
+
+void ExtDisplay::UpdateTimerCountdown(uint16_t seconds)
+{
+    if (display == nullptr)
+        return;
+
+    // 计时数字区域宽度预留约 3 个字符（右侧）
+    const uint8_t width = 26;
+    const uint8_t x = 128 - width;
+    const uint8_t y = 0;
+
+    // 清除原有数字区域，保留下边框线
+    display->fillRect(x, y, width, 15, BLACK);
+    display->drawFastHLine(x, 15, width, WHITE);
+
+    display->setCursor(x + 1, 2);
+    display->setTextSize(1);
+    display->setTextColor(WHITE, BLACK);
+
+    char buf[5];
+    // 根据 PlayTimer 状态区分 "OFF"（未配置计时）和 "0"（计时结束）
+    bool timerExpired = PlayTimer::IsExpired();
+    bool timerOff = (PlayTimer::minutes == 0) && !timerExpired;
+
+    if (seconds > 0) {
+        if (seconds > 999) seconds = 999;
+        snprintf(buf, sizeof(buf), "%3u", (unsigned)seconds);
+    } else if (timerOff) {
+        snprintf(buf, sizeof(buf), "OFF");
+    } else if (timerExpired) {
+        snprintf(buf, sizeof(buf), "  0");
+    } else {
+        // 理论上不会到这里，兜底显示 OFF
+        snprintf(buf, sizeof(buf), "OFF");
+    }
+    display->print(buf);
+
+    display->display();
 }
 void ExtDisplay::ScreenModeChange(const int &screenMode, const bool &isAnalog)
 {
@@ -390,49 +434,48 @@ void ExtDisplay::IdleOps()
         case Screen_Normal:
         case Screen_Mamehook_Single:
         case Screen_Mamehook_Dual:
-          #ifdef USES_TEMP
-          if(OF_Prefs::pins[OF_Const::tempPin] > -1) {
-              if(millis() - idleTimeStamp > OLED_IDLEUPD_INTERVAL) {
-                  idleTimeStamp = millis();
-                  if(showingTemp) {
-                          // Create a temporary string with profile name and layout
-                          char profWithLayout[16]; // Make sure this is large enough
-                          strcpy(profWithLayout, OF_Prefs::profiles[OF_Prefs::currentProfile].name);
-                          strcat(profWithLayout, " ");
-                          strcat(profWithLayout, OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout == OF_Const::layoutDiamond ? "Diam" : "Squa");
-                          
-                          TopPanelUpdate("Prof: ", profWithLayout);
-                          showingTemp = false;
-                      } else {
-                      idleTempStamp = idleTimeStamp;
-                      ShowTemp();
-                      showingTemp = true;
-                  }
-              } else if(showingTemp) {
-                  if(millis() - idleTempStamp > OLED_TEMPUPD_INTERVAL) {
-                      idleTempStamp = millis();
-                      if(currentTemp != OF_FFB::temperatureCurrent) {
-                          ShowTemp();
-                      }
-                  }
+          // 右侧倒计时：独立于顶部文本刷新，保持按秒更新
+          {
+              static unsigned long lastCountdownDraw = 0;
+              unsigned long now = millis();
+              if (now - lastCountdownDraw >= 250) {
+                  lastCountdownDraw = now;
+                  UpdateTimerCountdown((uint16_t)PlayTimer::GetRemainingSecondsLive());
               }
-
-          } else {
-          #endif // USES_TEMP
-              // Always show profile with layout when no temperature sensor is available
-              if(millis() - idleTimeStamp > OLED_IDLEUPD_INTERVAL) {
-                  idleTimeStamp = millis();
-                  // Create a temporary string with profile name and layout
-                  char profWithLayout[16]; // Make sure this is large enough
-                  strcpy(profWithLayout, OF_Prefs::profiles[OF_Prefs::currentProfile].name);
-                  strcat(profWithLayout, " ");
-                  strcat(profWithLayout, OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout == OF_Const::layoutDiamond ? "Diam" : "Squa");
-                  
-                  TopPanelUpdate("Prof: ", profWithLayout);
-              }
-          #ifdef USES_TEMP              
           }
-          #endif // USES_TEMP
+
+          // 正常状态栏：始终显示
+          // P?(GunID): <ProfileName> <Diam/Squa> <Temp> + 右侧倒计时
+          if(millis() - idleTimeStamp > OLED_IDLEUPD_INTERVAL) {
+              idleTimeStamp = millis();
+
+              // Gun ID
+              uint8_t gunIndex = (uint8_t)(OF_Prefs::settings[OF_Const::gunId] % 4);
+              char prefix[8];
+              snprintf(prefix, sizeof(prefix), "P%u: ", (unsigned)(gunIndex + 1));
+
+              // Profile + layout + temp
+              char line[32];
+
+              // 简写配置文件名：P_A / P_B / P_C / P_D（按槽位）
+              const uint8_t profIdx = (uint8_t)(OF_Prefs::currentProfile % PROFILE_COUNT);
+              char profShort[5] = { 'P', '_', 'A', '\0', '\0' };
+              profShort[2] = (char)('A' + (profIdx % 4));
+              const char* layoutStr = (OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout == OF_Const::layoutDiamond) ? "Diam" : "Squa";
+
+              #ifdef USES_TEMP
+              char tempBuf[6];
+              int temp = OF_FFB::temperatureCurrent;
+              if (temp < 0) temp = 0;
+              if (temp > 99) temp = 99;
+              snprintf(tempBuf, sizeof(tempBuf), "%2dC", temp);
+              snprintf(line, sizeof(line), "%s %s %s", profShort, layoutStr, tempBuf);
+              #else
+              snprintf(line, sizeof(line), "%s %s", profShort, layoutStr);
+              #endif
+
+              TopPanelUpdate(prefix, line);
+          }
           break;
         case Screen_Pause:
         case Screen_Profile:
@@ -915,6 +958,38 @@ void ExtDisplay::PauseListUpdate(const int &selection)
             #endif
             break;
           #endif            
+          case ScreenPause_PlayTimer:
+          {
+            // 显示当前计时器设置：0=OFF，其它显示分钟数
+            #ifdef OLED_091_INCH
+            display->setTextColor(BLACK, WHITE);
+            display->setCursor(0, 20);
+            if (PlayTimer::minutes == 0) {
+              display->println(" Play Timer: OFF ");
+            } else {
+              char buf[20];
+              snprintf(buf, sizeof(buf), " Timer: %2u min ", (unsigned)PlayTimer::minutes);
+              display->println(buf);
+            }
+            #else
+            display->setTextColor(WHITE, BLACK);
+            display->setCursor(0, 25);
+            display->println(" Rumble FFB Toggle ");
+            display->setTextColor(BLACK, WHITE);
+            display->setCursor(0, 36);
+            if (PlayTimer::minutes == 0) {
+              display->println(" Play Timer: OFF ");
+            } else {
+              char buf[22];
+              snprintf(buf, sizeof(buf), " Play Timer: %2u min ", (unsigned)PlayTimer::minutes);
+              display->println(buf);
+            }
+            display->setTextColor(WHITE, BLACK);
+            display->setCursor(0, 47);
+            display->println(" Send Escape Keypress ");
+            #endif
+            break;
+          }
 //wei13402 add end                
 //wei134102 add start
           case ScreenPause_ModeChange:

@@ -128,6 +128,7 @@ public:
         #ifdef USES_RUMBLE
         ScreenPause_RumbleFFToggle,
         #endif // USES_RUMBLE        
+        ScreenPause_PlayTimer,   // 游戏时间限制
         ScreenPause_EscapeKey
     };
 //wei134102 add start
@@ -150,6 +151,9 @@ public:
     #else
         Adafruit_SSD1306 *display = nullptr; //aggiunto inline per condividerla
     #endif
+
+    /// @brief 在顶部状态栏右侧显示三位秒数倒计时（0 清空倒计时区域）
+    void UpdateTimerCountdown(uint16_t seconds);
 
     /// @brief Whether life updates are in lifebar or life glyphs form
     bool lifeBar = false;

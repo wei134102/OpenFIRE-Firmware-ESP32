@@ -16,6 +16,7 @@
  */
 
 #include "OpenFIREmain.h"
+#include "OpenFIREPlayTimer.h"
 #include "boards/OpenFIREshared.h"
 #include "OpenFIREcolors.h"
 #include "OpenFIRElights.h"
@@ -647,6 +648,9 @@ void loop1()
         // All buttons' outputs except for the trigger are processed here.
         FW_Common::buttons.Poll(0);
 
+        // 更新游戏计时器（时间到后仅锁定按键上报，不断开 USB / 无线）
+        PlayTimer::Tick();
+
         #ifdef USES_TEMP
             if(OF_Prefs::pins[OF_Const::tempPin] > -1)
                 OF_FFB::TemperatureUpdate();
@@ -735,6 +739,11 @@ void loop()
     // poll/update button states with 1ms interval so debounce mask is more effective
     FW_Common::buttons.Poll(1);
     FW_Common::buttons.Repeat();
+
+    // 更新计时器（ESP32 不会跑 loop1，因此这里必须 Tick）
+    PlayTimer::Tick();
+
+    // 倒计时显示由 ExtDisplay::IdleOps() 统一驱动，避免多线程/覆盖问题
 
     if(OF_Prefs::toggles[OF_Const::holdToPause] && pauseHoldStarted) {
         #ifdef USES_RUMBLE
@@ -1397,6 +1406,37 @@ void loop()
                           break;
                         #endif // USES_SOLENOID
                         */
+                        case FW_Const::PauseMode_PlayTimer:
+                        {
+                          // 以 0/5/10/15/20 分钟循环
+                          uint8_t m = PlayTimer::minutes;
+                          if      (m == 0)  m = 5;
+                          else if (m == 5)  m = 10;
+                          else if (m == 10) m = 15;
+                          else if (m == 15) m = 20;
+                          else              m = 0;  // 20 -> OFF
+
+                          PlayTimer::SetMinutes(m);
+
+                          if(!OF_Serial::serialMode) {
+                              Serial.print("Play timer set to ");
+                              Serial.print((int)m);
+                              Serial.println(" minutes");
+                          }
+
+                          #ifdef USES_DISPLAY
+                              if (m == 0) {
+                                  FW_Common::OLED.TopPanelUpdate("Play Timer: OFF");
+                              } else {
+                                  char buf[24];
+                                  snprintf(buf, sizeof(buf), "Play Timer: %2u min", (unsigned)m);
+                                  FW_Common::OLED.TopPanelUpdate(buf);
+                              }
+                              delay(800);
+                              FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_PlayTimer);
+                          #endif // USES_DISPLAY
+                        }
+                        break;
                         case FW_Const::PauseMode_EscapeSignal:
                           SendEscapeKey();
 
@@ -1444,6 +1484,10 @@ void loop()
                 } else if(FW_Common::buttons.pressedReleased & FW_Const::ExitPauseModeBtnMask) {
                     if(!OF_Serial::serialMode)
                         Serial.println("Exiting pause mode...");
+
+                    // 离开暂停菜单时重置并启动计时（若设置了非 0 分钟）
+                    PlayTimer::ResetAndStart();
+
                     FW_Common::SetMode(FW_Const::GunMode_Run);
                 }
 
@@ -1481,6 +1525,9 @@ void loop()
                                 delay(50);
                             }
                         #endif // USES_RUMBLE
+
+                        // 长按退出暂停时同样启动计时
+                        PlayTimer::ResetAndStart();
 
                         // if any buttons are still held, keep polling until all buttons are debounced
                         while(FW_Common::buttons.debounced)
@@ -1874,6 +1921,10 @@ void SetModeWaitNoButtons(const FW_Const::GunMode_e &newMode, const unsigned lon
 // Handles events when trigger is pulled/held
 void TriggerFire()
 {
+    // 计时结束后完全禁用所有按键输出（包括鼠标/键盘/手柄）
+    if (PlayTimer::AreInputsLocked()) {
+        return;
+    }
     if(!FW_Common::buttons.offScreen) {
         if(!OF_FFB::triggerHeld) {
             if(FW_Common::buttons.analogOutput) // this should only ever be gamepad outputs
@@ -2114,6 +2165,9 @@ void AnalogStickPoll()
 
 void SendEscapeKey()
 {
+    if (PlayTimer::AreInputsLocked()) {
+        return;
+    }
     Keyboard.press(KEY_ESC);  // 696969 non corrisponde a HID_KEY_ESCAPE, ma lasciamo come impostato, boh ?
     Keyboard.report();
     delay(20);  // wait a bit so it registers on the PC.
