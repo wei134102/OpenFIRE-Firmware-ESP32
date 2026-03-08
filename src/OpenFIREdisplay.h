@@ -129,6 +129,8 @@ public:
         ScreenPause_RumbleFFToggle,
         #endif // USES_RUMBLE        
         ScreenPause_PlayTimer,   // 游戏时间限制
+        ScreenPause_AnalogInvertX, // 模拟摇杆 X 轴反转
+        ScreenPause_AnalogInvertY, // 模拟摇杆 Y 轴反转
         ScreenPause_EscapeKey
     };
 //wei134102 add start

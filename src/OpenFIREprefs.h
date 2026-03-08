@@ -131,6 +131,8 @@ public:
         0,                          // analogCalMinY
         4095,                       // analogCalMaxY
         0,                          // analogCalValid（0=禁用，1=启用）
+        0,                          // analogInvertX（0=正常, 1=反转）
+        0,                          // analogInvertY（0=正常, 1=反转）
         OF_Const::analogKeysLayoutArrows,  // analogKeysLayout（0=方向键，1=WASD）
     };
 

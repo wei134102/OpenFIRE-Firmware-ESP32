@@ -1437,6 +1437,44 @@ void loop()
                           #endif // USES_DISPLAY
                         }
                         break;
+                        case FW_Const::PauseMode_AnalogInvertX:
+                        {
+                          // Toggle X 轴反转
+                          uint32_t v = OF_Prefs::settings[OF_Const::analogInvertX];
+                          v = v ? 0 : 1;
+                          OF_Prefs::settings[OF_Const::analogInvertX] = v;
+                          OF_Prefs::SaveSettings();
+
+                          if (!OF_Serial::serialMode) {
+                              Serial.print("Analog X axis invert: ");
+                              Serial.println(v ? "ON" : "OFF");
+                          }
+                          #ifdef USES_DISPLAY
+                              FW_Common::OLED.TopPanelUpdate(v ? "X Axis: Inverted" : "X Axis: Normal");
+                              delay(800);
+                              FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_AnalogInvertX);
+                          #endif
+                        }
+                        break;
+                        case FW_Const::PauseMode_AnalogInvertY:
+                        {
+                          // Toggle Y 轴反转
+                          uint32_t v = OF_Prefs::settings[OF_Const::analogInvertY];
+                          v = v ? 0 : 1;
+                          OF_Prefs::settings[OF_Const::analogInvertY] = v;
+                          OF_Prefs::SaveSettings();
+
+                          if (!OF_Serial::serialMode) {
+                              Serial.print("Analog Y axis invert: ");
+                              Serial.println(v ? "ON" : "OFF");
+                          }
+                          #ifdef USES_DISPLAY
+                              FW_Common::OLED.TopPanelUpdate(v ? "Y Axis: Inverted" : "Y Axis: Normal");
+                              delay(800);
+                              FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_AnalogInvertY);
+                          #endif
+                        }
+                        break;
                         case FW_Const::PauseMode_EscapeSignal:
                           SendEscapeKey();
 
@@ -2055,6 +2093,16 @@ void AnalogStickPoll()
             // scale_with_cal 的输出范围是 ANALOG_STICK_MIN_X..MAX_X（与 X 相同的常量），对 Y 也适用
             if (normY < ANALOG_STICK_MIN_Y) normY = ANALOG_STICK_MIN_Y;
             if (normY > ANALOG_STICK_MAX_Y) normY = ANALOG_STICK_MAX_Y;
+        }
+
+        // 应用 X/Y 轴反转（在死区/缩放处理之后，映射到 Stick 物理范围）
+        if (OF_Const::settingsTypesCount > OF_Const::analogInvertX &&
+            OF_Prefs::settings[OF_Const::analogInvertX]) {
+            normX = ANALOG_STICK_MIN_X + ANALOG_STICK_MAX_X - normX;
+        }
+        if (OF_Const::settingsTypesCount > OF_Const::analogInvertY &&
+            OF_Prefs::settings[OF_Const::analogInvertY]) {
+            normY = ANALOG_STICK_MIN_Y + ANALOG_STICK_MAX_Y - normY;
         }
 
         // 按整个量程的一半计算死区范围（4095/2 ≈ 2048）

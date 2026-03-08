@@ -105,6 +105,8 @@ public:
         PauseMode_RumbleFFToggle,
         #endif // USES_RUMBLE        
         PauseMode_PlayTimer,           // 游戏时间限制（0/5/10/15/20分钟）
+        PauseMode_AnalogInvertX,       // 模拟摇杆 X 轴反转
+        PauseMode_AnalogInvertY,       // 模拟摇杆 Y 轴反转
         PauseMode_EscapeSignal
     };
     // Layout types

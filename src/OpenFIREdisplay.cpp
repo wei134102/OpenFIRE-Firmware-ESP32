@@ -990,6 +990,44 @@ void ExtDisplay::PauseListUpdate(const int &selection)
             #endif
             break;
           }
+          case ScreenPause_AnalogInvertX:
+            #ifdef OLED_091_INCH
+            display->setTextColor(BLACK, WHITE);
+            display->setCursor(0, 20);
+            display->println(" Analog Invert X ");
+            display->setCursor(0, 31);
+            display->printf(" X: %s ", OF_Prefs::settings[OF_Const::analogInvertX] ? "INV" : "NORM");
+            #else
+            display->setTextColor(WHITE, BLACK);
+            display->setCursor(0, 25);
+            display->println(" Play Timer ");
+            display->setTextColor(BLACK, WHITE);
+            display->setCursor(0, 36);
+            display->printf(" X Axis: %s ", OF_Prefs::settings[OF_Const::analogInvertX] ? "Inverted" : "Normal");
+            display->setTextColor(WHITE, BLACK);
+            display->setCursor(0, 47);
+            display->println(" Invert Y Axis ");
+            #endif
+            break;
+          case ScreenPause_AnalogInvertY:
+            #ifdef OLED_091_INCH
+            display->setTextColor(BLACK, WHITE);
+            display->setCursor(0, 20);
+            display->println(" Analog Invert Y ");
+            display->setCursor(0, 31);
+            display->printf(" Y: %s ", OF_Prefs::settings[OF_Const::analogInvertY] ? "INV" : "NORM");
+            #else
+            display->setTextColor(WHITE, BLACK);
+            display->setCursor(0, 25);
+            display->printf(" X Axis: %s ", OF_Prefs::settings[OF_Const::analogInvertX] ? "Inverted" : "Normal");
+            display->setTextColor(BLACK, WHITE);
+            display->setCursor(0, 36);
+            display->printf(" Y Axis: %s ", OF_Prefs::settings[OF_Const::analogInvertY] ? "Inverted" : "Normal");
+            display->setTextColor(WHITE, BLACK);
+            display->setCursor(0, 47);
+            display->println(" Send Escape Keypress ");
+            #endif
+            break;
 //wei13402 add end                
 //wei134102 add start
           case ScreenPause_ModeChange:
