@@ -125,6 +125,7 @@ public:
         ScreenPause_AnalogKeysLayout,  // 键盘布局：方向键 / WASD
         ScreenPause_AnalogDeadzone,     // 模拟摇杆死区设置
         ScreenPause_AxisUnsignedToggle, // 轴输出无符号模式开关
+        ScreenPause_AnalogSwapSticks,   // GAMEPAD 模式：左右摇杆互换
         #ifdef USES_RUMBLE
         ScreenPause_RumbleFFToggle,
         #endif // USES_RUMBLE        

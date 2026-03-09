@@ -101,6 +101,7 @@ public:
         PauseMode_AnalogKeysLayout,    // 键盘模式下的按键布局（方向键 / WASD）
         PauseMode_AnalogDeadzone,      // 模拟摇杆死区设置
         PauseMode_AxisUnsignedToggle,  // 轴输出无符号模式开关（Joypad-OS 兼容）
+        PauseMode_AnalogSwapSticks,    // GAMEPAD 模式：左右摇杆互换（红外定位 <-> 物理摇杆）
         #ifdef USES_RUMBLE
         PauseMode_RumbleFFToggle,
         #endif // USES_RUMBLE        

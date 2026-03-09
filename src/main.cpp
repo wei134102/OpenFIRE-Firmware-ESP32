@@ -140,6 +140,13 @@ void setup() {
         if (OF_Const::settingsTypesCount > OF_Const::axisUnsigned) {
             Gamepad16.unsignedAxis = (OF_Prefs::settings[OF_Const::axisUnsigned] != 0);
         }
+
+        // 根据设置初始化 GAMEPAD 模式左右摇杆互换（红外定位 <-> 物理摇杆）
+        if (OF_Const::settingsTypesCount > OF_Const::analogSwapSticks) {
+            Gamepad16.stickRight = (OF_Prefs::settings[OF_Const::analogSwapSticks] != 0);
+        } else {
+            Gamepad16.stickRight = false;
+        }
         
         // 如果USB ID未设置但gunId已设置，根据gunId更新USB ID
         if(OF_Prefs::usb.devicePID == 0 && OF_Prefs::settings[OF_Const::gunId] < 4) {
@@ -1349,6 +1356,30 @@ void loop()
                             #ifdef USES_DISPLAY
                                 FW_Common::OLED.TopPanelUpdate(mode ? "Axis: Unsigned" : "Axis: Signed");
                                 FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_AxisUnsignedToggle);
+                            #endif
+                        }
+                        break;
+                        case FW_Const::PauseMode_AnalogSwapSticks:
+                        {
+                            uint32_t v = 0;
+                            if (OF_Const::settingsTypesCount > OF_Const::analogSwapSticks) {
+                                v = OF_Prefs::settings[OF_Const::analogSwapSticks];
+                            }
+                            v = v ? 0 : 1;
+                            OF_Prefs::settings[OF_Const::analogSwapSticks] = v;
+                            OF_Prefs::SaveSettings();
+
+                            // 这个开关直接控制 Gamepad16 输出时“摄像头/红外轴”和“物理摇杆轴”的左右分配
+                            Gamepad16.stickRight = (v != 0);
+
+                            if (!OF_Serial::serialMode) {
+                                Serial.print("Swap sticks: ");
+                                Serial.println(v ? "ON" : "OFF");
+                            }
+                            #ifdef USES_DISPLAY
+                                FW_Common::OLED.TopPanelUpdate(v ? "Swap Sticks: ON" : "Swap Sticks: OFF");
+                                delay(800);
+                                FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_AnalogSwapSticks);
                             #endif
                         }
                         break;

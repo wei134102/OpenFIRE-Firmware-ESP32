@@ -902,6 +902,23 @@ void ExtDisplay::PauseListUpdate(const int &selection)
             display->printf(" Axis: %s ", OF_Prefs::settings[OF_Const::axisUnsigned] ? "Unsigned" : "Signed");
             display->setTextColor(WHITE, BLACK);
             display->setCursor(0, 47);
+            display->println(" Swap Sticks ");
+            #endif
+            break;
+          case ScreenPause_AnalogSwapSticks:
+            #ifdef OLED_091_INCH
+            display->setTextColor(BLACK, WHITE);
+            display->setCursor(0, 20);
+            display->printf(" Swap: %s ", OF_Prefs::settings[OF_Const::analogSwapSticks] ? "ON" : "OFF");
+            #else
+            display->setTextColor(WHITE, BLACK);
+            display->setCursor(0, 25);
+            display->printf(" Axis Mode ");
+            display->setTextColor(BLACK, WHITE);
+            display->setCursor(0, 36);
+            display->printf(" Swap Sticks: %s ", OF_Prefs::settings[OF_Const::analogSwapSticks] ? "ON" : "OFF");
+            display->setTextColor(WHITE, BLACK);
+            display->setCursor(0, 47);
             #ifdef USES_RUMBLE
             if(OF_Prefs::pins[OF_Const::rumblePin] >= 0) {
               display->println(" Rumble FFB Toggle ");

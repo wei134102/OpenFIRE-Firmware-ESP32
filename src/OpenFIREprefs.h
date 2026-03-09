@@ -134,6 +134,7 @@ public:
         0,                          // analogInvertX（0=正常, 1=反转）
         0,                          // analogInvertY（0=正常, 1=反转）
         OF_Const::analogKeysLayoutArrows,  // analogKeysLayout（0=方向键，1=WASD）
+        0,                          // analogSwapSticks（0=正常, 1=左右摇杆互换）
     };
 
     typedef struct USBMap_s {
