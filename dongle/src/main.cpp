@@ -5,6 +5,18 @@
 
 #include "TinyUSB_Devices.h"
 
+#if defined(USES_OLED_DISPLAY)
+  #include "OpenFIRE_logo.h"
+  #include <Wire.h>
+  #include <Adafruit_GFX.h>
+  #include <Adafruit_SSD1306.h>
+
+  #define SCREEN_WIDTH 128
+  #define SCREEN_HEIGHT 64
+  #define OLED_RESET    -1
+  Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+#endif
+
 #ifdef USES_DISPLAY
   #include "OpenFIRE_logo.h"
   #ifdef USE_LOVYAN_GFX
@@ -137,6 +149,22 @@ void setup() {
     //tft.fillRect(100,60,50,20,0/*BLACK*/);
   #endif //USES_DISPLAY
 
+  #if defined(USES_OLED_DISPLAY)
+    Wire.begin(OLED_SDA, OLED_SCL);
+    if(!display.begin(SSD1306_SWITCHCAPVCC, OLED_I2C_ADDR)) {
+      // Fallback to common alternate address.
+      display.begin(SSD1306_SWITCHCAPVCC, 0x3D);
+    }
+
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(SSD1306_WHITE);
+    display.setCursor(20, 0);
+    display.println("OpenFIRE DONGLE");
+    display.drawBitmap(40, 15, customSplash, CUSTSPLASH_WIDTH, CUSTSPLASH_HEIGHT, SSD1306_WHITE);
+    display.display();
+  #endif
+
   // ====== gestione connessione wireless ====================
   SerialWireless.init_wireless();
   SerialWireless.begin();
@@ -191,6 +219,27 @@ void setup() {
     #endif //OPENFIRE_ESPNOW_WIFI_POWER_AUTO
     
   #endif // USES_DISPLAY
+
+  #if defined(USES_OLED_DISPLAY)
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(SSD1306_WHITE);
+    display.setCursor(20, 0);
+    display.drawBitmap(20, 0, customSplashBanner, CUSTSPLASHBANN_WIDTH, CUSTSPLASHBANN_HEIGHT, SSD1306_WHITE);
+    display.setCursor(0, 16);
+    display.printf("Player: %d", usb_data_wireless.devicePlayer);
+    display.setCursor(60, 16);
+    display.printf("Ch:%d", usb_data_wireless.channel);
+    display.setCursor(0, 28);
+    display.printf("Gun: %02X:%02X:%02X:%02X:%02X:%02X",
+                  SerialWireless.mac_esp_another_card[0], SerialWireless.mac_esp_another_card[1], SerialWireless.mac_esp_another_card[2],
+                  SerialWireless.mac_esp_another_card[3], SerialWireless.mac_esp_another_card[4], SerialWireless.mac_esp_another_card[5]);
+    display.setCursor(0, 46);
+    display.printf("Dng: %02X:%02X:%02X:%02X:%02X:%02X",
+                  SerialWireless.mac_esp_inteface[0], SerialWireless.mac_esp_inteface[1], SerialWireless.mac_esp_inteface[2],
+                  SerialWireless.mac_esp_inteface[3], SerialWireless.mac_esp_inteface[4], SerialWireless.mac_esp_inteface[5]);
+    display.display();
+  #endif
 }
 
 #define FIFO_SIZE_READ_SER 200  // l'originale era 32

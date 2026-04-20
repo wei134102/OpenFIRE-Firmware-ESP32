@@ -100,6 +100,8 @@ public:
         false,          // invert static pixels
         true, //false,          // i2c OLED enabled //696969 per abilitare subito display
         false,          // i2c OLED alt address
+        false,          // analog output mode
+        false,          // mister mode
     };
 
     /// @brief Pin functions array

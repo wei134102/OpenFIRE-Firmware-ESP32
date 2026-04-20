@@ -49,6 +49,8 @@
     #define OPENFIRE_BOARD "rpipico2w"
 #elifdef ARDUINO_ESP32_S3_WROOM1_DevKitC_1_N16R8
     #define OPENFIRE_BOARD "esp32-s3-devkitc-1"
+#elif defined(ARDUINO_ESP32_S3_super_mini)
+    #define OPENFIRE_BOARD "esp32-s3-devkitc-1"
 #elifdef ARDUINO_WAVESHARE_ESP32_S3_PICO
     #define OPENFIRE_BOARD "waveshare-esp32-s3-pico"
 #elifdef ARDUINO_GENERIC_RP2350
@@ -163,6 +165,8 @@ public:
         invertStaticPixels,
         i2cOLED,
         i2cOLEDaltAddr,
+        analogOutputMode,
+        misterMode,
         // Add here
         boolTypesCount
     } boolTypes_e;
@@ -180,6 +184,8 @@ public:
         {"InvertStaticPixels",  invertStaticPixels  },
         {"I2COLEDEnabled",      i2cOLED             },
         {"I2COLEDAltAddr",      i2cOLEDaltAddr      },
+        {"AnalogOutput",        analogOutputMode    },
+        {"MisterMode",          misterMode          },
     };
 
     // Variable settings indices
@@ -198,6 +204,20 @@ public:
         tempWarning,
         tempShutdown,
         analogMode,
+        gunId,
+        analogDeadzone,
+        axisUnsigned,
+        analogCenterOffsetX,
+        analogCenterOffsetY,
+        analogCalMinX,
+        analogCalMaxX,
+        analogCalMinY,
+        analogCalMaxY,
+        analogCalValid,
+        analogInvertX,
+        analogInvertY,
+        analogKeysLayout,
+        analogSwapSticks,
         // Add here
         settingsTypesCount
     } settingsTypes_e;
@@ -217,6 +237,20 @@ public:
         {"TempWarning",         tempWarning         },
         {"TempDanger",          tempShutdown        },
         {"AnalogMode",          analogMode          },
+        {"GunID",               gunId               },
+        {"AnalogDeadzone",      analogDeadzone      },
+        {"AxisUnsigned",        axisUnsigned        },
+        {"AnalogCenterOffsetX", analogCenterOffsetX },
+        {"AnalogCenterOffsetY", analogCenterOffsetY },
+        {"AnalogCalMinX",       analogCalMinX       },
+        {"AnalogCalMaxX",       analogCalMaxX       },
+        {"AnalogCalMinY",       analogCalMinY       },
+        {"AnalogCalMaxY",       analogCalMaxY       },
+        {"AnalogCalValid",      analogCalValid      },
+        {"AnalogInvertX",       analogInvertX       },
+        {"AnalogInvertY",       analogInvertY       },
+        {"AnalogKeysLayout",    analogKeysLayout    },
+        {"AnalogSwapSticks",    analogSwapSticks    },
     };
 
     enum {
@@ -224,6 +258,11 @@ public:
         analogModeDpad,
         analogModeKeys
     } analogModeSettings_e;
+
+    enum {
+        analogKeysLayoutArrows = 0,
+        analogKeysLayoutWASD
+    } analogKeysLayoutSettings_e;
 
     // Profile data type indices
     // this MUST match the order of ProfileData_s in (FW)OpenFIREprefs
