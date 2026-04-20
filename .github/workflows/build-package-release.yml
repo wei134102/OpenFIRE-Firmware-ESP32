@@ -57,6 +57,9 @@ on:
 permissions:
   contents: write # Necessario per actions/upload-release-asset per caricare asset sulla release
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # necessaria per elimnare i warning  .. da giugno 2026 userà di default node24 e si potrà togliere, bisogna aggiornare però le versioni delle action
+
 jobs:
   build_firmware:
     runs-on: ubuntu-latest
@@ -80,13 +83,6 @@ jobs:
             flash_mode: 'dio'
             flash_freq: '80m'       
             address_littleFS: '0xc90000'
-          - name: 'ESP32_S3_super_mini'
-            boards: 'ESP32_S3_super_mini'
-            chip: 'esp32s3'
-            flash_size: '4MB'
-            flash_mode: 'dio'
-            flash_freq: '80m'
-            address_littleFS: '0x300000'
 
     steps:
       - name: Checkout repository OpenFIRE-Firmware-Esp32 with submodules
@@ -164,13 +160,7 @@ jobs:
             flash_size: '16MB'
             flash_mode: 'dio'
             flash_freq: '80m'         
-            address_littleFS: '0xc90000'
-          - name: 'ESP32_S3_super_mini'
-            chip: 'esp32s3'
-            flash_size: '4MB'
-            flash_mode: 'dio'
-            flash_freq: '80m'
-            address_littleFS: '0x300000'       
+            address_littleFS: '0xc90000'        
         os_config:
           - name: windows-64bit
             runner: windows-latest
