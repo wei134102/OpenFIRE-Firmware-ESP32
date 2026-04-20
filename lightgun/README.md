@@ -4,7 +4,6 @@
 
 ---
 
-
 ## PICON-AS: Wireless Lightgun Hardware
 Se vuoi costruire una lightgun wireless funzionante completamente a batteria basata su questo firmware, dai un'occhiata al progetto **PICON-AS**. Trovi tutte le istruzioni per l'hardware e il montaggio a questo indirizzo: [Istruzioni PICON-AS](https://alessandro-satanassi.github.io/OpenFIRE-PICON-AS-ESP32/)
 > [!NOTE]
@@ -75,6 +74,7 @@ This is simply an adaptation to make it work on ESP32S3, with the addition of wi
    * **Wi-Fi Icon**: Connection via wireless dongle.
    * **USB Icon**: Connection via physical cable.
 
+---
 
 ## 🤝 Sponsorship & Support
 
@@ -87,10 +87,11 @@ We chose PCBWay for their:
 
 <p align="left">
   <a href="https://www.pcbway.com">
-    <img src="lightgun/docs/img/pcbway-logo.png" alt="PCBWay - PCB Prototype & Fabrication" width="200">
+    <img src="docs/img/pcbway-logo.png" alt="PCBWay - PCB Prototype & Fabrication" width="200">
   </a>
 </p>
 
+---
 
 ![Waveshare-esp32-s3-pico](https://github.com/user-attachments/assets/5f7bf9ae-6ab5-4240-b930-d8cf20cb1c75)
 
@@ -102,5 +103,5 @@ We chose PCBWay for their:
 
 ### OpenFIRE - The Open *Four Infa-Red Emitter* Light Gun System [https://github.com/TeamOpenFIRE/OpenFIRE-Firmware](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware)
 
-![BannerDark](lightgun/docs/of_bannerLoD.png#gh-dark-mode-only)![BannerLight](lightgun/docs/of_bannerDoL.png#gh-light-mode-only)
+![BannerDark](docs/of_bannerLoD.png#gh-dark-mode-only)![BannerLight](docs/of_bannerDoL.png#gh-light-mode-only)
 
