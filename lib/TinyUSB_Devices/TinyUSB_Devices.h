@@ -93,6 +93,17 @@ public:
 };
 extern TinyUSBDevices_ TinyUSBDevices;
 
+//=====================================
+
+#ifdef OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
+void report_all_MOUSE_KEY_PAD_TX_wifi_espnow(void);
+
+#endif // OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
+
+// =====================================
+
+
+
 enum HID_RID_e{
   HID_RID_KEYBOARD = 1,
   HID_RID_MOUSE,   //2  
@@ -126,7 +137,8 @@ uint8_t const desc_hid_report[] = {
 // 5 button absolute mouse
 class AbsMouse5_
 {
-  private:
+  //private:
+  public:
   hid_abs_mouse_report_t absmouse5Report = {0,0,0,0,0};
   
   public:
@@ -171,10 +183,6 @@ extern AbsMouse5_ AbsMouse5;
   #define KEY_DOWN_ARROW  0xD9
   #define KEY_LEFT_ARROW  0xD8
   #define KEY_RIGHT_ARROW 0xD7
-  #define KEY_W           0x1A   // HID usage 0x07 Keyboard W
-  #define KEY_A           0x04   // HID usage 0x07 Keyboard A
-  #define KEY_S           0x16   // HID usage 0x07 Keyboard S
-  #define KEY_D           0x07   // HID usage 0x07 Keyboard D
   #define KEY_BACKSPACE   0xB2
   #define KEY_TAB         0xB3
   #define KEY_RETURN      0xB0
@@ -351,7 +359,8 @@ extern AbsMouse5_ AbsMouse5;
   
 class Keyboard_ : public Print
 {
-  private:
+  //private:
+  public:
     hid_keyboard_report_t _keyReport = {0,0,{0,0,0,0,0,0}};
 
   public:
@@ -378,19 +387,19 @@ extern Keyboard_ Keyboard;
 // OpenFIRE define       TinyUSB define in hid.h    
 #define PAD_A      0    // GAMEPAD_BUTTON_A  GAMEPAD_BUTTON_SOUTH
 #define PAD_B      1    // GAMEPAD_BUTTON_B  GAMEPAD_BUTTON_EAST
-#define PAD_C      42    // GAMEPAD_BUTTON_C   2
-#define PAD_X      2    // GAMEPAD_BUTTON_X  GAMEPAD_BUTTON_NORTH 
-#define PAD_Y      3    // GAMEPAD_BUTTON_Y  GAMEPAD_BUTTON_WEST  3
-#define PAD_Z      45    // GAMEPAD_BUTTON_Z  5
-#define PAD_LB     4    // GAMEPAD_BUTTON_TL     6
-#define PAD_RB     5    // GAMEPAD_BUTTON_TR  7
-#define PAD_LT     6    // GAMEPAD_BUTTON_TL2    8
-#define PAD_RT     7    // GAMEPAD_BUTTON_TR2  9
-#define PAD_SELECT 8   // GAMEPAD_BUTTON_SELECT 10
-#define PAD_START  9   // GAMEPAD_BUTTON_START  11
+#define PAD_C      2    // GAMEPAD_BUTTON_C
+#define PAD_X      3    // GAMEPAD_BUTTON_X  GAMEPAD_BUTTON_NORTH 
+#define PAD_Y      4    // GAMEPAD_BUTTON_Y  GAMEPAD_BUTTON_WEST
+#define PAD_Z      5    // GAMEPAD_BUTTON_Z
+#define PAD_LB     6    // GAMEPAD_BUTTON_TL
+#define PAD_RB     7    // GAMEPAD_BUTTON_TR
+#define PAD_LT     8    // GAMEPAD_BUTTON_TL2
+#define PAD_RT     9    // GAMEPAD_BUTTON_TR2
+#define PAD_SELECT 10   // GAMEPAD_BUTTON_SELECT
+#define PAD_START  11   // GAMEPAD_BUTTON_START
 #define PAD_HOME   12   // GAMEPAD_BUTTON_MODE
-#define PAD_LS     10   // GAMEPAD_BUTTON_THUMBL
-#define PAD_RS     11   // GAMEPAD_BUTTON_THUMBR   // qui finiscono i 15 bottoni standard
+#define PAD_LS     13   // GAMEPAD_BUTTON_THUMBL
+#define PAD_RS     14   // GAMEPAD_BUTTON_THUMBR   // qui finiscono i 15 bottoni standard
 #define PAD_15     15   // GAMEPAD_BUTTON_15      // TUTTI QUELLI DA ORA IN SEGUITO SONO bottoni CUSTOM
 #define PAD_16     16   // GAMEPAD_BUTTON_16
 #define PAD_17     17   // GAMEPAD_BUTTON_17
@@ -417,7 +426,8 @@ extern Keyboard_ Keyboard;
 #define START_DPAD_KEY PAD_UP  // utilizzato come riferimento per posizione per file lightgunButtons.cpp
 
 class Gamepad16_ {
-  private:
+  //private:
+  public:
     hid_gamepad16_report_t gamepad16Report = {0,0,0,0,0,0,0,0};
     uint16_t _x = 2048; // A META' CONSIDERANDO IL RANGE DA 0 A 4095
     uint16_t _y = 2048; // A META' CONSIDERANDO IL RANGE DA 0 A 4095
@@ -431,7 +441,6 @@ class Gamepad16_ {
     void report(void);
     void releaseAll(void);
     bool stickRight;
-    bool unsignedAxis = false; // false = 有符号轴(-32767~32767), true = 无符号轴(0~max) 供 Joypad-OS 兼容
   };
   extern Gamepad16_ Gamepad16;
 

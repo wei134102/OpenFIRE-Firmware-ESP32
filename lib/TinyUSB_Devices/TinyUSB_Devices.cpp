@@ -81,6 +81,62 @@ void TinyUSBDevices_::beginBT(const char *localName, const char *hidName) {
 }
 #endif // ARDUINO_RASPBERRY_PI_PICO_W
 
+#ifdef OPENFIRE_WIRELESS_ENABLE
+
+
+#ifdef OPENFIRE_WIRELESS_DEVICE_ESPNOW
+
+#ifdef COMMENTO
+#ifdef OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
+void report_tutto(void)
+{
+  uint8_t aux[sizeof(AbsMouse5.absmouse5Report)+sizeof(Keyboard._keyReport)+sizeof(Gamepad16.gamepad16Report)];
+  memcpy(&aux[0], &AbsMouse5.absmouse5Report, sizeof(AbsMouse5.absmouse5Report));
+  memcpy(&aux[sizeof(AbsMouse5.absmouse5Report)], &Keyboard._keyReport, sizeof(Keyboard._keyReport));
+  memcpy(&aux[sizeof(AbsMouse5.absmouse5Report)+sizeof(Keyboard._keyReport)], &Gamepad16.gamepad16Report, sizeof(Gamepad16.gamepad16Report));
+  SerialWireless.SendPacket((const uint8_t *)&aux, sizeof(aux), PACKET_TX::MOUSE_KEY_PAD_TX);
+}
+#endif // OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
+#endif //COMMENTO
+
+#ifdef OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
+void report_all_MOUSE_KEY_PAD_TX_wifi_espnow(void)
+{
+  // 'static' crea l'array in RAM una sola volta all'avvio. Zero overhead ogni 5ms!
+  static uint8_t aux[sizeof(AbsMouse5.absmouse5Report) + sizeof(Keyboard._keyReport) + sizeof(Gamepad16.gamepad16Report)];
+  
+  uint8_t* ptr = aux; 
+
+  // Copia MOUSE
+  memcpy(ptr, &AbsMouse5.absmouse5Report, sizeof(AbsMouse5.absmouse5Report));
+  ptr += sizeof(AbsMouse5.absmouse5Report);
+
+  // Copia TASTIERA
+  memcpy(ptr, &Keyboard._keyReport, sizeof(Keyboard._keyReport));
+  ptr += sizeof(Keyboard._keyReport);
+
+  // Copia GAMEPAD
+  memcpy(ptr, &Gamepad16.gamepad16Report, sizeof(Gamepad16.gamepad16Report));
+
+  // Spara via i dati
+  SerialWireless.SendPacket(aux, sizeof(aux), PACKET_TX::MOUSE_KEY_PAD_TX);
+
+  // non azzerarli tutti, perchè per come funziona la logica originale di lightgun buttons, non funzionerebbe bene .. lasciare il reset solo come impostato nei singoli report
+  //TinyUSBDevices.newReport[TinyUSBDevices_::reportMouse]=false;
+  //TinyUSBDevices.newReport[TinyUSBDevices_::reportKeyboard]=false;  
+  //TinyUSBDevices.newReport[TinyUSBDevices_::reportGamepad]=false;
+
+}
+#endif // OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
+
+
+
+
+#endif // OPENFIRE_WIRELESS_DEVICE_ESPNOW
+
+#endif // OPENFIRE_WIRELESS_ENABLE
+
+
 TinyUSBDevices_ TinyUSBDevices;
   
 /*****************************
@@ -108,7 +164,11 @@ void AbsMouse5_::report(void)
       #endif // ENABLE_BLUETOOTH_OPENFIRE
       #ifdef OPENFIRE_WIRELESS_DEVICE_ESPNOW
       case ENABLE_ESP_NOW_TO_DONGLE:  
+        #ifdef OPENFIRE_USE_ESPNOW_UNIFIED_PACKET  
+        report_all_MOUSE_KEY_PAD_TX_wifi_espnow();
+        #else
         SerialWireless.SendPacket((const uint8_t *)&absmouse5Report, sizeof(absmouse5Report), PACKET_TX::MOUSE_TX);
+        #endif // OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
         break;
       #endif //OPENFIRE_WIRELESS_DEVICE_ESPNOW
       case ENABLE_WIFI_TO_DONGLE:
@@ -213,7 +273,11 @@ void Keyboard_::report(void)
       #endif // ENABLE_BLUETOOTH_OPENFIRE
       #ifdef OPENFIRE_WIRELESS_DEVICE_ESPNOW
       case ENABLE_ESP_NOW_TO_DONGLE:
+        #ifdef OPENFIRE_USE_ESPNOW_UNIFIED_PACKET  
+        report_all_MOUSE_KEY_PAD_TX_wifi_espnow();
+        #else
         SerialWireless.SendPacket((const uint8_t *)&_keyReport, sizeof(_keyReport), PACKET_TX::KEYBOARD_TX);
+        #endif
         break;
         #endif //OPENFIRE_WIRELESS_DEVICE_ESPNOW
       case ENABLE_WIFI_TO_DONGLE:
@@ -374,25 +438,11 @@ size_t Keyboard_::write(const uint8_t *buffer, size_t size)
 
 void Gamepad16_::moveCam(uint16_t origX, uint16_t origY) {
   if(stickRight) {
-      // 摄像头使用主摇杆或右摇杆，按设置选择有符号/无符号输出
-      if (unsignedAxis) {
-        // Unsigned：屏幕左/上 -> 0，右/下 -> 32767（与绝对鼠标坐标一致）
-        gamepad16Report.x = map(origX, 0, 32767, 0, 32767);
-        gamepad16Report.y = map(origY, 0, 32767, 0, 32767);
-      } else {
-        // 有符号：屏幕坐标 0..32767 -> 摇杆 -32767..32767（左/上为负，右/下为正，与常见 HID 一致）
-        // 旧版曾用 32767..-32767，导致瞄准方向与屏幕移动相反。
-        gamepad16Report.x = map(origX, 0, 32767, -32767, 32767);
-        gamepad16Report.y = map(origY, 0, 32767, -32767, 32767);
-      }
+      gamepad16Report.x = map(origX, 0, 32767, -32767, 32767);
+      gamepad16Report.y = map(origY, 0, 32767, -32767, 32767);
   } else {
-      if (unsignedAxis) {
-        gamepad16Report.z  = map(origX, 0, 32767, 0, 32767);
-        gamepad16Report.rz = map(origY, 0, 32767, 0, 32767);
-      } else {
-        gamepad16Report.z  = map(origX, 0, 32767, -32767, 32767);
-        gamepad16Report.rz = map(origY, 0, 32767, -32767, 32767);
-      }
+      gamepad16Report.rx = map(origX, 0, 32767, -32767, 32767);
+      gamepad16Report.ry = map(origY, 0, 32767, -32767, 32767);
   }
   TinyUSBDevices.newReport[TinyUSBDevices_::reportGamepad] = true;
   //report(); 
@@ -403,23 +453,11 @@ void Gamepad16_::moveStick(uint16_t origX, uint16_t origY) {
   if(origX != _x || origY != _y) {
     _x = origX, _y = origY;
     if(stickRight) {
-      if (unsignedAxis) {
-        // Unsigned 模式下反转右摇杆方向
-        gamepad16Report.z  = map(_x, 0, 4095, 32767, 0);
-        gamepad16Report.rz = map(_y, 0, 4095, 32767, 0);
-      } else {
-        gamepad16Report.z  = map(_x, 0, 4095, 32767, -32767);
-        gamepad16Report.rz = map(_y, 0, 4095, 32767, -32767);
-      }
+      gamepad16Report.rx = map(_x, 0, 4095, 32767, -32767);
+      gamepad16Report.ry = map(_y, 0, 4095, 32767, -32767);
     } else {
-      if (unsignedAxis) {
-        // Unsigned 模式下反转左摇杆方向
-        gamepad16Report.x = map(_x, 0, 4095, 32767, 0);
-        gamepad16Report.y = map(_y, 0, 4095, 32767, 0);
-      } else {
-        gamepad16Report.x = map(_x, 0, 4095, 32767, -32767);
-        gamepad16Report.y = map(_y, 0, 4095, 32767, -32767);
-      }
+      gamepad16Report.x = map(_x, 0, 4095, 32767, -32767);
+      gamepad16Report.y = map(_y, 0, 4095, 32767, -32767);
     }
     TinyUSBDevices.newReport[TinyUSBDevices_::reportGamepad] = true;
     //report();
@@ -427,24 +465,6 @@ void Gamepad16_::moveStick(uint16_t origX, uint16_t origY) {
 }
 
 void Gamepad16_::press(uint8_t buttonNum) {
-  // Unsigned 模式：把 LT/RT 当作线性扳机轴（rx/ry），不再占用 buttons bit
-  if (unsignedAxis) {
-    if (buttonNum == PAD_LT) {
-      if (gamepad16Report.rx != 32767) {
-        gamepad16Report.rx = 32767;
-        TinyUSBDevices.newReport[TinyUSBDevices_::reportGamepad] = true;
-      }
-      return;
-    }
-    if (buttonNum == PAD_RT) {
-      if (gamepad16Report.ry != 32767) {
-        gamepad16Report.ry = 32767;
-        TinyUSBDevices.newReport[TinyUSBDevices_::reportGamepad] = true;
-      }
-      return;
-    }
-  }
-
   if(!(gamepad16Report.buttons & (1 << buttonNum))) {
     bitSet(gamepad16Report.buttons, buttonNum);
     TinyUSBDevices.newReport[TinyUSBDevices_::reportGamepad] = true;
@@ -453,24 +473,6 @@ void Gamepad16_::press(uint8_t buttonNum) {
 }
 
 void Gamepad16_::release(uint8_t buttonNum) {
-  // Unsigned 模式：LT/RT 释放时把线性扳机轴回到 0
-  if (unsignedAxis) {
-    if (buttonNum == PAD_LT) {
-      if (gamepad16Report.rx != 0) {
-        gamepad16Report.rx = 0;
-        TinyUSBDevices.newReport[TinyUSBDevices_::reportGamepad] = true;
-      }
-      return;
-    }
-    if (buttonNum == PAD_RT) {
-      if (gamepad16Report.ry != 0) {
-        gamepad16Report.ry = 0;
-        TinyUSBDevices.newReport[TinyUSBDevices_::reportGamepad] = true;
-      }
-      return;
-    }
-  }
-
   if(gamepad16Report.buttons & (1 << buttonNum)) {
     bitClear(gamepad16Report.buttons, buttonNum);
     TinyUSBDevices.newReport[TinyUSBDevices_::reportGamepad] = true;
@@ -507,7 +509,11 @@ void Gamepad16_::report()
       #endif // ENABLE_BLUETOOTH_OPENFIRE
       #ifdef OPENFIRE_WIRELESS_DEVICE_ESPNOW
       case ENABLE_ESP_NOW_TO_DONGLE:
+        #ifdef OPENFIRE_USE_ESPNOW_UNIFIED_PACKET  
+        report_all_MOUSE_KEY_PAD_TX_wifi_espnow();
+        #else
         SerialWireless.SendPacket((const uint8_t *)&gamepad16Report, sizeof(gamepad16Report), PACKET_TX::GAMEPADE_TX);
+        #endif
         break;
         #endif //OPENFIRE_WIRELESS_DEVICE_ESPNOW
       case ENABLE_WIFI_TO_DONGLE:
@@ -527,11 +533,6 @@ void Gamepad16_::report()
 void Gamepad16_::releaseAll() {
   tu_memclr(&gamepad16Report, sizeof(gamepad16Report));
   _x = 2048, _y = 2048;
-  // Unsigned 模式下，线性扳机轴默认回到 0（已被 memclr 清零），这里显式保持语义清晰
-  if (unsignedAxis) {
-    gamepad16Report.rx = 0;
-    gamepad16Report.ry = 0;
-  }
   TinyUSBDevices.newReport[TinyUSBDevices_::reportGamepad] = true;
   //report();
 }
