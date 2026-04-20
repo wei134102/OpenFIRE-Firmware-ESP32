@@ -169,7 +169,7 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
         }
 
 
-        #ifdef COMMENTO
+        #if 0 // COMMENTO
         // il migliore fino al 22/06/2025 ore 19:44
         // =================================================================================================
         // GESTIONE 2 PUNTI VISTI (VERSIONE FINALE UNIFICATA CON PESI A 3 LIVELLI)
@@ -374,7 +374,7 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
 
 
 
-        #ifdef COMMENTO
+        #if 0 // COMMENTO
         /*
          * BLOCCO DI CODICE COMPLETO PER GESTIONE DI 2 PUNTI RILEVATI
          * Ottimizzato per microcontrollori (ESP32, RP2040) e senza dipendenze da struct o funzioni esterne.
@@ -580,7 +580,7 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
         }
         #endif
 
-        #ifdef COMMENTO
+        #if 0 // COMMENTO
         /*
          * BLOCCO DI CODICE COMPLETO v7 - RICOSTRUZIONE CON MEMORIA DI FORMA
          * Mantiene la forma non-rettangolare appresa a 4 punti per eliminare
@@ -837,7 +837,7 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
         }
         #endif //COMMENTO
 
-        #ifndef COMMENTO
+        #if 1 // COMMENTO cleaned: always compile active implementation
         if (num_points_seen == 2)
         {
             // --- FASE 1: IDENTIFICAZIONE ---
@@ -988,7 +988,7 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
             
             
         }
-        #endif //COMMENTO
+        #endif // COMMENTO cleaned
         else
         if (num_points_seen == 3)
         {
