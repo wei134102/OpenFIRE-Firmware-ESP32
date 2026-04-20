@@ -1560,7 +1560,7 @@ bool SerialWireless_::connection_gun() {
   while (!TinyUSBDevice.mounted() && stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED) {
     if (stato_connessione_wireless == CONNECTION_STATE::NONE_CONNECTION) {
       if (((millis() - lastMillis_change_channel) > TIMEOUT_CHANGE_CHANNEL) && 
-         ((millis() - lastMillis_tx_packet)) >= (TIMEOUT_TX_PACKET - 50) {  // aggiunta impostato 50 ms come margine, per evitare che quando invia pacchetto cambi subito casnale senza dare possibilità risposta
+         ((millis() - lastMillis_tx_packet)) >= (TIMEOUT_TX_PACKET - 50)) {  // aggiunta impostato 50 ms come margine, per evitare che quando invia pacchetto cambi subito casnale senza dare possibilità risposta
         //channel++;
         //if (channel >13) channel = 1;
         aux_buffer_tx[13] = channel;
