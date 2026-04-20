@@ -132,6 +132,9 @@ public:
     // press and hold any button to exit simple pause menu (this is not a button combo)
     static inline constexpr uint32_t ExitPauseModeHoldBtnMask = BtnMask_A | BtnMask_B;
 
+    // Button combination to toggle between mouse and gamepad mode
+    static inline constexpr uint32_t ToggleMouseGamepadBtnMask = BtnMask_A | BtnMask_B | BtnMask_Trigger;
+
     // button combo to skip the center calibration step
     static inline constexpr uint32_t SkipCalCenterBtnMask = BtnMask_A;
 

@@ -376,21 +376,22 @@ void Gamepad16_::moveCam(uint16_t origX, uint16_t origY) {
   if(stickRight) {
       // 摄像头使用主摇杆或右摇杆，按设置选择有符号/无符号输出
       if (unsignedAxis) {
-        // Unsigned 模式：摄像头右摇杆不反转（保持 0->max 的正向变化）
+        // Unsigned：屏幕左/上 -> 0，右/下 -> 32767（与绝对鼠标坐标一致）
         gamepad16Report.x = map(origX, 0, 32767, 0, 32767);
         gamepad16Report.y = map(origY, 0, 32767, 0, 32767);
       } else {
-        gamepad16Report.x = map(origX, 0, 32767, 32767, -32767);
-        gamepad16Report.y = map(origY, 0, 32767, 32767, -32767);
+        // 有符号：屏幕坐标 0..32767 -> 摇杆 -32767..32767（左/上为负，右/下为正，与常见 HID 一致）
+        // 旧版曾用 32767..-32767，导致瞄准方向与屏幕移动相反。
+        gamepad16Report.x = map(origX, 0, 32767, -32767, 32767);
+        gamepad16Report.y = map(origY, 0, 32767, -32767, 32767);
       }
   } else {
       if (unsignedAxis) {
-        // Unsigned 模式：摄像头右摇杆不反转（保持 0->max 的正向变化）
         gamepad16Report.z  = map(origX, 0, 32767, 0, 32767);
         gamepad16Report.rz = map(origY, 0, 32767, 0, 32767);
       } else {
-        gamepad16Report.z  = map(origX, 0, 32767, 32767, -32767);
-        gamepad16Report.rz = map(origY, 0, 32767, 32767, -32767);
+        gamepad16Report.z  = map(origX, 0, 32767, -32767, 32767);
+        gamepad16Report.rz = map(origY, 0, 32767, -32767, 32767);
       }
   }
   TinyUSBDevices.newReport[TinyUSBDevices_::reportGamepad] = true;

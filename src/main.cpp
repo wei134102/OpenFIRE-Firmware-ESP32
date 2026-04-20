@@ -17,6 +17,7 @@
 
 #include "OpenFIREmain.h"
 #include "OpenFIREPlayTimer.h"
+#include "OpenFIREBoyMode.h"
 #include "boards/OpenFIREshared.h"
 #include "OpenFIREcolors.h"
 #include "OpenFIRElights.h"
@@ -383,11 +384,37 @@ void setup() {
     FW_Common::OLED.TopPanelUpdate(" go in usb mode "); // 696969 inserito da me
     TinyUSBDevices.begin(POLL_RATE);
     FW_Common::OLED.TopPanelUpdate(" wait for usb mount ");
+
     #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)// SE WIRELESS
         #define MILLIS_TIMEOUT  3000 //1 secondi  检测USB是否连接的时间！！！1秒
-        unsigned long lastMillis = millis ();
-        while ((millis () - lastMillis <= MILLIS_TIMEOUT) && (!TinyUSBDevice.mounted())) { yield(); }
-        if (!TinyUSBDevice.mounted()) {
+        unsigned long lastMillis = millis();
+        // 先给 USB 一段时间看看是否被挂载
+        while ((millis() - lastMillis <= MILLIS_TIMEOUT) && (!TinyUSBDevice.mounted())) { yield(); }
+
+        // 如果 USB 还没挂载，先给 Boy Mode 一个 3 秒窗口，再决定要不要去扫无线
+        if (!TinyUSBDevice.mounted())
+        {
+            BoyMode::BeginDecisionWindow(3000);
+            while (!TinyUSBDevice.mounted() &&
+                   !BoyMode::IsEnabled() &&
+                   (millis() - lastMillis <= (MILLIS_TIMEOUT + 3000))) {
+                yield();  // 先让 USB 有机会处理
+                BoyMode::TickDecisionWindow();
+            }
+            // 如果启用了 Boy Mode，在这里执行剩余的初始化操作
+            if (BoyMode::IsEnabled())
+            {
+                FW_Common::buttons.ReleaseAll();
+                FW_Common::buttons.ReportDisable();
+                OF_FFB::FFBShutdown();
+                #ifdef USES_DISPLAY
+                FW_Common::OLED.TopPanelUpdate(" BOY MODE ");
+                #endif
+            }
+        }
+
+        // 只有在没进 Boy Mode 的情况下，才真正去做无线连接/扫描
+        if (!TinyUSBDevice.mounted() && !BoyMode::IsEnabled()) {
             SerialWireless.init_wireless();
             SerialWireless.begin(); // fare una sorta di prebegin, senza impostare peer e altro
             if (lastDongleSave) {
@@ -406,18 +433,23 @@ void setup() {
                 SerialWireless.connection_gun();
             }
         }
-    #endif // OPENFIRE_WIRELESS_ENABLE
+    #else
+        while(!TinyUSBDevice.mounted() && !TinyUSBDevices.onBattery) { yield(); }
+    #endif
 
-    while(!TinyUSBDevice.mounted() && !TinyUSBDevices.onBattery) { yield();}
 
-
-    // arriva qui solo se e' stato connesso l'usb o e' stata negoziata e stabilita una connessione wireless
-    #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
+    // arriva qui solo se e' stato connesso l'usb, e' stata negoziata una connessione wireless, oppure Boy Mode è attivo
+    #ifdef ARDUINO_ARCH_ESP32
         #ifdef USES_DISPLAY
-            FW_Common::OLED.TopPanelUpdate("  !! LINK READY !! "); 
-            vTaskDelay(pdMS_TO_TICKS(1000));
+            if (TinyUSBDevice.mounted() || TinyUSBDevices.onBattery) {
+                FW_Common::OLED.TopPanelUpdate("  !! LINK READY !! ");
+                vTaskDelay(pdMS_TO_TICKS(1000));
+            } else if (BoyMode::IsEnabled()) {
+                FW_Common::OLED.TopPanelUpdate("  BOY MODE READY  ");
+                vTaskDelay(pdMS_TO_TICKS(600));
+            }
         #endif //USES_DISPLAY
-    #endif // defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
+    #endif // ARDUINO_ARCH_ESP32
 
     if (TinyUSBDevice.mounted()) {
         Serial.begin(9600);
@@ -444,8 +476,12 @@ void setup() {
     }  
     #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
     else {     
-        if (!lastDongleSave || 
-            (lastDongleSave && (!(memcmp(lastDongleAddress, peerAddress,6) == 0) || !(lastDongleChannel == espnow_wifi_channel)))) OF_Prefs::SaveLastDongleWireless(peerAddress, &espnow_wifi_channel);
+        // Only update "last dongle" if we actually have a negotiated wireless link.
+        if(!BoyMode::IsEnabled()) {
+            if (!lastDongleSave || 
+                (lastDongleSave && (!(memcmp(lastDongleAddress, peerAddress,6) == 0) || !(lastDongleChannel == espnow_wifi_channel))))
+                OF_Prefs::SaveLastDongleWireless(peerAddress, &espnow_wifi_channel);
+        }
         // CHIUDI TUTTO CIO' CHE E' USB SE E' DA CHIUDERE
         TinyUSBDevice.clearConfiguration();
         TinyUSBDevice.detach();
@@ -510,6 +546,13 @@ void setup() {
     FW_Common::OpenFIREper.source(OF_Prefs::profiles[OF_Prefs::currentProfile].adjX,
                                   OF_Prefs::profiles[OF_Prefs::currentProfile].adjY);
     FW_Common::OpenFIREper.deinit(0);
+
+    // Boy 模式只需要基本硬件初始化，直接进入 Run，不需要首启校准/无线等后续流程
+    if (BoyMode::IsEnabled())
+    {
+        FW_Common::SetMode(FW_Const::GunMode_Run);
+        return;
+    }
 
     // First boot sanity checks; all zeroes are initial config
     if((OF_Prefs::profiles[OF_Prefs::currentProfile].topOffset    == 0 &&
@@ -670,7 +713,7 @@ void loop1()
             TriggerFire();                                  // Handle button events and feedback ourselves.
         else TriggerNotFire();                              // Releasing button inputs and sending stop signals to feedback devices.
 
-        if(millis() - lastUSBpoll >= POLL_RATE) {
+        if(!BoyMode::IsEnabled() && millis() - lastUSBpoll >= POLL_RATE) {
             #ifdef USES_ANALOG
                 if(FW_Common::analogIsValid) AnalogStickPoll();
             #endif // USES_ANALOG
@@ -678,14 +721,86 @@ void loop1()
             FW_Common::buttons.SendReports();
         }
 
-        if(Serial.available()) OF_Serial::SerialProcessing();
+        if(!BoyMode::IsEnabled() && Serial.available()) OF_Serial::SerialProcessing();
 
         #ifdef MAMEHOOKER
-            if(OF_Serial::serialMode) OF_Serial::SerialHandling();                                   // Process the force feedback from the current queue.
+            if(!BoyMode::IsEnabled() && OF_Serial::serialMode) OF_Serial::SerialHandling();                                   // Process the force feedback from the current queue.
         #endif // MAMEHOOKER
         
         if(FW_Common::buttons.pressedReleased == FW_Const::EscapeKeyBtnMask)
             SendEscapeKey();
+        
+        // A+B+Trigger 快捷键检测：在运行模式下切换鼠标和手柄模式
+        if(FW_Common::buttons.pressedReleased == FW_Const::ToggleMouseGamepadBtnMask) {
+            // Toggle between mouse and gamepad mode
+            if(!OF_Serial::serialMode) {
+                Serial.println("Toggling input mode...");
+            }
+            
+            // Only toggle between mouse and gamepad mode, ignore MISTER mode
+            if(!FW_Common::buttons.analogOutput) {
+                // Current: Mouse/KB -> Switch to Gamepad
+                FW_Common::buttons.analogOutput = true;
+                FW_Common::OLED.mister = false; // Ensure MISTER mode is disabled
+                FW_Common::UpdateBindings(false);
+                if(!OF_Serial::serialMode)
+                    Serial.println("Mode changed to: Gamepad");
+                
+                // RGB灯反馈：蓝色表示手柄模式
+                #ifdef LED_ENABLE
+                    OF_RGB::LedUpdate(0, 0, 255); // 蓝色
+                #endif // LED_ENABLE
+            } else {
+                // Current: Gamepad -> Switch to Mouse/KB
+                FW_Common::buttons.analogOutput = false;
+                FW_Common::OLED.mister = false; // Ensure MISTER mode is disabled
+                FW_Common::UpdateBindings(false);
+                if(!OF_Serial::serialMode)
+                    Serial.println("Mode changed to: Mouse/Keyboard");
+                
+                // RGB灯反馈：绿色表示鼠标模式
+                #ifdef LED_ENABLE
+                    OF_RGB::LedUpdate(0, 255, 0); // 绿色
+                #endif // LED_ENABLE
+            }
+            
+            // 震动反馈
+            #ifdef USES_RUMBLE
+                if(OF_Prefs::toggles[OF_Const::rumble]) {
+                    // 短震动反馈
+                    analogWrite(OF_Prefs::pins[OF_Const::rumblePin], OF_Prefs::settings[OF_Const::rumbleStrength]);
+                    delay(200);
+                    #ifdef ARDUINO_ARCH_ESP32
+                        analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0);
+                    #else // rp2040
+                        digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);
+                    #endif
+                }
+            #endif // USES_RUMBLE
+            
+            // Save the new mode settings
+            OF_Prefs::toggles[OF_Const::analogOutputMode] = FW_Common::buttons.analogOutput;
+            OF_Prefs::toggles[OF_Const::misterMode] = FW_Common::OLED.mister;
+            OF_Prefs::SaveToggles();
+            
+            // Update display to show new mode
+            #ifdef USES_DISPLAY
+                if(FW_Common::buttons.analogOutput) {
+                    FW_Common::OLED.TopPanelUpdate("Mode Changed: Gamepad");
+                } else {
+                    FW_Common::OLED.TopPanelUpdate("Mode Changed: Mouse/KB");
+                }
+                // Briefly show status then update menu
+                delay(1000); // Show status for 1 second
+                FW_Common::OLED.PauseListUpdate((int)FW_Common::pauseModeSelection);
+            #endif // USES_DISPLAY
+            
+            // 恢复RGB灯到正常模式颜色
+            #ifdef LED_ENABLE
+                delay(500); // 保持反馈颜色0.5秒
+                FW_Common::SetLedColorFromMode(); // 恢复根据当前模式的颜色
+            #endif // LED_ENABLE
+        }
 
         if(OF_Prefs::toggles[OF_Const::holdToPause]) {
             if(FW_Common::buttons.debounced == FW_Const::EnterPauseModeHoldBtnMask
@@ -743,6 +858,32 @@ void loop1()
 // splits off into subsequent ExecModes depending on circumstances
 void loop()
 {
+    // Boy 模式：完全独立的“玩具模式”——只用 TRIGGER 驱动 solenoid，不依赖其他状态机
+    if (BoyMode::IsEnabled())
+    {
+        static bool pinsInited = false;
+        const int8_t trigPin = OF_Prefs::pins[OF_Const::btnTrigger];
+        const int8_t solPin  = OF_Prefs::pins[OF_Const::solenoidPin];
+
+        if (trigPin >= 0 && solPin >= 0)
+        {
+            if (!pinsInited)
+            {
+                pinMode(trigPin, INPUT_PULLUP);
+                pinMode(solPin, OUTPUT);
+                digitalWrite(solPin, LOW);
+                pinsInited = true;
+            }
+
+            // 按下 TRIGGER（低电平）= 打 solenoid，松开则关闭
+            const bool pressed = (digitalRead(trigPin) == LOW);
+            digitalWrite(solPin, pressed ? HIGH : LOW);
+        }
+
+        delay(5); // 简单节流，避免空转过快
+        return;
+    }
+
     // poll/update button states with 1ms interval so debounce mask is more effective
     FW_Common::buttons.Poll(1);
     FW_Common::buttons.Repeat();
@@ -1613,6 +1754,75 @@ void loop()
 
             } else if(FW_Common::buttons.pressedReleased & FW_Const::ExitPauseModeBtnMask) {
                 FW_Common::SetMode(FW_Const::GunMode_Run);
+            } else if(FW_Common::buttons.pressedReleased == FW_Const::ToggleMouseGamepadBtnMask) {
+                // Toggle between mouse and gamepad mode
+                if(!OF_Serial::serialMode) {
+                    Serial.println("Toggling input mode...");
+                }
+                
+                // Only toggle between mouse and gamepad mode, ignore MISTER mode
+                if(!FW_Common::buttons.analogOutput) {
+                    // Current: Mouse/KB -> Switch to Gamepad
+                    FW_Common::buttons.analogOutput = true;
+                    FW_Common::OLED.mister = false; // Ensure MISTER mode is disabled
+                    FW_Common::UpdateBindings(false);
+                    if(!OF_Serial::serialMode)
+                        Serial.println("Mode changed to: Gamepad");
+                    
+                    // RGB灯反馈：蓝色表示手柄模式
+                    #ifdef LED_ENABLE
+                        OF_RGB::LedUpdate(0, 0, 255); // 蓝色
+                    #endif // LED_ENABLE
+                } else {
+                    // Current: Gamepad -> Switch to Mouse/KB
+                    FW_Common::buttons.analogOutput = false;
+                    FW_Common::OLED.mister = false; // Ensure MISTER mode is disabled
+                    FW_Common::UpdateBindings(false);
+                    if(!OF_Serial::serialMode)
+                        Serial.println("Mode changed to: Mouse/Keyboard");
+                    
+                    // RGB灯反馈：绿色表示鼠标模式
+                    #ifdef LED_ENABLE
+                        OF_RGB::LedUpdate(0, 255, 0); // 绿色
+                    #endif // LED_ENABLE
+                }
+                
+                // 震动反馈
+                #ifdef USES_RUMBLE
+                    if(OF_Prefs::toggles[OF_Const::rumble]) {
+                        // 短震动反馈
+                        analogWrite(OF_Prefs::pins[OF_Const::rumblePin], OF_Prefs::settings[OF_Const::rumbleStrength]);
+                        delay(200);
+                        #ifdef ARDUINO_ARCH_ESP32
+                            analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0);
+                        #else // rp2040
+                            digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);
+                        #endif
+                    }
+                #endif // USES_RUMBLE
+                
+                // Save the new mode settings
+                OF_Prefs::toggles[OF_Const::analogOutputMode] = FW_Common::buttons.analogOutput;
+                OF_Prefs::toggles[OF_Const::misterMode] = FW_Common::OLED.mister;
+                OF_Prefs::SaveToggles();
+                
+                // Update display to show new mode
+                #ifdef USES_DISPLAY
+                    if(FW_Common::buttons.analogOutput) {
+                        FW_Common::OLED.TopPanelUpdate("Mode Changed: Gamepad");
+                    } else {
+                        FW_Common::OLED.TopPanelUpdate("Mode Changed: Mouse/KB");
+                    }
+                    // Briefly show status then update menu
+                    delay(1000); // Show status for 1 second
+                    FW_Common::OLED.PauseListUpdate((int)FW_Common::pauseModeSelection);
+                #endif // USES_DISPLAY
+                
+                // 恢复RGB灯到正常模式颜色
+                #ifdef LED_ENABLE
+                    delay(500); // 保持反馈颜色0.5秒
+                    FW_Common::SetLedColorFromMode(); // 恢复根据当前模式的颜色
+                #endif // LED_ENABLE
             } else if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_Trigger) {
                 FW_Common::SetMode(FW_Const::GunMode_Calibration);
             } else if(FW_Common::buttons.pressedReleased == FW_Const::RunModeNormalBtnMask) {
@@ -1678,7 +1888,10 @@ void ExecRunMode()
     Serial.println(FW_Const::RunModeLabels[FW_Common::runMode]);
 #endif
 
-    FW_Common::buttons.ReportEnable();
+    if(BoyMode::IsEnabled())
+        FW_Common::buttons.ReportDisable();
+    else
+        FW_Common::buttons.ReportEnable();
     if(FW_Common::justBooted) {
         // center the joystick so RetroArch doesn't throw a hissy fit about uncentered joysticks
         delay(100);  // Exact time needed to wait seems to vary, so make a safe assumption here.
@@ -1778,7 +1991,7 @@ void ExecRunMode()
             TriggerFire();                                  // Handle button events and feedback ourselves.
         else TriggerNotFire();                              // Releasing button inputs and sending stop signals to feedback devices.
 
-        if(millis() - lastUSBpoll >= POLL_RATE) {
+        if(!BoyMode::IsEnabled() && millis() - lastUSBpoll >= POLL_RATE) {
             #ifdef USES_ANALOG
                 if(FW_Common::analogIsValid) AnalogStickPoll();
             #endif // USES_ANALOG
@@ -1787,10 +2000,10 @@ void ExecRunMode()
         }
 
         // Run through serial receive buffer once this run, if it has contents.
-        if(Serial.available()) OF_Serial::SerialProcessing();
+        if(!BoyMode::IsEnabled() && Serial.available()) OF_Serial::SerialProcessing();
 
         #ifdef MAMEHOOKER
-            if(OF_Serial::serialMode) OF_Serial::SerialHandling();                                   // Process the force feedback from the current queue.
+            if(!BoyMode::IsEnabled() && OF_Serial::serialMode) OF_Serial::SerialHandling();                                   // Process the force feedback from the current queue.
         #endif // MAMEHOOKER
 
         if(FW_Common::buttons.pressedReleased == FW_Const::EscapeKeyBtnMask)
@@ -1990,10 +2203,22 @@ void SetModeWaitNoButtons(const FW_Const::GunMode_e &newMode, const unsigned lon
 // Handles events when trigger is pulled/held
 void TriggerFire()
 {
-    // 计时结束后完全禁用所有按键输出（包括鼠标/键盘/手柄）
-    if (PlayTimer::AreInputsLocked()) {
+    // Boy 模式：不依赖屏幕/IR，只要扣扳机就打 solenoid，不发 HID 按键
+    if (BoyMode::IsEnabled())
+    {
+        if(OF_Prefs::toggles[OF_Const::solenoid] &&
+           OF_Prefs::pins[OF_Const::solenoidPin] >= 0)
+        {
+            // 简单玩具逻辑：每次调用都让 SolenoidActivation 负责定时/翻转
+            OF_FFB::SolenoidActivation(0);
+        }
+        OF_FFB::triggerHeld = true;
         return;
     }
+
+    // 普通模式：计时结束后完全禁用所有按键输出（包括鼠标/键盘/手柄）
+    if (PlayTimer::AreInputsLocked())
+        return;
     if(!FW_Common::buttons.offScreen) {
         if(!OF_FFB::triggerHeld) {
             if(FW_Common::buttons.analogOutput) // this should only ever be gamepad outputs
@@ -2034,6 +2259,15 @@ void TriggerFire()
 // Handles events when trigger is released
 void TriggerNotFire()
 {
+    // Boy 模式：松开时直接关掉 solenoid，不走 HID 释放逻辑
+    if (BoyMode::IsEnabled())
+    {
+        if(OF_Prefs::pins[OF_Const::solenoidPin] >= 0)
+            digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], LOW);
+        OF_FFB::triggerHeld = false;
+        return;
+    }
+
     if(OF_FFB::triggerHeld) {
         if(FW_Common::buttons.analogOutput)
             Gamepad16.release(LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Trigger].reportCode3);

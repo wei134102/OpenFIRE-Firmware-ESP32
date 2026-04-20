@@ -870,8 +870,19 @@ void FW_Common::GetPosition()
                      buttons.offScreen = true;
                 else buttons.offScreen = false;
 
-                if(buttons.analogOutput)
-                     Gamepad16.moveCam(conMoveX, conMoveY);
+                if(buttons.analogOutput) {
+                    // 在 GAMEPAD 摄像头轴输出路径中，同步支持 AnalogInvertX / AnalogInvertY
+                    // 否则用户在暂停菜单切换反转时只会影响物理摇杆，不影响 IR->Gamepad 轴。
+                    if (OF_Const::settingsTypesCount > OF_Const::analogInvertX &&
+                        OF_Prefs::settings[OF_Const::analogInvertX]) {
+                        conMoveX = 32767 - conMoveX;
+                    }
+                    if (OF_Const::settingsTypesCount > OF_Const::analogInvertY &&
+                        OF_Prefs::settings[OF_Const::analogInvertY]) {
+                        conMoveY = 32767 - conMoveY;
+                    }
+                    Gamepad16.moveCam(conMoveX, conMoveY);
+                }
                 else AbsMouse5.move(conMoveX, conMoveY);
 
                 #ifdef TEST_CAM
