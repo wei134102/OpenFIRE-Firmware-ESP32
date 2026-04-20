@@ -466,9 +466,13 @@ void ExtDisplay::IdleOps()
               #ifdef USES_TEMP
               char tempBuf[6];
               int temp = OF_FFB::temperatureCurrent;
-              if (temp < 0) temp = 0;
-              if (temp > 99) temp = 99;
-              snprintf(tempBuf, sizeof(tempBuf), "%2dC", temp);
+              if (temp == (int)OF_Const::TEMPERATURE_SENSOR_ERROR_VALUE) {
+                  snprintf(tempBuf, sizeof(tempBuf), "Err");
+              } else {
+                  if (temp < 0) temp = 0;
+                  if (temp > 99) temp = 99;
+                  snprintf(tempBuf, sizeof(tempBuf), "%2dC", temp);
+              }
               snprintf(line, sizeof(line), "%s %s %s", profShort, layoutStr, tempBuf);
               #else
               snprintf(line, sizeof(line), "%s %s", profShort, layoutStr);
@@ -490,6 +494,10 @@ void ExtDisplay::IdleOps()
 #ifdef USES_TEMP
 void ExtDisplay::ShowTemp()
 {
+    if (OF_FFB::temperatureCurrent == (int)OF_Const::TEMPERATURE_SENSOR_ERROR_VALUE) {
+        TopPanelUpdate("Temp sensor: ", "Fault!");
+        return;
+    }
     if(OF_FFB::temperatureCurrent < 10) {
         tempString[0] = OF_FFB::temperatureCurrent + '0';
         tempString[1] = ' ';
