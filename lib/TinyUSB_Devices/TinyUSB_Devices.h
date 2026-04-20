@@ -441,6 +441,7 @@ class Gamepad16_ {
     void report(void);
     void releaseAll(void);
     bool stickRight;
+    bool unsignedAxis = false; // compatibility flag used by main menu setting
   };
   extern Gamepad16_ Gamepad16;
 

@@ -138,6 +138,7 @@ void setup() {
         OF_Prefs::Load();
 
         // 根据设置初始化轴输出模式（有符号/无符号）
+        // NOTE: 当前仅保留 unsignedAxis 兼容字段，实际 unsigned 映射逻辑待后续实现（见 docs/UNSIGNED_AXIS_TODO.md）
         if (OF_Const::settingsTypesCount > OF_Const::axisUnsigned) {
             Gamepad16.unsignedAxis = (OF_Prefs::settings[OF_Const::axisUnsigned] != 0);
         }
@@ -1488,6 +1489,7 @@ void loop()
                             OF_Prefs::settings[OF_Const::axisUnsigned] = mode;
                             OF_Prefs::SaveSettings();
 
+                            // NOTE: 当前这里只保存兼容状态；unsignedAxis 的完整行为逻辑待后续恢复实现
                             Gamepad16.unsignedAxis = (mode != 0);
 
                             if (!OF_Serial::serialMode) {
