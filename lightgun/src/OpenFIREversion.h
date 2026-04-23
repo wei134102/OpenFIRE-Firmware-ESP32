@@ -2,13 +2,13 @@
 #define OPENFIRE_VERSION_H
 
 // Versione attuale
-#define OPENFIRE_VERSION 6.1
+#define OPENFIRE_VERSION 66.1
 ///////#define OPENFIRE_CODENAME "Dawn Sigma rc2"
 //#define GIT_HASH
-#define OPENFIRE_VERSION_MAJOR 6
+#define OPENFIRE_VERSION_MAJOR 66
 #define OPENFIRE_VERSION_MINOR 1
 #define OPENFIRE_VERSION_PATCH 0
-#define OPENFIRE_VERSION_TYPE "rc2"  // Per indicare pre-release (alpha, beta, RC(Release Candidate), stable, dev)
+#define OPENFIRE_VERSION_TYPE "custom"  // Per indicare pre-release (alpha, beta, RC(Release Candidate), stable, dev)
 
 // Stringa di versione attuale
 #define OPENFIRE_VERSION_STRING (String(OPENFIRE_VERSION_MAJOR) + "." + String(OPENFIRE_VERSION_MINOR) + "." + String(OPENFIRE_VERSION_PATCH)+ "-" + OPENFIRE_VERSION_TYPE)
