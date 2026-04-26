@@ -388,6 +388,7 @@ void setup() {
 
     #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)// SE WIRELESS
         #define MILLIS_TIMEOUT  3000 //1 secondi  检测USB是否连接的时间！！！1秒
+        #define BOY_MODE_WINDOW_MS 3000 // Boy 模式按键判定窗口（毫秒）
         unsigned long lastMillis = millis();
         // 先给 USB 一段时间看看是否被挂载
         while ((millis() - lastMillis <= MILLIS_TIMEOUT) && (!TinyUSBDevice.mounted())) { yield(); }
@@ -395,22 +396,17 @@ void setup() {
         // 如果 USB 还没挂载，先给 Boy Mode 一个 3 秒窗口，再决定要不要去扫无线
         if (!TinyUSBDevice.mounted())
         {
-            BoyMode::BeginDecisionWindow(3000);
+            BoyMode::BeginDecisionWindow(BOY_MODE_WINDOW_MS);
             while (!TinyUSBDevice.mounted() &&
                    !BoyMode::IsEnabled() &&
-                   (millis() - lastMillis <= (MILLIS_TIMEOUT + 3000))) {
+                   (millis() - lastMillis <= (MILLIS_TIMEOUT + BOY_MODE_WINDOW_MS))) {
                 yield();  // 先让 USB 有机会处理
                 BoyMode::TickDecisionWindow();
             }
-            // 如果启用了 Boy Mode，在这里执行剩余的初始化操作
+            // 如果启用了 Boy Mode，这里不要做额外外设操作，避免在启动阶段阻塞
             if (BoyMode::IsEnabled())
             {
-                FW_Common::buttons.ReleaseAll();
-                FW_Common::buttons.ReportDisable();
-                OF_FFB::FFBShutdown();
-                #ifdef USES_DISPLAY
-                FW_Common::OLED.TopPanelUpdate(" BOY MODE ");
-                #endif
+                // 进入后由后续 Boy 模式分支接管
             }
         }
 
@@ -452,7 +448,9 @@ void setup() {
         #endif //USES_DISPLAY
     #endif // ARDUINO_ARCH_ESP32
 
-    if (TinyUSBDevice.mounted()) {
+    if (TinyUSBDevice.mounted() || BoyMode::IsEnabled()) {
+        // Boy 模式下按“有线已就绪”路径处理，避免切到无线串流分支
+        TinyUSBDevices.onBattery = false;
         Serial.begin(9600);
         Serial.setTimeout(0);
         FW_Common::OLED.TopPanelUpdate(" USB mounted "); 
@@ -859,31 +857,7 @@ void loop1()
 // splits off into subsequent ExecModes depending on circumstances
 void loop()
 {
-    // Boy 模式：完全独立的“玩具模式”——只用 TRIGGER 驱动 solenoid，不依赖其他状态机
-    if (BoyMode::IsEnabled())
-    {
-        static bool pinsInited = false;
-        const int8_t trigPin = OF_Prefs::pins[OF_Const::btnTrigger];
-        const int8_t solPin  = OF_Prefs::pins[OF_Const::solenoidPin];
-
-        if (trigPin >= 0 && solPin >= 0)
-        {
-            if (!pinsInited)
-            {
-                pinMode(trigPin, INPUT_PULLUP);
-                pinMode(solPin, OUTPUT);
-                digitalWrite(solPin, LOW);
-                pinsInited = true;
-            }
-
-            // 按下 TRIGGER（低电平）= 打 solenoid，松开则关闭
-            const bool pressed = (digitalRead(trigPin) == LOW);
-            digitalWrite(solPin, pressed ? HIGH : LOW);
-        }
-
-        delay(5); // 简单节流，避免空转过快
-        return;
-    }
+    // Boy 模式只影响启动连接决策；运行期沿用原有触发/反馈逻辑
 
     // poll/update button states with 1ms interval so debounce mask is more effective
     FW_Common::buttons.Poll(1);
@@ -2205,19 +2179,6 @@ void SetModeWaitNoButtons(const FW_Const::GunMode_e &newMode, const unsigned lon
 // Handles events when trigger is pulled/held
 void TriggerFire()
 {
-    // Boy 模式：不依赖屏幕/IR，只要扣扳机就打 solenoid，不发 HID 按键
-    if (BoyMode::IsEnabled())
-    {
-        if(OF_Prefs::toggles[OF_Const::solenoid] &&
-           OF_Prefs::pins[OF_Const::solenoidPin] >= 0)
-        {
-            // 简单玩具逻辑：每次调用都让 SolenoidActivation 负责定时/翻转
-            OF_FFB::SolenoidActivation(0);
-        }
-        OF_FFB::triggerHeld = true;
-        return;
-    }
-
     // 普通模式：计时结束后完全禁用所有按键输出（包括鼠标/键盘/手柄）
     if (PlayTimer::AreInputsLocked())
         return;
@@ -2261,15 +2222,6 @@ void TriggerFire()
 // Handles events when trigger is released
 void TriggerNotFire()
 {
-    // Boy 模式：松开时直接关掉 solenoid，不走 HID 释放逻辑
-    if (BoyMode::IsEnabled())
-    {
-        if(OF_Prefs::pins[OF_Const::solenoidPin] >= 0)
-            digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], LOW);
-        OF_FFB::triggerHeld = false;
-        return;
-    }
-
     if(OF_FFB::triggerHeld) {
         if(FW_Common::buttons.analogOutput)
             Gamepad16.release(LightgunButtons::ButtonDesc[FW_Const::BtnIdx_Trigger].reportCode3);

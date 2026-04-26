@@ -267,12 +267,15 @@ void OF_FFB::BurstFire()
 
 void OF_FFB::FFBShutdown()
 {
-    digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], LOW);
-    #ifdef ARDUINO_ARCH_ESP32
-        analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0); // 696969
-    #else // rp2040
-        digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);
-    #endif
+    if (OF_Prefs::pins[OF_Const::solenoidPin] >= 0)
+        digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], LOW);
+    if (OF_Prefs::pins[OF_Const::rumblePin] >= 0) {
+        #ifdef ARDUINO_ARCH_ESP32
+            analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0); // 696969
+        #else // rp2040
+            digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);
+        #endif
+    }
     solenoidFirstShot = false;
     rumbleHappening = false;
     rumbleHappened = false;

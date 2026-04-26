@@ -45,18 +45,24 @@ public:
             return;
         }
 
-        // 检测 ESP32 开发板的 BOOT 按钮（GPIO0）
+        // 兼容两种进入方式：
+        // 1) 板载 BOOT 按键（GPIO0）
+        // 2) 当前映射的 Trigger 按键（与注释/用户习惯一致）
         const int bootButtonPin = 0;
+        const int8_t triggerPin = OF_Prefs::pins[OF_Const::btnTrigger];
         if (!triggerPinInited)
         {
             pinMode(bootButtonPin, INPUT_PULLUP);
+            if (triggerPin >= 0)
+                pinMode(triggerPin, INPUT_PULLUP);
             triggerPinInited = true;
         }
 
-        bool bootButtonState = digitalRead(bootButtonPin);
+        const bool bootPressed = (digitalRead(bootButtonPin) == LOW);
+        const bool triggerPressed = (triggerPin >= 0) && (digitalRead(triggerPin) == LOW);
 
-        // 只要检测到 BOOT 按钮按下（LOW）就启用 BOY 模式
-        if (bootButtonState == LOW)
+        // 只要检测到 BOOT 或 Trigger 任一按下就启用 BOY 模式
+        if (bootPressed || triggerPressed)
         {
             Enable();
             // 启用后立刻返回，外层 while 条件会退出，不再继续倒计时
@@ -105,12 +111,12 @@ private:
 
         #ifdef USES_DISPLAY
         char buf[24];
-        snprintf(buf, sizeof(buf), "Boy? BOOT %lus", (unsigned long)secs);
+        snprintf(buf, sizeof(buf), "Boy? BOOT/TRIG %lus", (unsigned long)secs);
         FW_Common::OLED.TopPanelUpdate(buf);
         #endif
         
-        // 打印调试信息到串口
-        Serial.printf("BoyMode countdown: %lu\n", secs);
+        // 避免在早期启动阶段（USB CDC 未就绪）阻塞在串口输出
+        // 如需调试可在串口就绪后再打印
     }
 };
 
