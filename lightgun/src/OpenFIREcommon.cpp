@@ -250,10 +250,6 @@ void FW_Common::CameraSet()
                         log_e("ERRORE: ledcWrite fallita!");
                         ledcDetach(gpio_pin);
                     } 
-                    extern uint32_t tone_freq_main;
-                    extern uint32_t tone_duty_main;
-                    tone_freq_main = ledcReadFreq(gpio_pin);
-                    tone_duty_main = ledcRead(gpio_pin);
                 }
             } else {
                 log_i("Wii IR camera clock not used (GPIO not set, pin=%d).", gpio_pin);
