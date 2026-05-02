@@ -1,3 +1,4 @@
+#ifndef USE_PERSPECTIVE_ADVANCED
 /*
  * @file OpenFIRE_Perspective.cpp
  * @brief Light Gun library for 4 LED setup
@@ -150,3 +151,5 @@ int OpenFIRE_Perspective::getX() {
 int OpenFIRE_Perspective::getY() {
   return dstY;
 }
+
+#endif // USE_PERSPECTIVE_ADVANCED
