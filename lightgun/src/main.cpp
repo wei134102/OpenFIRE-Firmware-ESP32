@@ -1,9 +1,20 @@
 /*!
- * @file OpenFIREmain.ino
- * @brief OpenFIRE - 4IR LED Lightgun sketch w/ support for force feedback and other features.
- * Forked from IR-GUN4ALL v4.2, which is based on Prow's Enhanced Fork from https://github.com/Prow7/ir-light-gun,
+ * @file main.cpp
+ * @brief OpenFIRE Esp32 - 4IR LED Lightgun wireless sketch w/ support for force feedback and other features.
+ * Forked from OpenFIRE firmware v6.2 from https://github.com/TeamOpenFIRE/OpenFIRE-Firmware
+ * which in itself is forked from IR-GUN4ALL v4.2, which is based on Prow's Enhanced Fork from https://github.com/Prow7/ir-light-gun,
  * which in itself is based on the 4IR Beta "Big Code Update" SAMCO project from https://github.com/samuelballantyne/IR-Light-Gun
+ * @n CPP file for Samco Light Gun 4 LED setup
  *
+ * @copyright alessandro-satanassi, https://github.com/alessandro-satanassi, 2026
+ * @copyright GNU Lesser General Public License
+ *
+ * @author [Alessandro Satanassi](alessandro@cittini.it)
+ * @version V6.0 PreRelease5
+ * @date 2026
+ * 
+ * I thank you for producing the first original code:
+ * 
  * @copyright Samco, https://github.com/samuelballantyne, June 2020
  * @copyright Mike Lynch, July 2021
  * @copyright That One Seong, https://github.com/SeongGino, 2024
@@ -320,7 +331,7 @@ void setup() {
 // ===================================================================================================================
 
 #ifdef USE_TINYUSB
-        #if defined(ARDUINO_RASPBERRY_PI_PICO_W) && defined(ENABLE_CLASSIC)
+    #if defined(ARDUINO_RASPBERRY_PI_PICO_W) && defined(ENABLE_CLASSIC)
         // is VBUS (USB voltage) detected?
         if(digitalRead(34) || true) { // digitalRead(34) non funziona e non è il metodo corretto
             // If so, we're connected via USB, so initializing the USB devices chunk.

@@ -93,6 +93,23 @@ private:
     float width_top = (623 * CamToMouseMult) - (400 * CamToMouseMult);
     float width_bottom = (623 * CamToMouseMult) - (400 * CamToMouseMult);
 
+    /////////////////////////////////////////////////////////////////////
+
+    // --- VARIABILI MOTORE KINEMATICO (MOLLA) ---
+    float offset_X[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+    float offset_Y[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+    
+    // Quota di scostamento assorbita ad ogni frame (0.15 = 15% del movimento reale)
+    float COSTANTE_MOLLA = 0.25f; // 0.15f; più è basso più è lento .. la massima velocità è 1, in pratica il cambio è immediato a 1 
+    
+    // Penalità per la stima ibrida a 2 punti (circa 40 pixel crudi)
+    const int32_t PENALITA_STORICA = 1000000; // 25000;
+
+    int prev_GeomX[4] = {0, 0, 0, 0};
+    int prev_GeomY[4] = {0, 0, 0, 0};
+
+    /////////////////////////////////////////////////////////////////////
+
 };
 
 #endif // _OpenFIRE_Square_Advanced_h_
