@@ -76,6 +76,14 @@ jobs:
             flash_mode: 'dio'
             flash_freq: '80m'       
             address_littleFS: '0xc90000'
+          - name: 'GNPE_POCKET_DONGLE_S3_N16R8' 
+            boards: 'GNPE_POCKET_DONGLE_S3_N16R8'
+            chip: 'esp32s3'
+            flash_size: '16MB'
+            flash_mode: 'dio'
+            flash_freq: '80m'       
+            address_littleFS: '0xc90000'
+
 
     steps:
       - name: Checkout repository OpenFIRE-DONGLE-Esp32
@@ -142,6 +150,12 @@ jobs:
             flash_size: '16MB'
             flash_mode: 'dio'
             flash_freq: '80m'
+          - name: 'GNPE_POCKET_DONGLE_S3_N16R8' 
+            chip: 'esp32s3'
+            flash_size: '16MB'
+            flash_mode: 'dio'
+            flash_freq: '80m'
+
           
         os_config:
           - name: windows-64bit
