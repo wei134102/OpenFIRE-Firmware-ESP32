@@ -3,10 +3,6 @@
 
 This release is updated to commit **8b651a2** (April 19, 2026) of the original [OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware) firmware.
 
-> [!WARNING]
-> **NEW! PEDAL FIRMWARE NOTICE:** The **PEDAL** firmware is implemented and working well, but at the moment I have only preconfigured the WAVESHARE_ESP32_S3_ZERO_N4R2 (Esp32s3 Mini) board..
-
-
 ### Supported Boards (ESP32-S3)
 
 ***Lightgun:***
@@ -117,8 +113,6 @@ To configure all lightgun features (pins, buttons, name, player, etc.), the orig
 
 Questa release è aggiornata al commit **8b651a2** (19 aprile 2026) del firmware originale [OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware).
 
-> [!WARNING]
-> **NOVITA! AVVISO SUL FIRMWARE PEDAL:** Il firmware **PEDAL** è implementato e ben funzionante, ma al momento ho preconfigurato solo la board WAVESHARE_ESP32_S3_ZERO_N4R2 (Esp32s3 Mini).
 
 ---
 

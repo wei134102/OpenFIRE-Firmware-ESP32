@@ -499,5 +499,4 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
     prev_num_points_seen = num_points_seen;
 }
 
-
 #endif //USE_SQUARE_ADVANCED
