@@ -260,7 +260,7 @@ volatile bool broadcast_receiver = false;  // ??????? non serve
 
 //////////////////////////////////////////////////////////////////////////////
 TaskHandle_t xUSBTaskHandle = NULL;
-
+#ifdef DONGLE
 void usbTask(void *pvParameters) {
   // Teniamo traccia di chi ha il turno. 
   // 0 = Mouse, 1 = Tastiera, 2 = Gamepad
@@ -315,7 +315,7 @@ void usbTask(void *pvParameters) {
     // il task finisce il giro e torna a dormire all'inizio del for(;;)
   }
 }
-
+#endif // DONGLE
 /////////////////////////////////////////////////////////////////////////////
 TaskHandle_t xRadioTaskHandle = NULL;
 volatile bool radioFree = true;
@@ -1237,6 +1237,7 @@ void SerialWireless_::init_wireless() {
       );
   // ========== FINE AGGIUNTA PER NUOVA GESTIONE =================
 
+  #ifdef DONGLE
   // ========= AGGIUNTA PER NUOVA GESTIONE DONGLE USB (SERVE SOLO AL DONGLE) ===============
   xTaskCreatePinnedToCore(
         usbTask,          // funzione del task
@@ -1248,6 +1249,7 @@ void SerialWireless_::init_wireless() {
         APP_CPU_NUM        // core (puoi usare 0 o 1) APP_CPU_NUM = 1 (dove gira il loop) PRO_CPU_NUM = 0 (dove gira freertos, wifi, ecc.)
       );
   // ========== FINE AGGIUNTA PER NUOVA GESTIONE =================
+  #endif // DONGLE
 
 }
 
@@ -1355,6 +1357,9 @@ void SerialWireless_::begin() {
 
 bool SerialWireless_::end() {
 
+  vTaskDelete(xRadioTaskHandle);
+  // vTaskDelete(xUSBTaskHandle); // questo va solo nel dongle
+  
   esp_err_t err = esp_now_deinit();
   if (err != ESP_OK) {
     //Serial.printf("esp_now_deinit failed! 0x%x", err);
@@ -1532,7 +1537,7 @@ bool SerialWireless_::connection_gun_at_last_pedal() {
   if (stato_connessione_wireless == CONNECTION_STATE::DEVICES_CONNECTED_WITH_LAST_PEDAL) {    
     //stato_connessione_wireless = CONNECTION_STATE::DEVICES_CONNECTED;
     
-    memcpy(peerAddress_pedal, mac_esp_another_card, 6);
+    memcpy(peerAddress_pedal, lastPedalAddress, 6);
     memcpy(peerInfo.peer_addr, peerAddress_pedal, 6);
     peerInfo.channel = espnow_wifi_channel;
     if (esp_now_add_peer(&peerInfo) != ESP_OK) {  // inserisce il dongle nei peer
@@ -1547,7 +1552,7 @@ bool SerialWireless_::connection_gun_at_last_pedal() {
     return true;
   } else {
     //stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION;
-    TinyUSBDevices.is_pedal_wireless = true;
+    TinyUSBDevices.is_pedal_wireless = false;
     
     lastPedalSave=false;
     return false;
@@ -2508,7 +2513,7 @@ void setupTimerPedal() {
 // ======================== FINE TIMER PER PEDAL =============================
 
 // NON VA DEFINITA IN QUANTO SOSTITUISCE QUELLA DI DEFAULT CHE NON FA NULLA
-
+#ifdef DONGLE
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -2526,5 +2531,6 @@ void tud_hid_report_complete_cb(uint8_t instance, uint8_t const* report, uint16_
 }
 #endif
 
+#endif // DONGLE
 
 #endif //OPENFIRE_WIRELESS_ENABLE

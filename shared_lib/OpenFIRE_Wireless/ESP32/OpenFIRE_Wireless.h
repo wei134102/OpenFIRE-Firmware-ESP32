@@ -119,7 +119,7 @@ extern volatile uint8_t channel_display;
 
 
 enum WIRELESS_MODE {
-  NONE_WIRELESS =  0,                
+  NONE_WIRELESS = 0,   // WIFI SPENTO
   ENABLE_BLUETOOTH_TO_PC,         //1
   ENABLE_BLUETOOTH_TO_DONGLE,     //2
   ENABLE_ESP_NOW_TO_DONGLE,       //3
