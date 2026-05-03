@@ -1,16 +1,14 @@
 /*!
  * @file OpenFIREmain.h
- * @brief OpenFIRE main control program.
+ * @brief OpenFIREmain.h
+ * @n CPP OpenFIREmain.h
  *
- * @copyright Samco, https://github.com/samuelballantyne, June 2020
- * @copyright Mike Lynch, July 2021
- * @copyright That One Seong, https://github.com/SeongGino, 2024
+ * @copyright alessandro-satanassi, https://github.com/alessandro-satanassi, 2026
  * @copyright GNU Lesser General Public License
  *
- * @author [Sam Ballantyne](samuelballantyne@hotmail.com)
- * @author Mike Lynch
- * @author [That One Seong](SeongsSeongs@gmail.com)
- * @date 2025
+ * @author [Alessandro Satanassi](alessandro@cittini.it)
+ * @version V1.0
+ * @date 2026
  */
 
 #ifndef _OPENFIREMAIN_H_

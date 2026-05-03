@@ -1,3 +1,16 @@
+/*!
+ * @file TinyUSB_Devices.cpp
+ * @brief Library for OpenFIRE TinyUSB
+ * @n CPP Library for OpenFIRE TinyUSB
+ *
+ * @copyright alessandro-satanassi, https://github.com/alessandro-satanassi, 2026
+ * @copyright GNU Lesser General Public License
+ *
+ * @author [Alessandro Satanassi](alessandro@cittini.it)
+ * @version V1.0
+ * @date 2026
+ */
+
 /*
  * This module (hastily) combines Mike Lynch's modified "AbsMouse5" library, and
  * Chris Young's TinyUSB Mouse and Keyboard library (the Keyboard half, anyways),

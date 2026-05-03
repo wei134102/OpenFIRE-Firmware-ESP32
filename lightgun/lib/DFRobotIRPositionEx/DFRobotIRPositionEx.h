@@ -9,6 +9,15 @@
  * - Added sensitivity settings
  * - Added IIC clock setting, appears to work up to 1MHz
  *
+ * @copyright alessandro-satanassi, https://github.com/alessandro-satanassi, 2026
+ * @copyright GNU Lesser General Public License
+ *
+ * @author [Alessandro Satanassi](alessandro@cittini.it)
+ * @version V2.0
+ * @date 2026
+ *
+ * I thank you for producing the first original code:
+ *
  * @copyright [DFRobot](http://www.dfrobot.com), 2016
  * @copyright Mike Lynch, 2021
  * @copyright GNU Lesser General Public License

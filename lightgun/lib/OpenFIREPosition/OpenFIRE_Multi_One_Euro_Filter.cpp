@@ -1,4 +1,16 @@
 #ifdef USE_MULTI_ONE_EURO_FILTER
+/*!
+ * @file OpenFIRE_Multi_One_Euro_Filter.cpp
+ * @brief Library for One Euro Filter for 4 LED
+ * @n CPP Library for One Euro Filter for 4 LED
+ *
+ * @copyright alessandro-satanassi, https://github.com/alessandro-satanassi, 2026
+ * @copyright GNU Lesser General Public License
+ *
+ * @author [Alessandro Satanassi](alessandro@cittini.it)
+ * @version V2.0
+ * @date 2026
+ */
 
 #include "OpenFIRE_Multi_One_Euro_Filter.h"
 
@@ -16,13 +28,21 @@ OpenFIRE_One_Euro_Multi::OpenFIRE_One_Euro_Multi() {
 }
 
 void OpenFIRE_One_Euro_Multi::process(int* x, int* y) {
+    // Il calcolo del Delta-Time (dt) si basa sul micro-clock dell'ESP32. 
+    // Questa precisione temporale rende il filtro intrinsecamente immune 
+    // alle variazioni di framerate causate da eventuali picchi di carico sulla CPU.
     unsigned long currentMicros = micros();
     
     float dt = ((float)(currentMicros - lastMicros)) * 0.000001f; 
+    
+    // Se il timer impazzisce o il ciclo si blocca per il Wi-Fi, resettiamo il dt
+    // a un valore nominale per evitare divisioni per zero o salti catastrofici del filtro.
     if (dt <= 0.0f || dt > 0.1f) dt = 0.005f; 
     lastMicros = currentMicros;
 
     if (!initialized) {
+        // Cold start (Aggancio Immediato): evita che l'interpolatore inizi a calcolare
+        // da zero (origine asse), spingendo le coordinate istantaneamente dove si trova l'arma.
         for (int i = 0; i < 4; i++) {
             states[i].x_prev = states[i].x_hat = (float)x[i];
             states[i].y_prev = states[i].y_hat = (float)y[i];
@@ -36,9 +56,15 @@ void OpenFIRE_One_Euro_Multi::process(int* x, int* y) {
     const float a_d = fast_alpha(d_cutoff, dt_two_pi);
     const float inv_dt = 1.0f / dt; 
 
+    // Il core loop. Trattiamo indipendentemente i 4 angoli del quadrilatero per non 
+    // mescolare le singole inerzie geometriche.
     for (int i = 0; i < 4; i++) {
+        
         // --- 1. LOGICA SPAZIALE ---
         // Sfruttiamo i centri calcolati nel costruttore
+        // Adattamento periferico: man mano che ci allontaniamo dal centro della TV,
+        // la deformazione ottica amplifica il rumore. Questa logica riduce la sensibilità 
+        // del filtro (Beta) dinamicamente ai bordi per contrastare l'instabilità fisiologica.
         float distH = fabsf((float)x[i] - ((float)MouseMaxX * 0.5f)) * inv_center_x;
         float distV = fabsf((float)y[i] - ((float)MouseMaxY * 0.5f)) * inv_center_y;
         float maxDist = (distH > distV) ? distH : distV;
@@ -50,6 +76,8 @@ void OpenFIRE_One_Euro_Multi::process(int* x, int* y) {
         float dx = ((float)x[i] - states[i].x_prev) * inv_dt;
         
         // OTTIMIZZAZIONE EMA: Forma matematica ridotta (risparmia CPU)
+        // Matematica equivalente: y_hat = a_d * dx + (1 - a_d) * vel_x_hat, 
+        // ma evita una moltiplicazione per ciclo raggruppando i fattori.
         states[i].vel_x_hat += a_d * (dx - states[i].vel_x_hat);
         
         float cutoff_x = min_cutoff + adaptiveBeta * fabsf(states[i].vel_x_hat);
@@ -62,6 +90,8 @@ void OpenFIRE_One_Euro_Multi::process(int* x, int* y) {
         states[i].x_prev = (float)x[i];
 
         // --- 3. FILTRAGGIO ASSE Y ---
+        // Mirroring speculare della logica dell'asse X. Separazione necessaria per
+        // permettere movimenti rapidi in orizzontale preservando la stabilità verticale.
         float dy = ((float)y[i] - states[i].y_prev) * inv_dt;
         
         states[i].vel_y_hat += a_d * (dy - states[i].vel_y_hat);
@@ -75,7 +105,8 @@ void OpenFIRE_One_Euro_Multi::process(int* x, int* y) {
         states[i].y_prev = (float)y[i];
 
         // --- 4. SAFETY NET HARDWARE ---
-        // Se un glitch cosmico genera un Not-A-Number, lo resettiamo istantaneamente
+        // Se un glitch cosmico (es. divisione fallita) genera un Not-A-Number, lo resettiamo 
+        // istantaneamente forzando le coordinate attuali grezze. Evita il blocco totale dell'asse.
         if (isnan(states[i].x_hat) || isnan(states[i].y_hat)) {
             states[i].x_hat = (float)x[i];
             states[i].y_hat = (float)y[i];
@@ -83,10 +114,11 @@ void OpenFIRE_One_Euro_Multi::process(int* x, int* y) {
             states[i].vel_y_hat = 0.0f;
         }
 
+        // Il casting esplicito a intero post-arrotondamento riporta il dato al dominio
+        // del protocollo HID del mouse, pronto per la comunicazione USB/Bluetooth.
         x[i] = (int)roundf(states[i].x_hat);
         y[i] = (int)roundf(states[i].y_hat);
     }
 }
 
 #endif // USE_MULTI_ONE_EURO_FILTER
-

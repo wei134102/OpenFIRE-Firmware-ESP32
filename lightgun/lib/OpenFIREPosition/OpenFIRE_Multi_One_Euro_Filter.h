@@ -1,5 +1,16 @@
-
 #ifdef USE_MULTI_ONE_EURO_FILTER
+/*!
+ * @file OpenFIRE_Multi_One_Euro_Filter.h
+ * @brief Library for One Euro Filter for 4 LED
+ * @n CPP Library for One Euro Filter for 4 LED
+ *
+ * @copyright alessandro-satanassi, https://github.com/alessandro-satanassi, 2026
+ * @copyright GNU Lesser General Public License
+ *
+ * @author [Alessandro Satanassi](alessandro@cittini.it)
+ * @version V2.0
+ * @date 2026
+ */
 
 #ifndef OpenFIRE_Multi_One_Euro_Filter_h
 #define OpenFIRE_Multi_One_Euro_Filter_h
@@ -9,6 +20,9 @@
 
 class OpenFIRE_One_Euro_Multi {
 private:
+    // Struttura fusa: mantiene sia lo storico posizionale (prev/hat) che vettoriale (vel).
+    // Usare una singola struct garantisce che la cache L1 della CPU legga tutto lo stato
+    // di un singolo asse in una sola operazione (Locality of Reference).
     struct FilterState {
         float x_prev, x_hat;
         float y_prev, y_hat;
@@ -20,17 +34,33 @@ private:
     bool initialized = false;
 
     // Variabili per il centro dello schermo (calcolate una sola volta al boot)
+    // Conserviamo i reciproci (1/x) per commutare le pesanti divisioni geometriche 
+    // in moltiplicazioni veloci durante il runtime.
     float inv_center_x;
     float inv_center_y;
 
     // --- PARAMETRI DI TUNING ---
+    // min_cutoff: La "lentezza" del mirino quando l'utente si muove pochissimo (jitter/tremore). 
+    // Valori bassi (1.0f) aumentano la stabilità ma inducono latenza "viscosa".
     const float min_cutoff = 1.0f; 
+    
+    // d_cutoff: Reattività del derivato (velocità). 
+    // Filtra il "rumore" dal calcolo della velocità stessa prima di usarla per la correzione.
     const float d_cutoff = 10.0f;   
+    
+    // max_cutoff: Il limite di banda passante superiore. 
+    // Previene reazioni esagerate quando l'arma si sposta violentemente.
     const float max_cutoff = 30.0f; 
+    
+    // beta_base: Il coefficiente dinamico. Regola quanto aggressivamente l'algoritmo 
+    // disattiva il filtro "lento" (min_cutoff) quando percepisce movimenti veloci.
+    // L'equazione relaziona la risoluzione della telecamera a quella del mouse.
     const float beta_base = (0.011f * (float)CamResX) / (float)MouseResX;
 
     const float OEF_TWO_PI = 6.28318530718f;
 
+    // Sostituisce l'implementazione classica dell'Exponential Moving Average.
+    // Espande la formula matematica per evitare chiamate di funzione ricorsive.
     inline float fast_alpha(float cutoff, float dt_two_pi) {
         float te = cutoff * dt_two_pi;
         return te / (te + 1.0f);
@@ -38,10 +68,12 @@ private:
 
 public:
     OpenFIRE_One_Euro_Multi();
+    
+    // Il passaggio tramite puntatori int* previene costose copie di array per valore,
+    // manipolando direttamente la memoria del layer chiamante (Zero Copy).
     void process(int* x, int* y);
 };
 
 #endif // OpenFIRE_Multi_One_Euro_Filter_h
 
 #endif // USE_MULTI_ONE_EURO_FILTER
-

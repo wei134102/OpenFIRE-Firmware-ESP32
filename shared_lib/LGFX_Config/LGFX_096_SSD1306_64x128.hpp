@@ -1,3 +1,16 @@
+/*!
+ * @file LGFX_096_SSD1306_64x128.hpp
+ * @brief Library for LGFX_096_SSD1306_64x128
+ * @n CPP Library for LGFX_096_SSD1306_64x128
+ *
+ * @copyright alessandro-satanassi, https://github.com/alessandro-satanassi, 2026
+ * @copyright GNU Lesser General Public License
+ *
+ * @author [Alessandro Satanassi](alessandro@cittini.it)
+ * @version V1.0
+ * @date 2026
+ */
+
 #pragma once
 
 // adattarlo al codice già scritto di OpenFire definizione dei colori
