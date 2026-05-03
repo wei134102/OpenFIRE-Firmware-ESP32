@@ -69,6 +69,20 @@ jobs:
             flash_mode: 'dio'
             flash_freq: '80m'       
             address_littleFS: '0xc90000'
+          - name: 'ESP32_S3_super_mini'
+            boards: 'ESP32_S3_super_mini'
+            chip: 'esp32s3'
+            flash_size: '4MB'
+            flash_mode: 'dio'
+            flash_freq: '80m'
+            address_littleFS: '0x290000'
+          - name: 'ESP32_S3_super_mini_OLED091'
+            boards: 'ESP32_S3_super_mini_OLED091'
+            chip: 'esp32s3'
+            flash_size: '4MB'
+            flash_mode: 'dio'
+            flash_freq: '80m'
+            address_littleFS: '0x290000'
 
     steps:
       - name: Checkout repository OpenFIRE-Firmware-Esp32
@@ -145,7 +159,19 @@ jobs:
             flash_size: '16MB'
             flash_mode: 'dio'
             flash_freq: '80m'        
-            address_littleFS: '0xc90000'        
+            address_littleFS: '0xc90000'
+          - name: 'ESP32_S3_super_mini'
+            chip: 'esp32s3'
+            flash_size: '4MB'
+            flash_mode: 'dio'
+            flash_freq: '80m'
+            address_littleFS: '0x290000'
+          - name: 'ESP32_S3_super_mini_OLED091'
+            chip: 'esp32s3'
+            flash_size: '4MB'
+            flash_mode: 'dio'
+            flash_freq: '80m'
+            address_littleFS: '0x290000'
         os_config:
           - name: windows-64bit
             runner: windows-latest
