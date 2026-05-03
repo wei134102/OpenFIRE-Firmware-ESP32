@@ -250,6 +250,11 @@ uint8_t calcolaPotenzaOttimale(int8_t rssi_remoto) {
 ///////////////////////////////////////////////////////////////////
 
 volatile uint8_t channel_display = espnow_wifi_channel;
+
+#if defined(DONGLE) && defined(USES_OLED_DISPLAY)
+/** 0 = WiFi AP scan phase; 1–13 = per-channel RF sniff in findBestChannel() */
+volatile uint8_t dongle_oled_sniff_channel = 0;
+#endif
 volatile uint8_t seconds_display = 30;
 volatile bool broadcast_receiver = false;  // ??????? non serve
 
@@ -537,6 +542,8 @@ void animTask(void *pvParameters) {
 #endif //DONGLE
 
 
+// DONGLE OLED UI: dongle/src/dongle_oled_status.cpp (same TU as main, reliable flags)
+
 /////////////////////////////////////////////////////////////////////////////
 // FINE VERSIONE GRAFICA RICERCA CANALE PER DONGLE //////////////////////////
 /////////////////////////////////////////////////////////////////////////////
@@ -554,9 +561,11 @@ void IRAM_ATTR promiscuousCallback(void *buf, wifi_promiscuous_pkt_type_t type) 
 
 // ================= FUNZIONE PRINCIPALE =================
 uint8_t findBestChannel() {
-  
+#if defined(DONGLE) && defined(USES_DISPLAY)
+  TaskHandle_t animTaskHandle = NULL;
+#endif
+
   #if defined(DONGLE) && defined(USES_DISPLAY)
-  TaskHandle_t animTaskHandle = NULL;  
   if(display_init) {
   // Avvio animazione
     if (animTaskHandle == NULL) {
@@ -590,6 +599,11 @@ uint8_t findBestChannel() {
   g_sniffing = false;
   for (int i = 0; i < 14; i++) channelStats[i].maxRSSI = -128;
 
+  #if defined(DONGLE) && defined(USES_OLED_DISPLAY)
+  dongle_oled_sniff_channel = 0;
+  dongle_oled_draw_scan_status();
+  #endif
+
   // ================= FASE 1: SCAN RETI WiFi =================
   // Tempo: ~2 secondi (150ms × 13 canali)
   WiFi.mode(WIFI_STA);
@@ -598,6 +612,10 @@ uint8_t findBestChannel() {
 
   // Scan ottimizzato: 150ms per canale cattura tutti i beacon
   // (beacon interval tipico: 100ms)
+  #if defined(DONGLE) && defined(USES_OLED_DISPLAY)
+  dongle_oled_sniff_channel = 0;
+  dongle_oled_draw_scan_status();
+  #endif
   int n = WiFi.scanNetworks(false, true, false, 150UL, 0);
   if (n < 0) n = 0;
 
@@ -627,6 +645,10 @@ uint8_t findBestChannel() {
   WiFi.scanDelete();
   vTaskDelay(pdMS_TO_TICKS(50));
 
+  #if defined(DONGLE) && defined(USES_OLED_DISPLAY)
+  dongle_oled_draw_scan_status();
+  #endif
+
   // ================= FASE 2: SNIFF TRAFFICO E NOISE =================
   // Tempo: ~12 secondi (920ms × 13 canali)
   
@@ -635,6 +657,10 @@ uint8_t findBestChannel() {
   esp_wifi_set_promiscuous_rx_cb(&promiscuousCallback);
 
   for (int ch = 1; ch <= 13; ch++) {
+    #if defined(DONGLE) && defined(USES_OLED_DISPLAY)
+    dongle_oled_sniff_channel = (uint8_t)ch;
+    dongle_oled_draw_scan_status();
+    #endif
 
     esp_wifi_set_channel(ch, WIFI_SECOND_CHAN_NONE);
     vTaskDelay(pdMS_TO_TICKS(70)); // Stabilizzazione radio
@@ -644,7 +670,14 @@ uint8_t findBestChannel() {
     g_packetCounter = 0;
     g_sniffing = true;
     uint32_t startCount = g_packetCounter;
+    #if defined(DONGLE) && defined(USES_OLED_DISPLAY)
+    for (int _osi = 0; _osi < 4; _osi++) {
+      vTaskDelay(pdMS_TO_TICKS(150));
+      dongle_oled_draw_scan_status();
+    }
+    #else
     vTaskDelay(pdMS_TO_TICKS(600));
+    #endif
     uint32_t endCount = g_packetCounter;
     channelStats[ch].packets = endCount - startCount;
     
@@ -1236,6 +1269,14 @@ void SerialWireless_::begin() {
      
   #endif // DONGLE
 
+#ifdef DONGLE
+  channel_display = espnow_wifi_channel;
+#endif
+
+#if defined(DONGLE) && defined(USES_OLED_DISPLAY)
+  dongle_oled_draw_link_status();
+#endif
+
   #ifdef PEDAL
       espnow_wifi_channel=OPENFIRE_ESPNOW_WIFI_CHANNEL;
   #endif //GUN
@@ -1327,9 +1368,11 @@ bool SerialWireless_::end() {
 
 // ============ NUOVA IMPLEMNTAZIONE == LA GUN FA IL FARO ================================
 bool SerialWireless_::connection_dongle() {
+#if defined(DONGLE) && defined(USES_DISPLAY)
+  TaskHandle_t animTaskHandleLink = NULL;
+#endif
     
   #if defined(DONGLE) && defined(USES_DISPLAY)
-  TaskHandle_t animTaskHandleLink = NULL;  
   if(display_init) {
   // Avvio animazione
     if (animTaskHandleLink == NULL) {
@@ -1355,6 +1398,10 @@ bool SerialWireless_::connection_dongle() {
 
   broadcast_receiver = true;
 
+#if defined(DONGLE) && defined(USES_OLED_DISPLAY)
+  unsigned long dongle_oled_last_poll = 0;
+#endif
+
   while(stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED) { 
     if (stato_connessione_wireless == CONNECTION_STATE::NONE_CONNECTION) {
       lastMillis_start_dialogue = millis ();
@@ -1362,6 +1409,12 @@ bool SerialWireless_::connection_dongle() {
     if (((millis() - lastMillis_start_dialogue) > TIMEOUT_DONGLE_DIALOGUE) && stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED) {
       stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION;
     }
+#if defined(DONGLE) && defined(USES_OLED_DISPLAY)
+    if (millis() - dongle_oled_last_poll >= 150UL) {
+      dongle_oled_last_poll = millis();
+      dongle_oled_draw_link_status();
+    }
+#endif
     taskYIELD();
   }
   
@@ -1920,36 +1973,25 @@ void packet_callback_read_dongle() {
     #ifdef OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
     case PACKET_TX::MOUSE_KEY_PAD_TX: { // ATTENZIONE: Le parentesi graffe qui sono OBBLIGATORIE in C++ per dichiarare variabili dentro un 'case'
       
-      // Calcoliamo l'indirizzo base UNA sola volta e lo mettiamo nel puntatore 'ptr'
       uint8_t* ptr = &SerialWireless.packet.rxBuff[PREAMBLE_SIZE];
 
-      // --- MOUSE ---
-      // Confrontiamo il buffer con l'ultimo stato noto
-      if (memcmp(ptr, &absmouse5Report_last_wifi, sizeof(absmouse5Report_last_wifi))) {
-        memcpy(&absmouse5Report_last_wifi, ptr, sizeof(absmouse5Report_last_wifi));
-        absmouse5Report_pending = true;    
-      }   
+      // Always apply composite HID payload: memcmp-only skips updates if struct
+      // padding or host/dongle layout ever diverges, breaking mouse buttons.
+      memcpy(&absmouse5Report_last_wifi, ptr, sizeof(absmouse5Report_last_wifi));
+      absmouse5Report_pending = true;
+      ptr += sizeof(absmouse5Report_last_wifi);
 
-      ptr += sizeof(absmouse5Report_last_wifi); // Fai scorrere il puntatore in avanti alla fine dei dati mouse
+      memcpy(&keyReport_last_wifi, ptr, sizeof(keyReport_last_wifi));
+      keyReport_pending = true;
+      ptr += sizeof(keyReport_last_wifi);
 
-      // --- TASTIERA ---
-      if (memcmp(ptr, &keyReport_last_wifi, sizeof(keyReport_last_wifi))) {
-        memcpy(&keyReport_last_wifi, ptr, sizeof(keyReport_last_wifi));
-        keyReport_pending = true;
-      }
-      
-      ptr += sizeof(keyReport_last_wifi); // Fai scorrere il puntatore in avanti alla fine dei dati tastiera
+      memcpy(&gamepad16Report_last_wifi, ptr, sizeof(gamepad16Report_last_wifi));
+      gamepad16Report_pending = true;
 
-      // --- GAMEPAD ---
-      if (memcmp(ptr, &gamepad16Report_last_wifi, sizeof(gamepad16Report_last_wifi))) {
-        memcpy(&gamepad16Report_last_wifi, ptr, sizeof(gamepad16Report_last_wifi));
-        gamepad16Report_pending = true;
-      }
-      
-      if (absmouse5Report_pending || keyReport_pending || gamepad16Report_pending) xTaskNotifyGive(xUSBTaskHandle);
+      xTaskNotifyGive(xUSBTaskHandle);
 
       break;  
-    } // Chiusura del blocco del case
+    }
     #endif // OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
     #ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO
     case PACKET_TX::DUMMY_PACKET:

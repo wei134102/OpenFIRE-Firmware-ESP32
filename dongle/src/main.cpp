@@ -151,9 +151,10 @@ void setup() {
 
   #if defined(USES_OLED_DISPLAY)
     Wire.begin(OLED_SDA, OLED_SCL);
-    if(!display.begin(SSD1306_SWITCHCAPVCC, OLED_I2C_ADDR)) {
+    display_init = display.begin(SSD1306_SWITCHCAPVCC, OLED_I2C_ADDR);
+    if (!display_init) {
       // Fallback to common alternate address.
-      display.begin(SSD1306_SWITCHCAPVCC, 0x3D);
+      display_init = display.begin(SSD1306_SWITCHCAPVCC, 0x3D);
     }
 
     display.clearDisplay();
@@ -179,6 +180,16 @@ void setup() {
     tft.setCursor(0, 40);
     tft.printf("Attesa PEDAL");
   #endif // USES_DISPLAY
+
+  #if defined(USES_OLED_DISPLAY)
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(SSD1306_WHITE);
+    display.setCursor(0, 0);
+    display.println(F("RF link OK"));
+    display.println(F("Wait gun stream"));
+    display.display();
+  #endif
 
   SerialWireless.is_pedal_wireless_comunication = false;
   while (!SerialWireless.is_pedal_wireless_comunication) {

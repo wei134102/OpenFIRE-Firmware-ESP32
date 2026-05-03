@@ -107,7 +107,13 @@ extern bool lastPedalSave;
 extern const uint8_t BROADCAST_ADDR[6];
 
 extern uint8_t peerAddress_pedal[6];
- 
+
+#if defined(DONGLE) && defined(USES_OLED_DISPLAY)
+void dongle_oled_draw_scan_status(void);
+void dongle_oled_draw_link_status(void);
+extern volatile uint8_t dongle_oled_sniff_channel;
+extern volatile uint8_t channel_display;
+#endif
 
 
 
