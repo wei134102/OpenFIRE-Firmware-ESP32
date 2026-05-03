@@ -10,7 +10,7 @@
  * @copyright GNU Lesser General Public License
  *
  * @author [Alessandro Satanassi](alessandro@cittini.it)
- * @version V6.0 PreRelease5
+ * @version V6.0 PreRelease7
  * @date 2026
  * 
  * I thank you for producing the first original code:

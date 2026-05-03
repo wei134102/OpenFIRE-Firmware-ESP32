@@ -1,3 +1,16 @@
+/*!
+ * @file OpenFIREversion.h
+ * @brief OpenFIREversion.h
+ * @n CPP OpenFIREversion.h
+ *
+ * @copyright alessandro-satanassi, https://github.com/alessandro-satanassi, 2026
+ * @copyright GNU Lesser General Public License
+ *
+ * @author [Alessandro Satanassi](alessandro@cittini.it)
+ * @version V1.0
+ * @date 2026
+ */
+
 #ifndef OPENFIRE_VERSION_H
 #define OPENFIRE_VERSION_H
 

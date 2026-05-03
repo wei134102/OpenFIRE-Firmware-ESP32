@@ -1,4 +1,15 @@
-
+/*!
+ * @file OpenFIRE_Wireless.cpp
+ * @brief Library for OpenFIRE wireless with Esp-Now
+ * @n CPP Library for OpenFIRE wireless with Esp-Now
+ *
+ * @copyright alessandro-satanassi, https://github.com/alessandro-satanassi, 2026
+ * @copyright GNU Lesser General Public License
+ *
+ * @author [Alessandro Satanassi](alessandro@cittini.it)
+ * @version V1.0
+ * @date 2026
+ */
 
 #if defined(OPENFIRE_WIRELESS_ENABLE) && defined(ARDUINO_ARCH_ESP32)
 

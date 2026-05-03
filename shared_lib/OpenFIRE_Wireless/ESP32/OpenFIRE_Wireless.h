@@ -1,44 +1,14 @@
-/*
- * This module simulates the standard Arduino "Mouse.h" and
- * "Keyboard.h" API for use with the TinyUSB HID API. Instead of doing
- *  #include <HID.h>
- *  #include <Mouse.h>
- *  #include <Keyboard.h>
- *  
- *  Simply do
- *  
- *  #include <TinyUSB_Mouse_Keyboard.h>
- *  
- *  and this module will automatically select whether or not to use the
- *  standard Arduino mouse and keyboard API or the TinyUSB API. We had to
- *  combine them into a single library because of the way TinyUSB handles
- *  descriptors.
- *  
- *  For details on Arduino Mouse.h see
- *   https://www.arduino.cc/reference/en/language/functions/usb/mouse/
- *  For details on Arduino Keyboard.h see
- *   https://www.arduino.cc/reference/en/language/functions/usb/keyboard/
+/*!
+ * @file OpenFIRE_Wireless.h
+ * @brief Library for OpenFIRE wireless with Esp-Now
+ * @n CPP Library for OpenFIRE wireless with Esp-Now
  *
- *  NOTE: This code is derived from the standard Arduino Mouse.h, Mouse.cpp,
- *    Keyboard.h, and Keyboard.cpp code. The copyright on that original code
- *    is as follows.
- *   
- *  Copyright (c) 2015, Arduino LLC
- *  Original code (pre-library): Copyright (c) 2011, Peter Barrett
+ * @copyright alessandro-satanassi, https://github.com/alessandro-satanassi, 2026
+ * @copyright GNU Lesser General Public License
  *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU Lesser General Public
- *  License as published by the Free Software Foundation; either
- *  version 2.1 of the License, or (at your option) any later version.
- *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  Lesser General Public License for more details.
- *
- *  You should have received a copy of the GNU Lesser General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ * @author [Alessandro Satanassi](alessandro@cittini.it)
+ * @version V1.0
+ * @date 2026
  */
 
 #pragma once

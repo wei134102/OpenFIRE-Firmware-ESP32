@@ -2,6 +2,15 @@
  * @file OpenFIREcolors.h
  * @brief Collection of unique colours for RGB LEDs such as Dot Stars or Neopixels.
  *
+ * @copyright alessandro-satanassi, https://github.com/alessandro-satanassi, 2026
+ * @copyright GNU Lesser General Public License
+ *
+ * @author [Alessandro Satanassi](alessandro@cittini.it)
+ * @version V2.0
+ * @date 2026
+ *
+ * I thank you for producing the first original code:
+ *
  * @copyright Mike Lynch, 2021
  * @copyright GNU Lesser General Public License
  *

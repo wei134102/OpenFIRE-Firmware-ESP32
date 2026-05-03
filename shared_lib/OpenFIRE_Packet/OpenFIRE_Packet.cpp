@@ -1,3 +1,15 @@
+/*!
+ * @file OpenFIRE_Packet.cpp
+ * @brief Library for OpenFIRE Packet wireless with Esp-Now
+ * @n CPP Library for OpenFIRE Packet wireless with Esp-Now
+ *
+ * @copyright alessandro-satanassi, https://github.com/alessandro-satanassi, 2026
+ * @copyright GNU Lesser General Public License
+ *
+ * @author [Alessandro Satanassi](alessandro@cittini.it)
+ * @version V1.0
+ * @date 2026
+ */
 #ifdef OPENFIRE_WIRELESS_ENABLE
 
 #include "OpenFIRE_Packet.h"

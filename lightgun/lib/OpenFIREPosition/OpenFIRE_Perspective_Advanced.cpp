@@ -1,5 +1,30 @@
-
 #ifdef USE_PERSPECTIVE_ADVANCED
+/*!
+ * @file OpenFIRE_Perspective_Advanced.cpp
+ * @brief Light Gun library for 4 LED setup
+ * @n CPP file for Samco Light Gun 4 LED setup
+ *
+ * @copyright alessandro-satanassi, https://github.com/alessandro-satanassi, 2026
+ * @copyright GNU Lesser General Public License
+ *
+ * @author [Alessandro Satanassi](alessandro@cittini.it)
+ * @version V2.0
+ * @date 2026
+ * 
+ * I thank you for producing the first original code:
+ * 
+ * @copyright Samco, https://github.com/samuelballantyne, 2024
+ * @copyright GNU Lesser General Public License
+ *
+ * @author [Sam Ballantyne](samuelballantyne@hotmail.com)
+ * @version V1.0
+ * @date 2024
+ * Derived from Wiimote Whiteboard library:
+ * Copyright 2021 88hcsif
+ * Copyright (c) 2008 Stephane Duchesneau
+ * by Stephane Duchesneau <stephane.duchesneau@gmail.com>
+ * Ported from Johnny Lee's C# WiiWhiteboard project (Warper.cs file)
+ */
 
 #include "OpenFIRE_Perspective_Advanced.h"
 #include <math.h>
@@ -8,6 +33,8 @@
 // 1. MOTORE ALGEBRICO E REGISTRI CPU (Zero Overhead)
 // ========================================================================================
 
+// Calcola la matrice di trasformazione prospettica proiettando un quadrato ideale
+// (la calibrazione TV) sul quadrilatero irregolare letto dalla telecamera IR.
 inline void computeSquareToQuad(float* mat, float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3) {
   float dx1 = x1 - x2; float dy1 = y1 - y2;
   float dx2 = x3 - x2; float dy2 = y3 - y2;
@@ -16,7 +43,9 @@ inline void computeSquareToQuad(float* mat, float x0, float y0, float x1, float 
   float det = (dx1 * dy2 - dx2 * dy1);
   float g = 0.0f, h = 0.0f;
   
-  // Limite di degenerazione matematica (1e-8 è perfetto per la scala normalizzata a 1.0)
+  // Limite di degenerazione matematica (1e-8 è perfetto per la scala normalizzata a 1.0).
+  // Previene divisioni per zero catastrofiche nel caso in cui i LED formino 
+  // una singola linea retta o un punto (es. telecamera che guarda parallelamente allo schermo).
   if (fabsf(det) > 1e-8f) {
     float invDet = 1.0f / det;
     g = (sx * dy2 - dx2 * sy) * invDet;
@@ -28,6 +57,9 @@ inline void computeSquareToQuad(float* mat, float x0, float y0, float x1, float 
   mat[6] = x0;               mat[7] = y0;               mat[8] = 1.0f;
 }
 
+// Inversa della funzione precedente. Genera la matrice dei co-fattori.
+// Indispensabile per mappare il singolo pixel letto sul sensore (il "proiettile")
+// sulla superficie fisica e non distorta dello schermo della TV.
 inline void computeQuadToSquare(float* mat, float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3) {
   float dx1 = x1 - x2; float dy1 = y1 - y2;
   float dx2 = x3 - x2; float dy2 = y3 - y2;
@@ -51,8 +83,9 @@ inline void computeQuadToSquare(float* mat, float x0, float y0, float x1, float 
   
   float invDetQuad = (a * A + b * D + c * G);
   
-  // Se la fotocamera restituisce punti anomali/allineati, questa condizione fallisce 
-  // e la matrice NON viene scritta. Il mirino si congela sull'ultimo frame valido.
+  // Se la fotocamera restituisce punti anomali/allineati (determinante nullo), questa 
+  // condizione fallisce e la matrice NON viene scritta. Il mirino si congela sull'ultimo 
+  // frame valido invece di impazzire restituendo NaN o Inf.
   if (fabsf(invDetQuad) > 1e-8f) {
     float idet = 1.0f / invDetQuad;
     mat[0] = A * idet; mat[1] = D * idet; mat[2] = G * idet;
@@ -61,6 +94,8 @@ inline void computeQuadToSquare(float* mat, float x0, float y0, float x1, float 
   }
 }
 
+// Unrolling manuale del calcolo della matrice. Non usare cicli FOR qui:
+// l'ESP32 esegue questa istruzione flat in una manciata di cicli di clock.
 inline void multMats(const float* a, const float* b, float* res) {
   res[0] = a[0]*b[0] + a[1]*b[3] + a[2]*b[6];
   res[1] = a[0]*b[1] + a[1]*b[4] + a[2]*b[7];
@@ -77,6 +112,9 @@ inline void multMats(const float* a, const float* b, float* res) {
 // 2. FISICA E CALCOLO AREA
 // ========================================================================================
 
+// Algoritmo di de-warping spaziale di Brown-Conrady semplificato.
+// Necessario perché ai bordi estremi del campo visivo della telecamera IR
+// i LED "spanciano" a causa della lente sferica, falsando il calcolo prospettico.
 inline void OpenFIRE_Perspective::applyLensCorrection(float &x, float &y) {
   if (k1 == 0.0f) return; 
   
@@ -89,6 +127,8 @@ inline void OpenFIRE_Perspective::applyLensCorrection(float &x, float &y) {
   float r2 = (nx * nx) + (ny * ny);
   float distortion = 1.0f + (k1 * r2);
   
+  // Limiti di sicurezza intrinseci per evitare deformazioni distruttive del quadrilatero
+  // nel caso in cui i parametri di input k1 sfuggano al controllo dell'utente.
   if (distortion > 1.2f) distortion = 1.2f;
   if (distortion < 0.8f) distortion = 0.8f;
   
@@ -96,6 +136,8 @@ inline void OpenFIRE_Perspective::applyLensCorrection(float &x, float &y) {
   y = CY + (dy * distortion);
 }
 
+// Calcolo dell'area del poligono tramite prodotto vettoriale incrociato (Shoelace Formula).
+// Viene usata come indicatore Z-Depth per l'effetto parallasse.
 inline float OpenFIRE_Perspective::calculateQuadArea(float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3) {
   return 0.5f * fabsf((x2 - x0) * (y3 - y1) - (x3 - x1) * (y2 - y0));
 }
@@ -106,8 +148,10 @@ inline float OpenFIRE_Perspective::calculateQuadArea(float x0, float y0, float x
 
 void OpenFIRE_Perspective::warp(int x0, int y0, int x1, int y1, int x2, int y2, int x3, int y3, float dx0, float dy0, float dx1, float dy1, float dx2, float dy2, float dx3, float dy3) {
   
-  // Riorganizzazione Ciclica Pura: TL, TR, BR, BL 
-  // Essenziale per creare un perimetro geometricamente inattaccabile
+  // Riorganizzazione Ciclica Pura: TL, TR, BR, BL.
+  // Essenziale. L'algoritmo matematico esplode se i vertici del quadrilatero 
+  // si incrociano ad X (Bug Clessidra). Questa mappatura fissa garantisce 
+  // un perimetro sempre chiuso e ordinato per il proiettore matriciale.
   float pt_TL_x = (float)x0,  pt_TL_y = (float)y0;
   float pt_TR_x = (float)x1,  pt_TR_y = (float)y1;
   float pt_BR_x = (float)x3,  pt_BR_y = (float)y3; 
@@ -120,6 +164,9 @@ void OpenFIRE_Perspective::warp(int x0, int y0, int x1, int y1, int x2, int y2, 
 
   float currentArea = calculateQuadArea(pt_TL_x, pt_TL_y, pt_TR_x, pt_TR_y, pt_BR_x, pt_BR_y, pt_BL_x, pt_BL_y);
 
+  // Snapshot della calibrazione iniziale.
+  // Fissa il "punto zero" della distanza e della rotazione. Tutto il gioco
+  // viene calcolato come differenza proporzionale da questo esatto fotogramma.
   if (!init) {
     if (currentArea > 10.0f) {
       // Inizializzazione della base dello schermo con lo stesso ordine ciclico (TL, TR, BR, BL)
@@ -134,14 +181,17 @@ void OpenFIRE_Perspective::warp(int x0, int y0, int x1, int y1, int x2, int y2, 
     if (!init) return; 
   }
 
-  // Freeze di sicurezza: se la telecamera viene coperta (area vicina a 0), 
-  // le variabili di parallasse non si degradano.
+  // Freeze di sicurezza: se la telecamera viene coperta accidentalmente (area vicina a 0), 
+  // impediamo al calcolo di assorbire l'errore, salvando la stabilità della z-depth.
   if (currentArea > 10.0f) {
     smoothedArea = (0.1f * currentArea) + (0.9f * smoothedArea);
   }
 
   float dynamicSrcY = srcY;
-  // Parallasse ottimizzato: hardware FPU assoluto
+  
+  // Applicazione Parallasse: se la distanza del giocatore diminuisce (area sale rispetto alla base),
+  // il centro ottico (dynamicSrcY) viene spinto verso l'alto/basso per compensare 
+  // fisicamente l'altezza della canna rispetto al sensore montato.
   if (parallaxFactor != 0.0f && baseArea > 10.0f && smoothedArea > 10.0f) {
     float distanceRatio = sqrtf(baseArea / smoothedArea);
     dynamicSrcY += parallaxFactor * (distanceRatio - 1.0f);
@@ -158,16 +208,20 @@ void OpenFIRE_Perspective::warp(int x0, int y0, int x1, int y1, int x2, int y2, 
   float normSrcX = srcX * INV_NORM_SCALE;
   float normSrcY = dynamicSrcY * INV_NORM_SCALE;
 
+  // Moltiplicazione del vettore proiettile [X, Y, 1] contro la matrice di trasformazione fusa.
   float r0 = (normSrcX * warpmatrix[0] + normSrcY * warpmatrix[3] + warpmatrix[6]);
   float r1 = (normSrcX * warpmatrix[1] + normSrcY * warpmatrix[4] + warpmatrix[7]);
   float r3 = (normSrcX * warpmatrix[2] + normSrcY * warpmatrix[5] + warpmatrix[8]);
   
   if (fabsf(r3) > 1e-8f) {
     float invR3 = 1.0f / r3;
+    // Conversione divisione prospettica (w) in spazio bidimensionale (x,y)
     float dstX_float = roundf((r0 * invR3) * NORM_SCALE);
     float dstY_float = roundf((r1 * invR3) * NORM_SCALE);
 
-    // Clamp fisico: blocca le coordinate oltre lo schermo per prevenire crash UB 
+    // Clamp fisico Assoluto: blocca le coordinate finali prima del casting ad intero.
+    // Se spariamo parallelamente allo schermo, la proiezione prospettica tende all'infinito.
+    // Questo clamp previene l'overflow int32 che causerebbe il crash UB (Undefined Behavior) del core ESP32.
     if (dstX_float > 2000000000.0f) dstX_float = 2000000000.0f;
     if (dstX_float < -2000000000.0f) dstX_float = -2000000000.0f;
     if (dstY_float > 2000000000.0f) dstY_float = 2000000000.0f;
@@ -186,4 +240,3 @@ int OpenFIRE_Perspective::getX() { return dstX; }
 int OpenFIRE_Perspective::getY() { return dstY; }
 
 #endif // USE_PERSPECTIVE_ADVANCED
-

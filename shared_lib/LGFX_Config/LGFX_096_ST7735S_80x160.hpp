@@ -1,3 +1,16 @@
+/*!
+ * @file LGFX_096_ST7735S_80x160.hpp
+ * @brief Library for LGFX_096_ST7735S_80x160
+ * @n CPP Library for LGFX_096_ST7735S_80x160
+ *
+ * @copyright alessandro-satanassi, https://github.com/alessandro-satanassi, 2026
+ * @copyright GNU Lesser General Public License
+ *
+ * @author [Alessandro Satanassi](alessandro@cittini.it)
+ * @version V1.0
+ * @date 2026
+ */
+
 #pragma once
 
 class LGFX : public lgfx::LGFX_Device

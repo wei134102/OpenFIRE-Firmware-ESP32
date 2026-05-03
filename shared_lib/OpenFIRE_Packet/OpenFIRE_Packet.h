@@ -1,3 +1,18 @@
+/*!
+ * @file OpenFIRE_Packet.h
+ * @brief Library for OpenFIRE Packet wireless with Esp-Now
+ * @n CPP Library for OpenFIRE Packet wireless with Esp-Now
+ *
+ * @copyright alessandro-satanassi, https://github.com/alessandro-satanassi, 2026
+ * @copyright GNU Lesser General Public License
+ *
+ * @author [Alessandro Satanassi](alessandro@cittini.it)
+ * @version V1.0
+ * @date 2026
+ */
+
+
+
 /*
 11111111 00000000 11111111 00000000 00000000 00000000 ... 00000000 10000001
 |      | |      | |      | |      | |      | |      | | | |      | |______|__Stop byte

@@ -4,12 +4,12 @@
  * @brief Light Gun library for 4 LED setup
  * @n CPP file for Samco Light Gun 4 LED setup
  *
- * @copyright alessandro-satanassi, https://github.com/alessandro-satanassi, 2025
+ * @copyright alessandro-satanassi, https://github.com/alessandro-satanassi, 2026
  * @copyright GNU Lesser General Public License
  *
  * @author [Alessandro Satanassi](alessandro@cittini.it)
- * @version V1.0
- * @date 2025
+ * @version V2.0
+ * @date 2026
  * 
  * I thank you for producing the first original code:
  * 
@@ -52,11 +52,21 @@ private:
     //================================================================
     // STATO DEL TRACKER
     //================================================================
+    
+    // Le coordinate finali sono conservate in interi perché rappresentano i pixel virtuali
+    // del mouse. Vengono traslate usando il bit-shift (CamToMouseShift) per garantire
+    // la massima velocità della ALU rispetto all'uso dei float.
     int  FinalX[4] = {400 * CamToMouseMult, 623 * CamToMouseMult, 400 * CamToMouseMult, 623 * CamToMouseMult};
     int  FinalY[4] = {200 * CamToMouseMult, 200 * CamToMouseMult, 568 * CamToMouseMult, 568 * CamToMouseMult};
+    
     int  medianX = MouseMaxX / 2;
     int  medianY = MouseMaxY / 2;
+    
+    // Registro a scorrimento (shift register) ereditato dalle API originali di Samco.
+    // Viene mantenuto per non rompere la retrocompatibilità con funzioni esterne
+    // che si aspettano di leggere uno storico di stabilità a 5 frame per singolo sensore.
     unsigned int see[4];
+    
     float height = (568 * CamToMouseMult) - (200 * CamToMouseMult);
     float width = (623 * CamToMouseMult) - (400 * CamToMouseMult);
     float angle = 0;
@@ -64,30 +74,32 @@ private:
     unsigned int start = 0;
     unsigned int seenFlags = 0;
 
-    bool is_tracking_stable = false; // s efalse vul dire che al frame precedente non sono stati visti punti o solo 1
-    float ideal_aspect_ratio = 16.0f / 9.0f; // rapporto tra larghezza e altezza del rettangolo formato dai TxIR
-    uint8_t prev_num_points_seen = 0; // numero di TxIR visti
+    // is_tracking_stable agisce da "frizione": impedisce al motore predittivo (1-2 punti)
+    // di inventare geometrie se nel frame precedente eravamo ciechi. Richiede un aggancio
+    // solido (almeno 3 punti) prima di consentire le predizioni parziali.
+    bool is_tracking_stable = false; 
+    
+    // ideal_aspect_ratio conserva l'ultima proporzione reale nota del rettangolo IR.
+    // È vitale per la gestione a 2 punti, dove dobbiamo decidere se stiamo guardando
+    // il lato lungo o corto del sensore senza avere tutti i riferimenti ottici.
+    float ideal_aspect_ratio = 16.0f / 9.0f; 
+    
+    uint8_t prev_num_points_seen = 0; 
+    
+    // Usiamo maschere di bit (bitmask) per lo storico visivo perché permettono di
+    // verificare stati complessi e fare confronti incrociati in un singolo ciclo di clock
+    // usando operatori bit a bit (&, |), risultando enormemente più veloci degli array.
     uint8_t prev_point_seen_mask = 0b00000000; // A->00001000  B->00000100  C->00000010  D->00000001
-    uint8_t last_identified_idx; //Per ricordare quale punto era visibile con solo un sensore visto
     uint8_t current_point_seen_mask = 0;
-    // A---B  //TxIR superiori orrizzontali 
+
+    // A---B  //TxIR superiori orizzontali 
     // |   |  // la base AB-CD è sempre più corta dell'altezza AC-BD
     // |   |  // le diagonali del rettangolo sono AD-BC
-    // C---D  //TxIR inferiori orrizzontali
+    // C---D  //TxIR inferiori orizzontali
 
     int prev2_medianX;
     int prev2_medianY;
-    float prev2_height;
-    float prev2_width;
-    float prev2_angle;
-
-    float shape_vec_AB_x, shape_vec_AB_y; // Vettore dal vertice A al vertice B
-    float shape_vec_AD_x, shape_vec_AD_y; // Vettore dal vertice A al vertice D
-    int point4_X, point4_Y;
-    uint8_t point4_idx;
-
-    //int shape_correction_x;
-    //int shape_correction_y;
+ 
     float height_left = (568 * CamToMouseMult) - (200 * CamToMouseMult);
     float height_right = (568 * CamToMouseMult) - (200 * CamToMouseMult);
     float width_top = (623 * CamToMouseMult) - (400 * CamToMouseMult);
@@ -96,14 +108,21 @@ private:
     /////////////////////////////////////////////////////////////////////
 
     // --- VARIABILI MOTORE KINEMATICO (MOLLA) ---
+    // Questi array conservano il "debito" di scostamento tra la geometria pura calcolata
+    // e la posizione reale mostrata all'utente. Devono essere float per consentire
+    // assorbimenti frazionari (sub-pixel) senza incappare nell'arrotondamento prematuro a zero.
     float offset_X[4] = {0.0f, 0.0f, 0.0f, 0.0f};
     float offset_Y[4] = {0.0f, 0.0f, 0.0f, 0.0f};
     
-    // Quota di scostamento assorbita ad ogni frame (0.15 = 15% del movimento reale)
-    float COSTANTE_MOLLA = 0.25f; // 0.15f; più è basso più è lento .. la massima velocità è 1, in pratica il cambio è immediato a 1 
+    // Definisce la reattività del filtro anti-glitch. Un valore di 0.25 significa che
+    // ogni errore ottico istantaneo viene assorbito al 25% per frame, distribuendo 
+    // l'anomalia su ~4 frame. Mantiene il feeling "snappy" ma uccide il tremolio.
+    float COSTANTE_MOLLA = 0.25f; 
     
-    // Penalità per la stima ibrida a 2 punti (circa 40 pixel crudi)
-    const int32_t PENALITA_STORICA = 1000000; // 25000;
+    // Questo è un muro matematico. Quando mancano dei punti ottici, l'algoritmo valuta 6 combinazioni.
+    // PENALITA_STORICA garantisce che il codice preferisca mantenere l'associazione logica 
+    // del frame precedente piuttosto che inventare rotazioni spazialmente assurde.
+    const int32_t PENALITA_STORICA = 1000000; 
 
     int prev_GeomX[4] = {0, 0, 0, 0};
     int prev_GeomY[4] = {0, 0, 0, 0};
