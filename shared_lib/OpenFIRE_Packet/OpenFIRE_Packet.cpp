@@ -14,9 +14,15 @@
 
 #include "OpenFIRE_Packet.h"
 
-//PacketCRC crc;  0x9B = 10011011 = 155
-//#define POLY_CRC 0x9B
+// ===================================================================================
+// INIZIALIZZAZIONE E GENERAZIONE CRC 
+// ===================================================================================
+
 const uint8_t poly = 0x9B;
+
+// La tabella CRC viene generata dinamicamente in RAM all'avvio (boot).
+// Questo trade-off sacrifica una frazione di millisecondo al boot per risparmiare 
+// preziosi cicli di CPU durante il calcolo CRC bit-a-bit in esecuzione (runtime).
 void Packet::generateTable_crc()
 {
 	for (uint16_t i = 0; i < 256; ++i) {
@@ -44,9 +50,6 @@ uint8_t Packet::calculate_crc(uint8_t arr[], uint8_t len)
 
 void Packet::begin(const configST& configs)
 {
-	port         = configs.port; 
-	debugPort    = configs.debugPort; 
-	debug        = configs.debug;
 	callbacks    = configs.callbacks;
 	callbacksLen = configs.callbacksLen;
 	timeout 	 = configs.timeout;
@@ -57,23 +60,28 @@ void Packet::begin(const configST& configs)
 
 void Packet::begin(Stream& _port, const bool& _debug, Stream& _debugPort, const uint32_t& _timeout)
 {
-	port      = &_port;
-	debugPort = &_debugPort;
-	debug     = _debug;
 	timeout   = _timeout;
 
 	txBuff[0] = START_BYTE;
 	generateTable_crc();
 }
 
+// ===================================================================================
+// COSTRUZIONE DEL PACCHETTO (TX)
+// ===================================================================================
+
 uint8_t Packet::constructPacket(uint8_t messageLen, uint8_t packetID)
 {
 	txBuff[2] = packetID;
 	txBuff[3] = messageLen;
 
+	// Il CRC copre l'intestazione e il payload. Deve essere calcolato PRIMA di 
+	// applicare il COBS, in modo che il ricevitore possa validare il pacchetto
+	// solo dopo averlo riportato al suo stato originale.
 	uint8_t crcVal = calculate_crc(&txBuff[2], messageLen+2);
 	txBuff[messageLen + PREAMBLE_SIZE] = crcVal;
 	
+	// Il COBS "nasconde" gli 0xFF trasformandoli in puntatori al byte successivo.
 	calcOverhead(&txBuff[PREAMBLE_SIZE], (uint8_t)messageLen+1);
 	stuffPacket(&txBuff[PREAMBLE_SIZE], (uint8_t)messageLen+1);
 
@@ -82,26 +90,17 @@ uint8_t Packet::constructPacket(uint8_t messageLen, uint8_t packetID)
 	return (uint8_t)messageLen;
 }
 
+// ===================================================================================
+// MOTORE FSM DI RICEZIONE E PARSING (RX)
+// ===================================================================================
+// Macchina a stati finiti reattiva. Legge un carattere alla volta uscendo subito 
+// dalla funzione. Nessun ciclo bloccante per rispettare i tempi di ESP-NOW.
+
 uint8_t Packet::parse(uint8_t recChar, bool valid)
 {
-	
-	/*
+	// Valutazione a cortocircuito: se packetStart == 0 (siamo in stato di attesa), 
+	// la condizione è vera e millis() NON viene valutata. Risparmia chiamate CPU.
 	bool packet_fresh = (packetStart == 0) || ((millis() - packetStart) < timeout);
-	if (!packet_fresh) {
-		//if (debug) debugPort->println("ERROR: STALE PACKET");
-		reset();
-		//bytesRead   = 0;
-		//state       = find_start_byte;
-		//status      = STALE_PACKET_ERROR;
-		//packetStart = 0;
-		return 0; //bytesRead;
-	}
-
-	if (valid) {
-	*/
-
-// ======================= prova nuovo ====================	
-bool packet_fresh = (packetStart == 0) || ((millis() - packetStart) < timeout);
 	if (!packet_fresh) {
 		reset();
 		// RIMOSSO: return 0; 
@@ -117,7 +116,6 @@ bool packet_fresh = (packetStart == 0) || ((millis() - packetStart) < timeout);
 			reset(); // Azzera tutto istantaneamente
 			// Lasciamo che lo switch qui sotto elabori questo START_BYTE in modo pulito!
 		}
-// ================= fine prova nuovo sistema =========================
 
 		switch (state) {
 			case find_start_byte: /////////////////////////////////////////
@@ -155,10 +153,6 @@ bool packet_fresh = (packetStart == 0) || ((millis() - packetStart) < timeout);
 					rxBuff[3] = recChar;
 				}
 				else {
-					//bytesRead = 0;
-					//state     = find_start_byte;
-					//status    = PAYLOAD_ERROR;
-					//if (debug) debugPort->println("ERROR: PAYLOAD_ERROR");
 					reset();
 					return 0; //bytesRead;
 				}
@@ -178,14 +172,14 @@ bool packet_fresh = (packetStart == 0) || ((millis() - packetStart) < timeout);
 			case find_crc: ///////////////////////////////////////////
 			{		
 				rxBuff[bytesToRec + PREAMBLE_SIZE] = recChar;						
+				
+				// Rimuove l'overhead COBS per riportare i dati alla forma originale 
+				// necessaria per la validazione crittografica.
 				unpackPacket(&rxBuff[PREAMBLE_SIZE], bytesToRec + 1);
+				
 				uint8_t calcCrc = calculate_crc(&rxBuff[2], bytesToRec+2);
 				if (calcCrc == rxBuff[bytesToRec + PREAMBLE_SIZE]) state = find_end_byte;
 				else {
-					//bytesRead = 0;
-					//state     = find_start_byte;
-					//status    = CRC_ERROR;
-					//if (debug) debugPort->println("ERROR: CRC_ERROR");
 					reset();
 					return 0; //bytesRead;
 				}
@@ -197,14 +191,13 @@ bool packet_fresh = (packetStart == 0) || ((millis() - packetStart) < timeout);
 				state = find_start_byte;
 				if (recChar == STOP_BYTE) {
 					bytesRead = bytesToRec;
-					//status    = NEW_DATA;
+					
+					// Esecuzione callback se presente. Implementazione a puntatore a funzione
+					// per minimizzare la latenza di notifica al layer superiore.
 					if (callbacks) callbacks[0]();
 					packetStart = 0;	// reset the timer
 					return bytesToRec;
 				}
-				//bytesRead = 0;
-				//status    = STOP_BYTE_ERROR;
-				//if (debug) debugPort->println("ERROR: STOP_BYTE_ERROR");
 				reset();
 				return 0; //bytesRead;
 				break;
@@ -212,26 +205,16 @@ bool packet_fresh = (packetStart == 0) || ((millis() - packetStart) < timeout);
 
 			default:
 			{
-				/*
-				if (debug) {
-					debugPort->print("ERROR: Undefined state ");
-					debugPort->println(state);
-				}
-				*/
 				reset();
-				//bytesRead = 0;
-				//state     = find_start_byte;
 				break;
 			}
 		}
 	}
 	else {
 		bytesRead = 0;
-		//status    = NO_DATA;
 		return 0; //bytesRead;
 	}
 	bytesRead = 0;
-	//status    = CONTINUE;
 	return 0; //bytesRead;
 }
 
@@ -239,6 +222,12 @@ uint8_t Packet::currentPacketID()
 {
 	return idByte;
 }
+
+// ===================================================================================
+// FUNZIONI SUPPORTO AL COBS (Consistent Overhead Byte Stuffing)
+// ===================================================================================
+// Sostituisce gli 0xFF nel flusso dati con l'offset (la distanza) per raggiungere 
+// lo 0xFF successivo, creando una sorta di "linked list" all'interno del pacchetto.
 
 void Packet::calcOverhead(uint8_t arr[], uint8_t len)
 {

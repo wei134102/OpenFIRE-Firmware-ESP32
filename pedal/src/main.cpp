@@ -18,6 +18,10 @@
 
 #include "OpenFIRE-PEDAL-version.h"
 
+// ===================================================================================
+// HARDWARE STATE & CONFIGURATION
+// ===================================================================================
+
 bool display_init = false;
 
 const int8_t leds[4] = {PIN_LED1, 
@@ -25,15 +29,31 @@ const int8_t leds[4] = {PIN_LED1,
                         PIN_LED3, 
                         PIN_LED4}; // I tuoi 4 GPIO
 
-
-//uint8_t buffer_aux[5];                        volatile uint8_t buttons_state = 0;
+// Manteniamo lo stato di tutti i pedali in un singolo byte (maschera di bit). 
+// Questo permette di trasmettere l'intero stato del modulo con un solo byte di payload radio, 
+// minimizzando l'overhead di rete e i tempi di volo (Air Time) su ESP-NOW.
 uint8_t buttons_state = 0;
 volatile uint8_t buttons_last_state = 0;
+
+// ===================================================================================
+// GESTIONE KEEP-ALIVE E DEBOUNCING
+// ===================================================================================
+
 volatile bool send_packet_pedal = false; // true se bisogna spedire un pacchetto
 #define DEBOUNCE_DELAY 15 // o meglio 20 ms ??// tempo di deboincing per pulsanti
+
+// Quando un pedale viene tenuto premuto a lungo (es. per ripararsi in Time Crisis), 
+// il dongle potrebbe perdere la connessione o interpretare il silenzio radio come disconnessione.
+// Questo timer garantisce un reinvio periodico (keep-alive) dello stato attivo.
+// NOTA: il valore è sfasato a 69ms invece dei canonici 50ms per evitare collisioni 
+// di battimento di frequenza con il modulo Lightgun principale sulla stessa rete radio.
 #define TIME_REPEAT_SEND (uint64_t)69000 // 50 ms // 69 reinvias il pacchetto ogni tot ms solo se qualche buttone è premuto .. il valore va specificato in microsecondi quidi ms x 1000
+
 #define NUM_BUTTONS 2
 
+// La struttura Button incapsula la Macchina a Stati per il debouncing software.
+// L'uso di questa struct permette di scalare il numero di pedali senza dover 
+// duplicare la logica nel loop principale.
 struct Button {
     int8_t pin;
     bool currentState;
@@ -47,12 +67,20 @@ Button buttons[NUM_BUTTONS] = {
     {PIN_PEDAL2, LOW, LOW, 0, 0}  // Pedale 2
 };
 
+
+// ===================================================================================
+// MULTITHREADING: FEEDBACK VISIVO (CORE 1)
+// ===================================================================================
+// L'inizializzazione del layer Wireless è bloccante e può richiedere secondi.
+// Sfruttiamo il processore dual-core dell'ESP32 delegando un task indipendente a 
+// un FreeRTOS thread. Questo fornisce un feedback visivo immediato (animazione Supercar)
+// all'utente, confermando che il pedale è vivo e sta cercando la rete.
+
 void animTaskLink(void *pvParameters) {
    
   int currentLed = 0;
   int direction = 1;
 
-  
   for (;;) {
     digitalWrite(leds[currentLed], HIGH);
     vTaskDelay(pdMS_TO_TICKS(150)); 
@@ -66,8 +94,13 @@ void animTaskLink(void *pvParameters) {
   } 
 }
 
-// ================================== TIMER REINVIO AUTOMATICO ===================================
+// ===============================================================================
+// TIMER REINVIO AUTOMATICO (KEEP-ALIVE)
+// ===============================================================================
 // CALLBACK
+// Questa callback viene eseguita in un contesto Hardware Timer interrupt (o task ad 
+// alta priorità). Deve essere estremamente breve e non bloccante. 
+// Alziamo semplicemente la flag atomica `send_packet_pedal`.
 void timer_callback_send_repeat(void* arg) {
   
   if (buttons_last_state) send_packet_pedal = true;
@@ -75,17 +108,14 @@ void timer_callback_send_repeat(void* arg) {
 }
 
 esp_timer_handle_t timer_handle_send_repeat;
+
+
+// ===============================================================================
+// MAIN SETUP
 // ===============================================================================
 
 // The main show!
 void setup() {
-  //TinyUSBDevices.begin(1);
-  //TinyUSBDevice.begin(0);
-  //SerialTinyUSB.begin(115200);
-  
-  #ifdef COMMENTO
-  Serial.begin(115200);
-  #endif // COMMENTO
 
   // Configurazione Pedali (Ingressi con Pull-Up)
   for (uint8_t i = 0; i < NUM_BUTTONS; i++) {
@@ -97,7 +127,7 @@ void setup() {
     digitalWrite(leds[i], LOW); 
   }
 
-
+  // Creazione del task visivo asincrono prima di bloccare la CPU con la rete.
   TaskHandle_t animTaskHandleLink = NULL;  
   xTaskCreatePinnedToCore(
         animTaskLink,          // funzione del task
@@ -110,43 +140,14 @@ void setup() {
   );  
   
   // ====== gestione connessione wireless ====================
+  // Fase bloccante: Il pedale attende qui finché non stabilisce l'handshake ESP-NOW.
   SerialWireless.init_wireless();
   SerialWireless.begin();
   SerialWireless.connection_pedal();
   // ====== fine gestione wireless .. va avanti solo dopo che si è accoppiato il dispositivo =======
-
-
-  #ifdef COMMENTO
-  ///////////////////////// POI ANDRA' TOLTO ////////////////////////////////////////////////
-  // ====== connessione USB ====== imposta VID e PID come quello che gli passa la pistola ===============
-  if (!TinyUSBDevice.isInitialized()) { // aggiunto ..funzionava lo stesso, ma così è più sicuro .. sicuramente serve per Esp32 con libreria non integrfata nel core
-    TinyUSBDevice.begin(0);
-  }
-      
-  TinyUSBDevice.setManufacturerDescriptor(usb_data_wireless.deviceManufacturer);
-  TinyUSBDevice.setProductDescriptor(usb_data_wireless.deviceName);
-  TinyUSBDevice.setID(usb_data_wireless.deviceVID, usb_data_wireless.devicePID);
-
-  // Initializing the USB devices chunk.
-  TinyUSBDevices.begin(1);
-  //////////////////////////// FINE POI ANDRA' TOLDO /////////////////////////////////////////
-  #endif // COMMENTO
-
-  #ifdef COMMENTO
-  //TEST
-  //Serial.begin(115200);
-  Serial.printf("\n\nWireless channel da USB_DATA = %d\n\n", usb_data_wireless.channel);
-  Serial.printf("\n\nWireless channel da espnow_wifi_channel = %d\n\n", espnow_wifi_channel);
-  Serial.printf("Mac PeerAddres: %02X:%02X:%02X:%02X:%02X:%02X\n", peerAddress[0], peerAddress[1], peerAddress[2], peerAddress[3], peerAddress[4], peerAddress[5]);
-  Serial.printf("PreeAddres presente nei peer: %s\n", esp_now_is_peer_exist(peerAddress) ? "SI": "NO");
-  Serial.printf("BROADCAST presente nei peer: %s\n", esp_now_is_peer_exist(BROADCAST_ADDR) ? "SI": "NO");
-  #endif // COMMENTO
-
-  /*
-  Serial.begin(9600);
-  Serial.setTimeout(0);
-  */
     
+  // Connessione stabilita. Uccidiamo il task visivo parallelo per liberare memoria 
+  // e cicli CPU, poiché ora il controllo dei LED passa alla logica di sistema.
   if (animTaskHandleLink != NULL) {
       vTaskDelete(animTaskHandleLink);
       animTaskHandleLink = NULL;
@@ -154,28 +155,11 @@ void setup() {
 
   vTaskDelay(pdMS_TO_TICKS(150));
 
-
-  #ifdef COMMENTO
-  //if ((usb_data_wireless.channel == espnow_wifi_channel) && (espnow_wifi_channel == 1))  {
-  //SerialWireless.mac_esp_another_card, 6) != 0 && // controlla che sia nei peer la board da cui arrivano i paccheti
-  //    memcmp(info->des_addr, peerAddress
-  //if ((peerAddress[0] == 0xFF))  {  
-  if (esp_now_is_peer_exist(peerAddress) && !memcmp(peerAddress, SerialWireless.mac_esp_another_card, 6)) {
-    digitalWrite(leds[0], HIGH);
-    digitalWrite(leds[1], HIGH);
-    digitalWrite(leds[2], HIGH);
-    digitalWrite(leds[3], HIGH);
-    vTaskDelay(pdMS_TO_TICKS(1500));
-
-  }
-  #endif // COMMENTO
-
   for (uint8_t i = 0; i < 4; i++) {
-    //pinMode(leds[i], OUTPUT);
     digitalWrite(leds[i], LOW); 
   }
 
-  
+  // Riscontro visivo di accoppiamento riuscito.
   if (usb_data_wireless.devicePlayer >= 1 && usb_data_wireless.devicePlayer <= 4) {
     digitalWrite(leds[usb_data_wireless.devicePlayer - 1], HIGH); // accende fisso il led del player corrispondente 1,2,3,4
   } else {
@@ -183,10 +167,8 @@ void setup() {
     digitalWrite(leds[0], HIGH);
     digitalWrite(leds[3], HIGH);
   }
-
-  //vTaskDelay(pdMS_TO_TICKS(2000)); 
-
   
+  // Inizializzazione Timer Hardware per il keep-alive.
   esp_timer_create_args_t timer_args = {
     .callback = &timer_callback_send_repeat,
     .arg = NULL,
@@ -196,27 +178,32 @@ void setup() {
     
   esp_timer_create(&timer_args, &timer_handle_send_repeat);
   esp_timer_start_periodic(timer_handle_send_repeat, TIME_REPEAT_SEND);
-  
  
 }
 
+// ===============================================================================
+// MAIN LOOP
+// ===============================================================================
 
 void loop()
 {
-
   unsigned long millis_current = millis(); 
   
   uint8_t bitMask = 1;
   buttons_state = 0;
 
+  // 1. SCANSIONE PEDALI E DEBOUNCING NON-BLOCCANTE
   for (uint8_t i = 0; i < NUM_BUTTONS; i++, bitMask <<= 1) {
     if (!buttons[i].debounceTime) {
+      // Pedale a riposo (o stato stabile raggiunto). Leggiamo l'hardware.
       buttons[i].currentState = buttons[i].pin >= 0 ? !(bool)digitalRead(buttons[i].pin) : false;
       
       if (buttons[i].currentState) {
         buttons_state |= bitMask; 
       }
       
+      // Se c'è un cambiamento fisico, inneschiamo la finestra di debounce.
+      // In questo periodo di "cecità" volontaria ignoreremo i rimbalzi meccanici dello switch.
       if (buttons[i].currentState != buttons[i].lastState) {
         buttons[i].debounceTime = DEBOUNCE_DELAY;
         buttons[i].lastDebounceTime = millis_current; 
@@ -224,6 +211,7 @@ void loop()
       }
     }
     else {
+      // Finestra di debounce attiva. Riduciamo il timer scalando il delta temporale trascorso (`aux`).
       unsigned long aux = millis_current - buttons[i].lastDebounceTime;
       
       if (aux >= buttons[i].debounceTime) {
@@ -233,43 +221,30 @@ void loop()
           buttons[i].lastDebounceTime = millis_current;
       }
       
+      // Manteniamo lo stato consolidato in attesa che il rimbalzo hardware finisca.
       if (buttons[i].lastState) {
         buttons_state |= bitMask; 
       }  
     }
   }
 
- 
+  // 2. LOGICA EVENT-DRIVEN DI TRASMISSIONE RADIO
+  // Trasmettiamo sulla rete ESCLUSIVAMENTE in due scenari:
+  // A) È avvenuto un cambio di stato fisico (salita/discesa di un pedale).
+  // B) Il timer hardware ha alzato la flag per il keep-alive (pedale mantenuto premuto).
   if ((buttons_state != buttons_last_state) || (send_packet_pedal == true)) {
     // Invia pacchetto con posizione pedali alla lightgun - invia il byte buttons_state
-    //vTaskDelay(pdMS_TO_TICKS(5000));
-    //buffer_aux[0] = buttons_state;
-    
-    //SerialWireless.SendPacket((const uint8_t *)buffer_aux, 1, PACKET_TX::PEDAL_TX);
+ 
     SerialWireless.SendPacket((const uint8_t *)&buttons_state, 1, PACKET_TX::PEDAL_TX);
 
     buttons_last_state = buttons_state;
-    
-    
+     
     esp_timer_restart(timer_handle_send_repeat, TIME_REPEAT_SEND);
      
     send_packet_pedal = false;
 
-    #ifdef COMMENTO
-     for (uint8_t i = 0; i < 4; i++) {
-    //pinMode(leds[i], OUTPUT);
-    digitalWrite(leds[i], LOW); 
-  }
-
-    if (buttons_state == 1 || buttons_state == 3) digitalWrite(leds[0], HIGH);
-    if (buttons_state == 2 || buttons_state == 3)digitalWrite(leds[3], HIGH);
-    vTaskDelay(pdMS_TO_TICKS(50));
-    digitalWrite(leds[0], LOW);
-    digitalWrite(leds[3], LOW);
-
-    digitalWrite(leds[usb_data_wireless.devicePlayer - 1], HIGH);
-   #endif // COMMENTO
   }
       
+  // Rate limiting volontario per cedere CPU al layer WiFi/ESP-NOW sottostante.
   vTaskDelay(pdMS_TO_TICKS(5));  // fai polling ogni 5ms
 }

@@ -13,6 +13,14 @@
 
 #pragma once
 
+// ===================================================================================
+// ASTRAZIONE MULTI-PIATTAFORMA (WIP) E DIPENDENZE
+// ===================================================================================
+// L'obiettivo è mantenere l'hardware sottostante il più possibile astratto,
+// permettendo in futuro porting su altre architetture (es. RP2040) se le librerie
+// radio lo consentiranno. Attualmente la rete è fortemente legata all'ecosistema 
+// Espressif (ESP-NOW) per questioni di latenza ultra-bassa.
+
 #if defined(OPENFIRE_WIRELESS_ENABLE) && defined(ARDUINO_ARCH_ESP32)
 
 #include <Arduino.h>
@@ -36,37 +44,22 @@
 #endif
 
 
-#ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO
-// ---------------- INIZIO AGGIUNTE TPC (Transmit Power Control) ----------------
-// Target di potenza (valori espressi in 0.25 dBm, range 8-84)
-#define WIFI_POWER_MAX 80    // 20 dBm (Massima potenza)
-#define WIFI_POWER_MIN 20    // 5 dBm (Minima potenza per risparmio batteria)
-#define TARGET_RSSI   -55    // Segnale ideale per stabilità/consumo a 12Mbps
-
-// Esponiamo la variabile globale che memorizza l'ultimo RSSI letto
-extern volatile int8_t last_rssi_percepito;
-
-// Prototipo della funzione di calcolo
-uint8_t calcolaPotenzaOttimale(int8_t rssi_remoto);
-// ---------------- FINE AGGIUNTE TPC ----------------
-#endif //OPENFIRE_ESPNOW_WIFI_POWER_AUTO
-
-
 /*****************************
- *   ESP_NOW
+ *   ESP_NOW E VARIABILI DI STATO GLOBALI
  *****************************/
+// ===================================================================================
+// GESTIONE DELLO STATO DISTRIBUITO (EXTERN)
+// ===================================================================================
+// L'uso estensivo di extern permette di condividere lo stato della rete (MAC address, 
+// canali, report USB) tra diversi moduli senza overhead di passaggio parametri. 
+// Le struct report (es. absmouse5Report_last_wifi) fungono da "Shadow State" per 
+// inviare i dati all'host USB solo quando c'è un reale cambiamento hardware.
 
- 
 extern uint8_t espnow_wifi_channel;
 extern uint8_t espnow_wifi_power;
 extern hid_abs_mouse_report_t absmouse5Report_last_wifi;
 extern hid_keyboard_report_t  keyReport_last_wifi;
 extern hid_gamepad16_report_t gamepad16Report_last_wifi;
-#ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO
-extern bool espnow_wifi_power_auto;
-extern int8_t ultimo_rssi_trasmesso;
-extern int8_t espnow_rssi_ricevuto;
-#endif //OPENFIRE_ESPNOW_WIFI_POWER_AUTO
 extern uint8_t lastDongleAddress[6];
 extern uint8_t lastPedalAddress[6];
 extern uint8_t lastDongleChannel;
@@ -85,7 +78,13 @@ extern volatile uint8_t dongle_oled_sniff_channel;
 extern volatile uint8_t channel_display;
 #endif
 
-
+// ===================================================================================
+// DEFINIZIONI DEL PROTOCOLLO (ENUMERATORI) E MACCHINA A STATI DI RETE
+// ===================================================================================
+// Definiscono il vocabolario del nostro livello di trasporto proprietario.
+// PACKET_TX: Identifica il TIPO di payload trasportato (dati USB, force feedback seriale, o comandi di rete).
+// CONNECTION_STATE: Una macchina a stati finiti (FSM) rigorosa che guida la fase di "Handshake" 
+// (ricerca, associazione, conferma) garantendo che i dispositivi (Gun, Dongle, Pedal) non si incrocino.
 
 
 enum WIRELESS_MODE {
@@ -110,12 +109,6 @@ enum PACKET_TX {
   #ifdef OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
   MOUSE_KEY_PAD_TX,
   #endif // OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
-  #ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO
-  // NUOVO PER GESTIONE POTENZA TX
-  DUMMY_PACKET, // TRASMISSIONE DI UN PACCHETTO VUOTO fantoccio/fittizio col quale non fare nulla  // ????? DOPPIONE NON SERVE ??? .. POTREBBE ESSERE UTILE PER LATRE COSE COME TEST
-  RSSI_FEEDBACK, // TRASMETTE UN PACCHETTO VUOTO CHE SERVE PER MISURARE L'RSSI SUL DISPOSITIVO RICEVENTE, CHIEDE ESPLICITAMENTE AL RICEVENTE DI INVIARGLI UN RSSI REPORT
-  RSSI_REPORT,   // INVIA AL DISPOSITIVO TRASMISTTENTE IL VALORE DELL'RSSI RICEVUTO IN MODO CHE IL TRASMITTENTE ADATTI LA SUA POTENZA - quando si riceve questo pacchetto che contienne rssi, si regola la potenza
-  #endif //OPENFIRE_ESPNOW_WIFI_POWER_AUTO
   // ========= VALUTARE
   RESET_DATA_USB,
   REBOOT,      // REBOOT DEL DONGLE
@@ -155,6 +148,9 @@ enum CONNECTION_STATE {
 
 };
 
+// Struttura vitale per l'USB Spoofing. 
+// Passata via rete all'avvio, permette al Dongle di clonare dinamicamente 
+// l'identità (VID/PID) della specifica pistola connessa in quel momento.
 typedef struct __attribute__ ((packed)) {
   char deviceManufacturer[21];
   char deviceName[16];
@@ -172,6 +168,14 @@ extern USB_Data_GUN_Wireless usb_data_wireless;
 /*****************************
  *   SERIAL WIRELESS SECTION
  *****************************/
+// ===================================================================================
+// CLASSE: SerialWireless_ (INTERFACE PATTERN)
+// ===================================================================================
+// Architettura Bridge: Ereditando dalla classe standard `Stream`, facciamo 
+// credere all'ecosistema Arduino (e al modulo Mamehooker) di stare parlando con una 
+// normale porta seriale hardware. Sotto il cofano, i dati vengono manipolati 
+// in modo asincrono, impacchettati via COBS e sparati sull'etere tramite ESP-NOW.
+
 #ifndef _SERIAL_STREAM_H_
 #define _SERIAL_STREAM_H_
 
@@ -184,6 +188,14 @@ class SerialWireless_ : public Stream
   uint8_t mac_esp_another_card[6];
   volatile uint8_t stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION; //0;
 
+  // ===================================================================================
+  // STRUTTURE DATI LOCK-FREE: GESTIONE BUFFER (TX/RX)
+  // ===================================================================================
+  // Per garantire operazioni in tempo reale durante gli interrupt (ISR) del WiFi, 
+  // si utilizzano Ring Buffers (Buffer Circolari) basati su potenze di 2 (es. 128, 256).
+  // L'uso di maschere bit a bit (es. & MASK) sostituisce i lenti operatori modulo (%), 
+  // e la logica "writer/reader" evita l'uso di semafori bloccanti nelle fasi critiche.
+  
   // ======= per FIFO SERIAL ===============
   // ===== per write === buffer lineare ====
   #define FIFO_SIZE_WRITE_SERIAL 128 // deve essere una potenza di 2
@@ -230,6 +242,9 @@ class SerialWireless_ : public Stream
   bool _overflow_write = false; 
   // fine per buffer scrittura
  
+  // ===================================================================================
+  // CONTRATTO API: FUNZIONI DELLA CLASSE STREAM E FUNZIONI CUSTOM
+  // ===================================================================================
   SerialWireless_() : Stream() {}
   ~SerialWireless_() {}
   
@@ -283,8 +298,6 @@ class SerialWireless_ : public Stream
   // ===== per i timer ================
 
 void setupTimerSerial();
-void stopTimer_serial();
-void resetTimer_serial(uint64_t duration_us);
 
 
 volatile bool is_pedal_wireless_comunication; // serve per sincronizzazione col dongle, ma andrebbe rivisto e poi probabilmente tolto
