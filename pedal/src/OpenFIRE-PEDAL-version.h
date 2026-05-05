@@ -15,13 +15,13 @@
 #define OPENFIRE_PEDAL_VERSION_H
 
 // Versione attuale
-#define OPENFIRE_PEDAL_VERSION 6.1
+#define OPENFIRE_PEDAL_VERSION 6.2
 ///////#define OPENFIRE_CODENAME "Dawn Sigma rc2"
 //#define GIT_HASH
 #define OPENFIRE_PEDAL_VERSION_MAJOR 6
-#define OPENFIRE_PEDAL_VERSION_MINOR 1
+#define OPENFIRE_PEDAL_VERSION_MINOR 2
 #define OPENFIRE_PEDAL_VERSION_PATCH 0
-#define OPENFIRE_PEDAL_VERSION_TYPE "rc2"  // Per indicare pre-release (alpha, beta, RC(Release Candidate), stable)
+#define OPENFIRE_PEDAL_VERSION_TYPE "Beta1"  // Per indicare pre-release (alpha, beta, RC(Release Candidate), stable)
 
 // Stringa di versione attuale
 #define OPENFIRE_PEDAL_VERSION_STRING (String(OPENFIRE_PEDAL_VERSION_MAJOR) + "." + String(OPENFIRE_PEDAL_VERSION_MINOR) + "." + String(OPENFIRE_PEDAL_VERSION_PATCH)+ "-" + OPENFIRE_PEDAL_VERSION_TYPE)

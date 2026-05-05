@@ -16,6 +16,7 @@
  * Chris Young's TinyUSB Mouse and Keyboard library (the Keyboard half, anyways),
  * which in itself uses pieces of Arduino's basic Keyboard library.
  */
+
 #ifdef USE_TINYUSB
   #include <Adafruit_TinyUSB.h>
 #elifdef CFG_TUSB_MCU
@@ -70,6 +71,12 @@ uint8_t desc_bt_report[] = {
 };
 #endif // ARDUINO_RASPBERRY_PI_PICO_W
 
+// ===================================================================================
+// INIZIALIZZAZIONE ENDPOINT E RE-ENUMERAZIONE
+// ===================================================================================
+// Forzare il detach/attach è l'unico modo per costringere Windows a ri-leggere 
+// i nostri descrittori compositi al volo (Spoofing) nel caso in cui TinyUSB 
+// fosse già montato prima che completassimo le nostre configurazioni di rete.
 void TinyUSBDevices_::begin(int polRate) {
     usbHid.setPollInterval(polRate);
     usbHid.setReportDescriptor(desc_hid_report, sizeof(desc_hid_report));
@@ -99,7 +106,13 @@ void TinyUSBDevices_::beginBT(const char *localName, const char *hidName) {
 
 #ifdef OPENFIRE_WIRELESS_DEVICE_ESPNOW
 
-
+// ===================================================================================
+// OTTIMIZZAZIONE ESP-NOW: COMPATTAZIONE DEI REPORT (UNIFIED PACKET)
+// ===================================================================================
+// L'etere è costoso. Inviare un pacchetto WiFi richiede preamble, header e conferme.
+// Invece di inviare Mouse, Tastiera e Pad in 3 pacchetti distinti intasando la rete, 
+// compattiamo brutalmente tutte e tre le struct in un solo treno di byte, copiato 
+// chirurgicamente in un buffer statico (per annullare l'overhead dell'allocazione stack).
 #ifdef OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
 void report_all_MOUSE_KEY_PAD_TX_wifi_espnow(void)
 {
@@ -141,6 +154,12 @@ TinyUSBDevices_ TinyUSBDevices;
 
 AbsMouse5_::AbsMouse5_() {}
 
+// ===================================================================================
+// ROUTING DINAMICO DEL PAYLOAD (Wired vs Wireless)
+// ===================================================================================
+// Questo è il fulcro dell'astrazione: il codice della Lightgun chiama AbsMouse5.report().
+// Se `onBattery` è false (USB connessa), spedisce i dati all'Endpoint USB fisico.
+// Se `onBattery` è true, instrada il payload via Radio (BT/ESPNOW) verso il Dongle.
 void AbsMouse5_::report(void)
 {
   if(!TinyUSBDevices.onBattery) {
@@ -186,7 +205,6 @@ void AbsMouse5_::move_wheel_pan(int8_t wheel, int8_t pan) {
 		absmouse5Report.wheel = wheel;
     absmouse5Report.pan = pan;
 		report();
-
   }
 }
 
@@ -196,8 +214,6 @@ void AbsMouse5_::move(int16_t x, int16_t y)
 		absmouse5Report.x = x;
 		absmouse5Report.y = y;
     TinyUSBDevices.newReport[TinyUSBDevices_::reportMouse] = true;
-	  //report();
-		
 	}
 }
 
@@ -206,7 +222,6 @@ void AbsMouse5_::press(uint8_t button)
 	if(!(absmouse5Report.buttons & button)) {
     absmouse5Report.buttons |= button;
     TinyUSBDevices.newReport[TinyUSBDevices_::reportMouse] = true;
-	  //report();
   }
 }
 
@@ -215,7 +230,6 @@ void AbsMouse5_::release(uint8_t button)
 	if(absmouse5Report.buttons & button) {
     absmouse5Report.buttons &= ~button;
 	  TinyUSBDevices.newReport[TinyUSBDevices_::reportMouse] = true;
-    //report();
   }
 }
 
@@ -341,7 +355,6 @@ size_t Keyboard_::press(uint8_t k)
     return 0;
   }
   TinyUSBDevices.newReport[TinyUSBDevices_::reportKeyboard] = true;
-	//report();
 	return 1;
 }
   
@@ -385,7 +398,6 @@ size_t Keyboard_::release(uint8_t k)
 	  }
   }
   TinyUSBDevices.newReport[TinyUSBDevices_::reportKeyboard] = true;
-  //report();
 	return 1;
 }
   
@@ -394,7 +406,6 @@ void Keyboard_::releaseAll(void)
   tu_memclr(&_keyReport.keycode, 6);
   _keyReport.modifier = 0;
   TinyUSBDevices.newReport[TinyUSBDevices_::reportKeyboard] = true;
-  //report();
 }
   
 size_t Keyboard_::write(uint8_t c)
@@ -437,7 +448,6 @@ void Gamepad16_::moveCam(uint16_t origX, uint16_t origY) {
       gamepad16Report.ry = map(origY, 0, 32767, -32767, 32767);
   }
   TinyUSBDevices.newReport[TinyUSBDevices_::reportGamepad] = true;
-  //report(); 
 }
 
 void Gamepad16_::moveStick(uint16_t origX, uint16_t origY) {
@@ -452,7 +462,6 @@ void Gamepad16_::moveStick(uint16_t origX, uint16_t origY) {
       gamepad16Report.y = map(_y, 0, 4095, 32767, -32767);
     }
     TinyUSBDevices.newReport[TinyUSBDevices_::reportGamepad] = true;
-    //report();
   }
 }
 
@@ -460,7 +469,6 @@ void Gamepad16_::press(uint8_t buttonNum) {
   if(!(gamepad16Report.buttons & (1 << buttonNum))) {
     bitSet(gamepad16Report.buttons, buttonNum);
     TinyUSBDevices.newReport[TinyUSBDevices_::reportGamepad] = true;
-    //report();
   }
 }
 
@@ -468,7 +476,6 @@ void Gamepad16_::release(uint8_t buttonNum) {
   if(gamepad16Report.buttons & (1 << buttonNum)) {
     bitClear(gamepad16Report.buttons, buttonNum);
     TinyUSBDevices.newReport[TinyUSBDevices_::reportGamepad] = true;
-    //report();
   }
 }
 
@@ -476,7 +483,6 @@ void Gamepad16_::padUpdate(uint8_t padMask) {
   if(gamepad16Report.hat != padMask) {
     gamepad16Report.hat = padMask;
     TinyUSBDevices.newReport[TinyUSBDevices_::reportGamepad] = true;
-    //report();
   }
 }
 
@@ -522,7 +528,6 @@ void Gamepad16_::releaseAll() {
   tu_memclr(&gamepad16Report, sizeof(gamepad16Report));
   _x = 2048, _y = 2048;
   TinyUSBDevices.newReport[TinyUSBDevices_::reportGamepad] = true;
-  //report();
 }
 
 

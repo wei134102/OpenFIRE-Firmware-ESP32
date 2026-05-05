@@ -11,6 +11,49 @@
  * @date 2026
  */
 
+/*
+ * This module simulates the standard Arduino "Mouse.h" and
+ * "Keyboard.h" API for use with the TinyUSB HID API. Instead of doing
+ *  #include <HID.h>
+ *  #include <Mouse.h>
+ *  #include <Keyboard.h>
+ *  
+ *  Simply do
+ *  
+ *  #include <TinyUSB_Mouse_Keyboard.h>
+ *  
+ *  and this module will automatically select whether or not to use the
+ *  standard Arduino mouse and keyboard API or the TinyUSB API. We had to
+ *  combine them into a single library because of the way TinyUSB handles
+ *  descriptors.
+ *  
+ *  For details on Arduino Mouse.h see
+ *   https://www.arduino.cc/reference/en/language/functions/usb/mouse/
+ *  For details on Arduino Keyboard.h see
+ *   https://www.arduino.cc/reference/en/language/functions/usb/keyboard/
+ *
+ *  NOTE: This code is derived from the standard Arduino Mouse.h, Mouse.cpp,
+ *    Keyboard.h, and Keyboard.cpp code. The copyright on that original code
+ *    is as follows.
+ *   
+ *  Copyright (c) 2015, Arduino LLC
+ *  Original code (pre-library): Copyright (c) 2011, Peter Barrett
+ *
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Lesser General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 2.1 of the License, or (at your option) any later version.
+ *
+ *  This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Lesser General Public License for more details.
+ *
+ *  You should have received a copy of the GNU Lesser General Public
+ *  License along with this library; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ */
+
 #pragma once
 
 #ifndef _TINYUSB_DEVICES_H_
@@ -31,6 +74,14 @@
 /*****************************
  *   GLOBAL SECTION
  *****************************/
+// ===================================================================================
+// PATTERN: WRAPPER COMPOSITO & SHADOW STATE
+// ===================================================================================
+// Questa classe funge da "Direttore d'Orchestra". Invece di avere dispositivi 
+// USB separati, incapsula Tastiera, Mouse e Gamepad in un unico endpoint composito.
+// Conserva inoltre lo stato (newReport) per capire dinamicamente quando c'è 
+// la reale necessità di impegnare la porta USB o il ponte radio.
+
 #ifndef _GLOBAL_H_
 #define _GLOBAL_H_
 
@@ -81,6 +132,12 @@ enum HID_RID_e{
   HID_RID_GAMEPAD // 3  
 };
 
+// ===================================================================================
+// DESCRITTORE COMPOSITO
+// ===================================================================================
+// Questo array è la "Carta d'Identità" che mandiamo a Windows/Linux. 
+// Combina le tre periferiche. Quando l'OS riceve un pacchetto, guarda il 
+// primo byte (Report ID) per capire a quale delle tre periferiche assegnare i dati.
 uint8_t const desc_hid_report[] = {
   TUD_HID_REPORT_DESC_KEYBOARD(HID_REPORT_ID(HID_RID_e::HID_RID_KEYBOARD)),
   TUD_HID_REPORT_DESC_ABSMOUSE(HID_REPORT_ID(HID_RID_e::HID_RID_MOUSE)),
@@ -93,6 +150,14 @@ uint8_t const desc_hid_report[] = {
 /*****************************
  *   MOUSE SECTION
  *****************************/ 
+// ===================================================================================
+// MOUSE ASSOLUTO (ABSOLUTE MOUSE)
+// ===================================================================================
+// Perché un mouse assoluto? I mouse standard comunicano le "differenze" di movimento (dx, dy).
+// Una Lightgun invece ottiene coordinate esatte dello schermo (es. x:1920, y:1080).
+// Dicendo all'OS che questo è un mouse assoluto, il cursore si "teletrasporta" 
+// istantaneamente sul target senza soffrire di accelerazioni hardware di Windows.
+
 #ifndef _ABSMOUSE5_H_
 #define _ABSMOUSE5_H_
 
@@ -116,7 +181,10 @@ class AbsMouse5_
   AbsMouse5_();  // si puo' togliere non serve a nulla
 	void report(void);
   void move(int16_t x, int16_t y);
+  
+  // Architettura estensibile: Mantenuta per future mod hardware (es. rotellina o scroll)
   void move_wheel_pan(int8_t wheel, int8_t pan); // NON INDISPENSABILE AGGIUNTA DA ME
+  
   void press(uint8_t b = hid_mouse_button_bm_t::MOUSE_BUTTON_LEFT); // solo un bottone per volta
 	void release(uint8_t b = hid_mouse_button_bm_t::MOUSE_BUTTON_LEFT); // solo un bottone per volta
 	void releaseAll() { release(0x1f); }
@@ -195,6 +263,8 @@ extern AbsMouse5_ AbsMouse5;
   #define ISO_KEY 0x64
   #define ISO_REPLACEMENT 0x32
 
+  // Lookup table per tastiere Italiane, essenziale per non inviare
+  // char errati quando la Lightgun "digita" per configurazioni via software.
   const uint8_t KeyboardLayout_it_IT[128] =
   {
     0x00,          // NUL
@@ -354,6 +424,15 @@ extern Keyboard_ Keyboard;
 #ifndef _GAMEPAD_H_
 #define _GAMEPAD_H_
 
+// ===================================================================================
+// GAMEPAD 16-BIT (SOLUZIONE PER MULTIPLAYER / MAME)
+// ===================================================================================
+// Windows ha un grave problema di design: due mouse faticano a convivere indipendentemente.
+// Quando due persone giocano insieme, assegnare il P2 a un Gamepad aggira il problema.
+// Ma un asse Gamepad USB standard (8-bit) ha una risoluzione di soli 255 passi: inaccettabile 
+// per la mira di un fucile! Forziamo quindi il report a 16-bit (-32767 a +32767), permettendo 
+// all'emulatore (Mame, TeknoParrot) di interpretare la Lightgun 2 con precisione millimetrica.
+
 // Using the Adafruit Gamepad desc as the basis, but with 4 16-bit axis and a 16-bit 15 button report
 // OpenFIRE define       TinyUSB define in hid.h    
 #define PAD_A      0    // GAMEPAD_BUTTON_A  GAMEPAD_BUTTON_SOUTH
@@ -411,6 +490,10 @@ class Gamepad16_ {
     void padUpdate(uint8_t padMask);
     void report(void);
     void releaseAll(void);
+    
+    // Legacy Porting: Alcuni setup (es. Cabela's Top Shot) richiedono l'inversione
+    // dell'assegnazione tra stick Sinistro (X/Y) e stick Destro (Rx/Ry).
+    // Questo flag permette lo swap dinamico della mappatura USB.
     bool stickRight;
   };
   extern Gamepad16_ Gamepad16;

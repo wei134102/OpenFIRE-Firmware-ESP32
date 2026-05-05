@@ -61,6 +61,7 @@ inline int fast_roundf(float val) {
 #define C 2
 #define D 3
 
+
 void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
 
     // =========================================================================//
@@ -412,8 +413,7 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
         GeomX[C] = positionXX[c]; GeomY[C] = positionYY[c];
         GeomX[D] = positionXX[d]; GeomY[D] = positionYY[d];
 
-        if (num_points_seen >= 2 && prev_num_points_seen >= 1) {
-            
+        if (num_points_seen >= 2 && prev_num_points_seen >= 1) {     
             int move_x = 0, move_y = 0;
             uint8_t stable_count = 0;
             for (uint8_t i = 0; i < 4; i++) {

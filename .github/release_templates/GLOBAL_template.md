@@ -1,7 +1,7 @@
-# GLOBAL RELEASE - FIRMWARE **LIGHTGUN** **DONGLE** **PEDAL** - OpenFIRE ESP32
+# GLOBAL RELEASE - FIRMWARE FOR:  **LIGHTGUN** - **DONGLE** - **PEDAL** - OpenFIRE ESP32
 
 
-This release is updated to commit **8b651a2** (April 19, 2026) of the original [OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware) firmware.
+This release is updated to commit **8b651a2** (April 19, 2026) of the original firmware **(version 6.2 - Long Bridge)** [OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware).
 
 ### Supported Boards (ESP32-S3)
 
@@ -114,10 +114,10 @@ To configure all lightgun features (pins, buttons, name, player, etc.), the orig
 ---
 ---
 
-# GLOBAL RELEASE - FIRMWARE **LIGHTGUN** **DONGLE** **PEDAL** - OpenFIRE ESP32
+# GLOBAL RELEASE - FIRMWARE PER: **LIGHTGUN** - **DONGLE** - **PEDAL** - OpenFIRE ESP32
 
 
-Questa release è aggiornata al commit **8b651a2** (19 aprile 2026) del firmware originale [OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware).
+Questa release è aggiornata al commit **8b651a2** (19 aprile 2026) del firmware originale **(versione 6.2 - Long Bridge)** [OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware).
 
 
 ---
