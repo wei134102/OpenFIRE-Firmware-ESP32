@@ -37,10 +37,22 @@
 #include "OpenFIREprefs.h"
 #include "OpenFIREconstant.h"
 
+// ===================================================================================
+// OS ABSTRACTION: RIDEFINIZIONE DEL DELAY (FREERTOS)
+// ===================================================================================
+// Sostituendo la funzione nativa bloccante con vTaskDelay, garantiamo che 
+// lo scheduler di FreeRTOS possa cedere il controllo ad altri task (es. radio o display) 
+// durante le attese, prevenendo lo stallo dell'intero sistema operativo.
 #ifdef ARDUINO_ARCH_ESP32  // 696969
     #define delay(ms) vTaskDelay(pdMS_TO_TICKS(ms))                    
 #endif //ARDUINO_ARCH_ESP32
 
+// ===================================================================================
+// CONDIVISIONE RISORSE DISPLAY
+// ===================================================================================
+// Esponendo un puntatore reference (*&), permettiamo al modulo Wireless, isolato 
+// in altri thread, di iniettare animazioni di stato (es. "Searching...") 
+// direttamente sul display, aggirando l'incapsulamento standard del firmware.
 // ========== serve per usare display da parte wireless =============
 #ifdef USES_DISPLAY
     #ifdef USE_LOVYAN_GFX
@@ -54,7 +66,13 @@
 // ========== fine serve per usare display da parte wireless =============
 
 
-
+// ===================================================================================
+// MULTITHREADING (CORE 1) E WATCHDOG
+// ===================================================================================
+// Il setup del dual-core scarica cicli preziosi. Tuttavia, il vTaskDelay(1) 
+// è essenziale architettonicamente: costringe il task a dormire 1 ms permettendo 
+// al task Idle nascosto di FreeRTOS di girare. Senza questo respiro, il Core si 
+// bloccherebbe e l'Hardware Watchdog riavvierebbe la scheda in panic.
 
 // =======696969===== GESTIONE DUAL CORE PER ESP32 CHE USA FREERTOS ===  INIZIALIZZAZIONE ========
 #if defined(ARDUINO_ARCH_ESP32) && defined(DUAL_CORE)
@@ -93,6 +111,13 @@ void setup() {
 #endif
 // ======= 696969 ========= FINE X AVVIO DUAL CORE ESP32 =================================
 
+// ===================================================================================
+// HARDWARE FAILSAFES (I2C & ADC)
+// ===================================================================================
+// La stabilità fisica dell'hardware vario (cloni Arduino, cablaggi lunghi) è imprevedibile.
+// I timeout I2C prevengono blocchi infiniti del bus. I pin GPIO tenuti alti 
+// compensano quirk noti di board specifiche (es. stabilizzare l'LDO del Pico).
+
     // In case some I2C devices deadlock the program
     // (can happen due to bad pin mappings)
     Wire.setTimeout(100);
@@ -108,6 +133,13 @@ void setup() {
         pinMode(23, OUTPUT);
         digitalWrite(23, HIGH);
     #endif
+
+// ===================================================================================
+// DATA INTEGRITY & PROFILAZIONE
+// ===================================================================================
+// Una EEPROM (o File System) corrotta può caricare valori di offset impossibili, 
+// distruggendo la matematica del tracking IR. Questo blocco agisce come "Sanitizer", 
+// forzando il fallback a valori sicuri prima che il software possa crashare.
 
     // Init pins array, and OFPresets for later load ops
     OF_Prefs::LoadPresets();
@@ -192,6 +224,13 @@ void setup() {
     
     
 
+// ===================================================================================
+// IDENTITA' DINAMICA USB (SPOOFING SHADOWING)
+// ===================================================================================
+// Prepariamo l'identità della periferica. Se siamo in modalità Wireless, questi 
+// dati verranno inviati al Dongle affinché possa fingersi questa specifica pistola. 
+// Se siamo via Cavo, configureremo il nostro TinyUSB locale con questi stessi parametri.
+
     // ===== 696969 per trasmettere i dati wireless al dongle ========
     #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
         strncpy(usb_data_wireless.deviceManufacturer,MANUFACTURER_NAME,sizeof(usb_data_wireless.deviceManufacturer));
@@ -263,22 +302,15 @@ void setup() {
         OF_RGB::LedInit();
     #endif // LED_ENABLE
 
-    ////////////////////////////////////////////////////////////
-    // scrive sulla parte superiore del diplay "connessione"
-    #ifdef ARDUINO_ARCH_ESP32
-    #ifdef USES_DISPLAY
-        // ========== serve per usare display da parte wireless =============
-        //////////////////////////////////////////////////////////////////////////display_OLED=FW_Common::OLED.display;
-        // ========== fine serve per usare display da parte wireless =============
 
-        //FW_Common::OLED.ScreenModeChange(ExtDisplay::Screen_Init);
-        ////////////////////////FW_Common::OLED.TopPanelUpdate(" ... CONNECTION ...");      
+// ===================================================================================
+// CALIBRAZIONE EMPIRICA HARDWARE DEGLI STICK ANALOGICI
+// ===================================================================================
+// Invece di affidarci a valori di deadzone hardcodati (che variano per usura 
+// dei potenziometri, molla meccanica o tolleranze di fabbrica), blocchiamo il sistema 
+// per 2 secondi all'avvio. Registriamo fisicamente il "rumore" di fondo dello stick 
+// a riposo per stabilire un centro e limiti di sicurezza personalizzati dinamicamente.
 
-    #endif // USES_DISPLAY
-    #endif //ARDUINO_ARCH_ESP32
-
-
-    /// SPOSTARE DOPO INZIALIZZAZIONE
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // 696969 == CODICE PER CALIBRARE LEVETTA STICK IN POSIZIONE CENTRALE =============
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -345,6 +377,7 @@ void setup() {
     ANALOG_STICK_DEADZONE_X_CENTER = (ANALOG_STICK_DEADZONE_X_MIN + ANALOG_STICK_DEADZONE_X_MAX) / 2; 
     ANALOG_STICK_DEADZONE_Y_CENTER = (ANALOG_STICK_DEADZONE_Y_MIN + ANALOG_STICK_DEADZONE_Y_MAX) / 2; 
     
+    // Espansione di tolleranza (buffer zona morta) per assorbire piccoli rimbalzi meccanici
     ANALOG_STICK_DEADZONE_X_MIN -= 400;
     ANALOG_STICK_DEADZONE_X_MAX += 400;
     ANALOG_STICK_DEADZONE_Y_MIN -= 400;
@@ -355,6 +388,14 @@ void setup() {
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // ===================================================================================================================
+
+// ===================================================================================
+// CONNECTION ROUTING: WIRED (USB) VS WIRELESS (ESP-NOW)
+// ===================================================================================
+// Al boot, il sistema attende ~1000ms per capire se è connesso via Cavo a un PC.
+// Se l'Host USB monta il dispositivo, la Lightgun sceglierà la porta Seriale fisica. 
+// In caso contrario, interpreterà l'assenza di host come "Modalità Batteria", 
+// disattivando il driver USB locale e accendendo la radio ESP-NOW per agganciarsi al Dongle.
 
 #ifdef USE_TINYUSB
     #if defined(ARDUINO_RASPBERRY_PI_PICO_W) && defined(ENABLE_CLASSIC)
@@ -422,21 +463,12 @@ void setup() {
             if (lastDongleSave) {
                 // PROVA A CONNETTERTI AL PRECEDENTE DONGLE INVIANDO IL PACCHETTO CHECK_CONNECTION
                 if (SerialWireless.connection_gun_at_last_dongle()) {
-                    
-                    //if (lastPedalSave) SerialWireless.connection_gun_at_last_pedal();
                 } else {
-                    //lastDongleSave=false;
-                    //SerialWireless.end();
-                    //SerialWireless.begin();
                     SerialWireless.connection_gun();
-                    //SerialWireless.connection_gun_at_pedal();
                 }
             }
             else {
-                //TinyUSBDevices.onBattery = false; // lo imposta a true solo dopo che è stata stabilita e riconosciuta connessione tra dongle e gun
-                //uint8_t stato_wireless = 0;
                 SerialWireless.connection_gun();
-                //SerialWireless.connection_gun_at_pedal();
             }
         }
     #else
@@ -473,13 +505,10 @@ void setup() {
         #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
             if (TinyUSBDevices.onBattery) {  // nel caso incredibile che l'USB sia montato nel momnto esatto in cui è stata stabilita connessione wireless
                 TinyUSBDevices.onBattery = false;
-                //SerialWireless.end();
             }
             if (TinyUSBDevices.wireless_mode != WIRELESS_MODE::NONE_WIRELESS) SerialWireless.end();
         #endif 
         Serial_OpenFIRE_Stream = & Serial;
-        //Serial_OpenFIRE_Stream->setTimeout(0);  
-        //(*Serial_OpenFIRE_Stream).setTimeout(0); 
 
     }  
     #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
@@ -491,12 +520,12 @@ void setup() {
                 OF_Prefs::SaveLastDongleWireless(peerAddress, &espnow_wifi_channel);
         }
         // CHIUDI TUTTO CIO' CHE E' USB SE E' DA CHIUDERE
+        // Salvaguarda la memoria e previene errori del core USB quando non è connesso fisicamente.
         TinyUSBDevice.clearConfiguration();
         TinyUSBDevice.detach();
         
         Serial_OpenFIRE_Stream = &SerialWireless;
-        // ======================== PEDAL  POI SPOSTARLO
-        //SerialWireless.connection_gun_at_pedal(); // 696969 POI DECIDERE DOVE METTERLO
+        // ======================== PEDAL   //696969
         if (lastPedalSave && (lastPedalChannel == espnow_wifi_channel)) {
             if (!SerialWireless.connection_gun_at_last_pedal()) SerialWireless.connection_gun_at_pedal();
         } else SerialWireless.connection_gun_at_pedal();
@@ -521,10 +550,17 @@ void setup() {
     #ifdef ARDUINO_ARCH_ESP32
     #ifdef USES_DISPLAY
         FW_Common::OLED.ScreenModeChange(ExtDisplay::ScreenMode_e::Screen_None);
-        //FW_Common::OLED.ScreenModeChange(ExtDisplay::Screen_Init);
-        //FW_Common::OLED.TopPanelUpdate(" ... CONNECTION ...");
     #endif // USES_DISPLAY
     #endif //ARDUINO_ARCH_ESP32
+
+// ===================================================================================
+// POLYMORPHIC I/O: IL TRUCCO DELLA SERIALE VIRTUALE
+// ===================================================================================
+// Architettura geniale per retrocompatibilità. Ridefinendo la macro `Serial` per 
+// puntare al nostro stream dereferenziato (*Serial_OpenFIRE_Stream), l'intera codebase 
+// legacy (nata per USB wired) può usare `Serial.print` e `Serial.write` come sempre. 
+// I dati verranno instradati magicamente via Cavo o via Rete (ESP-NOW) a seconda 
+// dell'esito della negoziazione precedente.
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////// 696969 ////////////////////////////////////////////////
@@ -549,7 +585,9 @@ void setup() {
     /////////////////// AbsMouse5.init(true); // 696969 rimosso per il mio nuovo OpenFire_TinyDevice
 
     // IR camera maxes out motion detection at ~300Hz, and millis() isn't good enough
-    
+    // L'esecuzione wireless introduce overhead. Ridurre il tick rate della telecamera IR 
+    // su batteria (da 5ms a ~15ms) offre più CPU all'ESP-NOW limitando lag di sistema.
+    // funziona comunque bene alla stessa frequenza usata con connessione via cavo, ma volendo si può abbassare
     if (TinyUSBDevices.onBattery) startIrCamTimer(209);  // 120 ---- 100->10ms 66 -> 15ms per connessione wireless
       else startIrCamTimer(209); // 5ms per connessione via seriale
     

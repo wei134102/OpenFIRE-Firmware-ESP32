@@ -1,3 +1,16 @@
+/*!
+ * @file tusb_gamepad16.h
+ * @brief tusb_gamepad16
+ * @n CPP tusb_gamepad16
+ *
+ * @copyright alessandro-satanassi, https://github.com/alessandro-satanassi, 2026
+ * @copyright GNU Lesser General Public License
+ *
+ * @author [Alessandro Satanassi](alessandro@cittini.it)
+ * @version V1.0
+ * @date 2026
+ */
+
 /*
     16-bit axis gamepad definition
     Copyright (c) 2024 Earle F. Philhower, III <earlephilhower@yahoo.com>
@@ -18,6 +31,15 @@
 */
 
 #pragma once
+
+// ===================================================================================
+// HID DESCRIPTOR OVERRIDE: INGEGNERIA DEI 16-BIT
+// ===================================================================================
+// Il driver standard HID di Windows assegna ai gamepad 8-bit per asse (valori: -127/+127).
+// Iniettando un descrittore USB customizzato forziamo la risoluzione LOGICA a -32767/+32767.
+// Questo non serve per leggere ADC più precisi, ma per offrire all'emulatore (Mamehooker) 
+// un piano di mira ad altissima definizione quando la Lightgun agisce in modalità Gamepad 
+// (ad esempio per evitare conflitti del mouse con il Player 1 in setup multiplayer locali).
 
 #define TUD_HID_REPORT_DESC_GAMEPAD16(...) \
   HID_USAGE_PAGE ( HID_USAGE_PAGE_DESKTOP     )                 ,\
