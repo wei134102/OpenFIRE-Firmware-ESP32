@@ -1,14 +1,27 @@
+/*!
+ * @file OpenFIRE-DONGLE-version.h
+ * @brief OpenFIRE-DONGLE-version.h
+ * @n CPP OpenFIRE-DONGLE-version.h
+ *
+ * @copyright alessandro-satanassi, https://github.com/alessandro-satanassi, 2026
+ * @copyright GNU Lesser General Public License
+ *
+ * @author [Alessandro Satanassi](alessandro@cittini.it)
+ * @version V1.0
+ * @date 2026
+ */
+
 #ifndef OPENFIRE_DONGLE_VERSION_H
 #define OPENFIRE_DONGLE_VERSION_H
 
 // Versione attuale
-#define OPENFIRE_DONGLE_VERSION 6.1
+#define OPENFIRE_DONGLE_VERSION 6.2
 ///////#define OPENFIRE_CODENAME "Dawn Sigma rc2"
 //#define GIT_HASH
 #define OPENFIRE_DONGLE_VERSION_MAJOR 6
-#define OPENFIRE_DONGLE_VERSION_MINOR 1
+#define OPENFIRE_DONGLE_VERSION_MINOR 2
 #define OPENFIRE_DONGLE_VERSION_PATCH 0
-#define OPENFIRE_DONGLE_VERSION_TYPE "rc2"  // Per indicare pre-release (alpha, beta, RC(Release Candidate), stable)
+#define OPENFIRE_DONGLE_VERSION_TYPE "Beta1"  // Per indicare pre-release (alpha, beta, RC(Release Candidate), stable)
 
 // Stringa di versione attuale
 #define OPENFIRE_DONGLE_VERSION_STRING (String(OPENFIRE_DONGLE_VERSION_MAJOR) + "." + String(OPENFIRE_DONGLE_VERSION_MINOR) + "." + String(OPENFIRE_DONGLE_VERSION_PATCH)+ "-" + OPENFIRE_DONGLE_VERSION_TYPE)

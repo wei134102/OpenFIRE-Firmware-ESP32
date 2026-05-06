@@ -1,4 +1,26 @@
+/*!
+ * @file tusb_gamepad16_report.h
+ * @brief tusb_gamepad16_report
+ * @n CPP tusb_gamepad16_report
+ *
+ * @copyright alessandro-satanassi, https://github.com/alessandro-satanassi, 2026
+ * @copyright GNU Lesser General Public License
+ *
+ * @author [Alessandro Satanassi](alessandro@cittini.it)
+ * @version V1.0
+ * @date 2026
+ */
+
+
 #pragma once
+
+// ===================================================================================
+// DATA STRUCTURE: PAYLOAD GAMEPAD 16-BIT
+// ===================================================================================
+// __attribute__((packed)) è obbligatorio: dice al compilatore C++ di non inserire 
+// byte di padding (spazio vuoto) tra le variabili per allinearle in memoria. 
+// L'assenza di padding garantisce che la struct corrisponda millimetricamente 
+// al byte-order richiesto dal protocollo HID USB per il Gamepad 16.
 
 // HID Gamepad Protocol Report.
 typedef struct __attribute__((packed)) {

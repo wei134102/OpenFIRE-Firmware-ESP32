@@ -3,6 +3,15 @@
  * @brief Light Gun library for 4 LED setup
  * @n CPP file for Samco Light Gun 4 LED setup
  *
+ * @copyright alessandro-satanassi, https://github.com/alessandro-satanassi, 2026
+ * @copyright GNU Lesser General Public License
+ *
+ * @author [Alessandro Satanassi](alessandro@cittini.it)
+ * @version V2.0
+ * @date 2026
+ *
+ * I thank you for producing the first original code:
+ *
  * @copyright Samco, https://github.com/samuelballantyne, 2024
  * @copyright GNU Lesser General Public License
  *

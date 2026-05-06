@@ -1,9 +1,27 @@
-
+/*!
+ * @file OpenFIRE_Wireless.cpp
+ * @brief Library for OpenFIRE wireless with Esp-Now
+ * @n CPP Library for OpenFIRE wireless with Esp-Now
+ *
+ * @copyright alessandro-satanassi, https://github.com/alessandro-satanassi, 2026
+ * @copyright GNU Lesser General Public License
+ *
+ * @author [Alessandro Satanassi](alessandro@cittini.it)
+ * @version V1.0
+ * @date 2026
+ */
 
 #if defined(OPENFIRE_WIRELESS_ENABLE) && defined(ARDUINO_ARCH_ESP32)
 
 #include "OpenFIRE_Wireless.h"
 #include "esp_idf_version.h"
+
+// ===================================================================================
+// INIZIALIZZAZIONE HARDWARE DIPENDENTE DAL RUOLO (GUN vs DONGLE)
+// ===================================================================================
+// Includiamo selettivamente i driver del display in base al target di compilazione
+// (#ifdef DONGLE o #ifdef GUN) per risparmiare prezioso spazio sulla memoria Flash
+// e non caricare librerie grafiche su dispositivi che ne sono sprovvisti.
 
 #ifdef DONGLE
   #ifdef USES_DISPLAY
@@ -60,6 +78,10 @@
 extern bool display_init;
 
 
+// ===================================================================================
+// CONFIGURAZIONE ESP-NOW E VARIABILI GLOBALI
+// ===================================================================================
+
 #ifndef OPENFIRE_ESPNOW_WIFI_CHANNEL
   #define OPENFIRE_ESPNOW_WIFI_CHANNEL 11 // canale sul quale si sintonizza la lightgun di default
 #endif // OPENFIRE_ESPNOW_WIFI_CHANNEL
@@ -74,22 +96,19 @@ extern bool display_init;
 uint8_t espnow_wifi_channel = OPENFIRE_ESPNOW_WIFI_CHANNEL;  // FATTA VARIABILE PER FUTURA CONFIGURAZIONE TRAMITE APP O OLED
 uint8_t espnow_wifi_power = OPENFIRE_ESPNOW_WIFI_POWER;      // FATTA VARIABILE PER FUTURA CONFIGURAZIONE TRAMITE APP O OLED
 
-
+// SHADOW STATE HID: Manteniamo una copia locale dell'ultimo stato inviato al PC.
+// Aggiorniamo l'host USB *solo* quando questi dati cambiano, evitando di saturare
+// l'Endpoint USB con polling inutili.
 hid_abs_mouse_report_t absmouse5Report_last_wifi = {0,0,0,0,0};
 hid_keyboard_report_t  keyReport_last_wifi = {0,0,{0,0,0,0,0,0}};
 hid_gamepad16_report_t gamepad16Report_last_wifi = {0,0,0,0,0,0,0,0};
-
 
 volatile bool absmouse5Report_pending = false; 
 volatile bool keyReport_pending = false;
 volatile bool gamepad16Report_pending = false;
 
-
-#ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO
-  bool espnow_wifi_power_auto = true;
-#endif // OPENFIRE_ESPNOW_WIFI_POWER_AUTO
-
-
+// SPOOFING USB: Dati di default del Dongle, che verranno sovrascritti dai dati della
+// Lightgun durante la negoziazione (Handshake) per ingannare il SO.
 USB_Data_GUN_Wireless usb_data_wireless = {
   "OpenFIRE_DONGLE",  // MANIFACTURES
   "FIRECon",          // NAME
@@ -104,6 +123,9 @@ USB_Data_GUN_Wireless usb_data_wireless = {
 SerialWireless_ SerialWireless;
 extern Adafruit_USBD_HID usbHid;
 
+// Spinlocks (Mutex Hardware): Fondamentali per garantire che letture e scritture
+// sui buffer circolari non vengano mai interrotte a metà da task su core diversi 
+// o da interrupt WiFi, prevenendo la corruzione letale della RAM.
 static portMUX_TYPE mux_serial_tx = portMUX_INITIALIZER_UNLOCKED;
 static portMUX_TYPE mux_radio_tx = portMUX_INITIALIZER_UNLOCKED;
 
@@ -127,6 +149,10 @@ static void _esp_now_tx_cb(const esp_now_send_info_t *tx_info, esp_now_send_stat
 void packet_callback_read_dongle(); // callback packet 
 void packet_callback_read_gun(); // callback packet
 void packet_callback_read_pedal(); // callback packet
+
+// ===================================================================================
+// GESTIONE INDIRIZZAMENTO E MACCHINA A STATI DI RETE
+// ===================================================================================
 
 ///////////////////////////////////////////////////////////////////
 //#define SIZE_BASE_AUX 13
@@ -153,9 +179,7 @@ uint8_t aux_buffer[13 + sizeof(usb_data_wireless)];
 const uint8_t BROADCAST_ADDR[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 #if defined(DONGLE)
-  ///////////////////////uint8_t peerAddress[6] = {0x24, 0x58, 0x7C, 0xDA, 0x38, 0xA0}; // quello montato con piedini su breackboard
   uint8_t peerAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}; // broadcast
-
   const functionPtr callbackArr[] = { packet_callback_read_dongle };
   uint8_t lastDongleAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
   uint8_t lastPedalAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
@@ -163,10 +187,8 @@ const uint8_t BROADCAST_ADDR[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
   uint8_t lastPedalChannel = OPENFIRE_ESPNOW_WIFI_CHANNEL;
   bool lastDongleSave = false; // se true significa che abbiamo un indirizzo dell'ultimo dongle altrimenti false
   bool lastPedalSave = false; 
-  #elif defined(PEDAL)
-
+#elif defined(PEDAL)
   uint8_t peerAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}; // broadcast
-
   const functionPtr callbackArr[] = { packet_callback_read_pedal };
   uint8_t lastDongleAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
   uint8_t lastPedalAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
@@ -174,12 +196,9 @@ const uint8_t BROADCAST_ADDR[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
   uint8_t lastPedalChannel = OPENFIRE_ESPNOW_WIFI_CHANNEL;
   bool lastDongleSave = false; // se true significa che abbiamo un indirizzo dell'ultimo dongle altrimenti false
   bool lastPedalSave = false; 
-  #elif defined(GUN)
+#elif defined(GUN)
   uint8_t peerAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}; // broadcast
-
-
   const functionPtr callbackArr[] = { packet_callback_read_gun };
-
   uint8_t lastDongleAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
   uint8_t lastPedalAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
   uint8_t lastDongleChannel = OPENFIRE_ESPNOW_WIFI_CHANNEL;
@@ -187,7 +206,6 @@ const uint8_t BROADCAST_ADDR[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
   bool lastDongleSave = false; // se true significa
   bool lastPedalSave = false; // se true significa
   // ==========================================================================================================
-
 #endif
 
 // ========= per gestione PEDAL ===========
@@ -197,65 +215,39 @@ void setupTimerPedal();
 esp_timer_handle_t timer_handle_pedal;
 // ===================================================
 
-
+// ===================================================================================
+// HARDWARE SETTINGS: FREQUENZA RADIO E PHY
+// ===================================================================================
 ///////////////////////////////////////////////////////////////////
 // Definizione globale della configurazione del rate
 esp_now_rate_config_t rate_config = {
-    .phymode = WIFI_PHY_MODE_11G, // Forza lo standard G
-    .rate = WIFI_PHY_RATE_12M,    // Forza i 12 Mbps
+    .phymode = WIFI_PHY_MODE_11G, // Forza lo standard G (Miglior compromesso penetrazione/velocità)
+    .rate = WIFI_PHY_RATE_12M,    // Forza i 12 Mbps (Garantisce stabilità del link a discapito della banda larga non necessaria)
     .ersu = false,                // Non necessario per 11g
     .dcm = false                  // Non necessario per 11g
 };
 ////////////////////////////////////////////////////////////////////
 
-#ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO
-// ---------------- INIZIO LOGICA TPC ----------------
-// Variabile globale per salvare l'RSSI istantaneo del pacchetto appena arrivato
-volatile int8_t last_rssi_percepito = -100;
-int8_t ultimo_rssi_trasmesso = TARGET_RSSI;
-int8_t espnow_rssi_ricevuto = 0;
-//volatile int8_t last_rssi_percepito = -100;
-// ultimo_rssi_trasmesso = last_rssi_percepito;
-
-uint8_t calcolaPotenzaOttimale(int8_t rssi_remoto) {
-    // Usiamo direttamente int16_t per evitare cast impliciti continui nei calcoli successivi
-    int16_t potenza_attuale = espnow_wifi_power;
-
-    // Calcolo in un'unica riga: 
-    // Usiamo lo shift bit a bit (<< 1) al posto della moltiplicazione (* 2) per massima velocità hardware
-    potenza_attuale += (TARGET_RSSI - rssi_remoto) * 2; // * 4; 
-
-    // AGGIUNGIAMO UN MARGINE DI SICUREZZA DI +2 dBm (8 unità) 
-    // visto che la potenza non verrà più corretta in volo!
-    //potenza_attuale += 8;
-    
-    #if defined(GUN)
-        // La GUN scende per risparmiare batteria
-        potenza_attuale = constrain(potenza_attuale, WIFI_POWER_MIN, WIFI_POWER_MAX);
-    #elif defined(DONGLE)
-        // Il DONGLE resta mediamente alto (minimo 40) perché ha la corrente via USB
-        potenza_attuale = constrain(potenza_attuale, 40, WIFI_POWER_MAX);
-    #elif defined(PEDAL)
-        // Il DONGLE resta mediamente alto (minimo 40) perché ha la corrente via USB
-        potenza_attuale = constrain(potenza_attuale, 40, WIFI_POWER_MAX);   
-    #endif
-
-    return (uint8_t)potenza_attuale;
-}
-
-
-// ---------------- FINE LOGICA TPC ----------------
-#endif //OPENFIRE_ESPNOW_WIFI_POWER_AUTO
 
 ///////////////////////////////////////////////////////////////////
 
 volatile uint8_t channel_display = espnow_wifi_channel;
 volatile uint8_t seconds_display = 30;
-volatile bool broadcast_receiver = false;  // ??????? non serve
+volatile bool broadcast_receiver = false;  
+
+// ===================================================================================
+// TASKS ASINCRONI FREERTOS (USB E RADIO)
+// ===================================================================================
 
 //////////////////////////////////////////////////////////////////////////////
 TaskHandle_t xUSBTaskHandle = NULL;
 #ifdef DONGLE
+
+// Il task USB gestisce l'invio dei dati HID al PC garantendo che l'Endpoint non 
+// venga mai saturato. Utilizza un algoritmo Round-Robin per dare priorità a rotazione 
+// tra Mouse, Tastiera e Gamepad, evitando che periferiche "loquaci" (come il mouse) 
+// oscurino gli altri controlli.
+
 void usbTask(void *pvParameters) {
   // Teniamo traccia di chi ha il turno. 
   // 0 = Mouse, 1 = Tastiera, 2 = Gamepad
@@ -312,9 +304,14 @@ void usbTask(void *pvParameters) {
 }
 #endif // DONGLE
 /////////////////////////////////////////////////////////////////////////////
+
 TaskHandle_t xRadioTaskHandle = NULL;
 volatile bool radioFree = true;
 
+// Il task della Radio è il controllore del traffico. Rimane "addormentato" fino
+// a quando non riceve una notifica (ISR ESP-NOW o Timer Seriale).
+// Gestisce sia il Parsing dei pacchetti in arrivo (scavalcando la FSM), 
+// sia l'emissione dei pacchetti in coda verso l'etere.
 
 void radioTask(void *pvParameters) {
   while (1) {
@@ -352,6 +349,12 @@ void radioTask(void *pvParameters) {
 }
 // =====================================
 
+// ===================================================================================
+// ANIMAZIONI GRAFICHE ASINCRONE (DISPLAY TFT/OLED)
+// ===================================================================================
+// Queste funzioni sono lanciate su Core separati durante le fasi "bloccanti" di rete 
+// per garantire che lo schermo sia fluido e reattivo, fornendo un chiaro feedback
+// visuale sull'accoppiamento all'utente (UX Pattern).
 
 /////////////////////////////////////////////////////////////////////////////
 // VERSIONE GRAFICA RICERCA CANALE PER GUN //////////////////////////////////
@@ -541,6 +544,17 @@ void animTask(void *pvParameters) {
 // FINE VERSIONE GRAFICA RICERCA CANALE PER DONGLE //////////////////////////
 /////////////////////////////////////////////////////////////////////////////
 
+// ===================================================================================
+// RICERCA EURISTICA CANALE MIGLIORE (AUTO-CHANNEL CONFIGURATION)
+// ===================================================================================
+// Questa funzione eseguita dal Dongle attiva la modalità "Promiscuous" del chip radio
+// per annusare l'etere (sniffing). Assegna uno score a ciascun canale basato non
+// solo sul numero di reti, ma soprattutto sul rumore reale (Noise Floor) e sul
+// traffico effettivo dei pacchetti che transitano in quell'istante. Sceglie il 
+// canale che offre il SNR (Signal-to-Noise Ratio) migliore per l'ESP-NOW.
+
+// ================= FUNZIONI PER RICERCA MIGLIORE CANALE - USATO SOLO DAL DONGLE =========================
+#ifdef DONGLE
 
 // ================= VARIABILI GLOBALI PER CALLBACK =================
 static volatile uint32_t g_packetCounter = 0;
@@ -779,6 +793,8 @@ uint8_t findBestChannel() {
   
   return bestCh;
 }
+#endif // DONGLE
+// ================= FINE FUNZIONI PER RICERCA MIGLIORE CANALE - USATO SOLO DAL DONGLE =========================
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -787,6 +803,14 @@ uint8_t findBestChannel() {
 /*****************************
  *   SERIAL WIRELESS SECTION
  *****************************/
+// ===================================================================================
+// INTERFACCIA STREAM: ASTRAZIONE DELLA RADIO COME PORTA SERIALE VIRTUALE
+// ===================================================================================
+// Questi metodi sovrascrivono l'interfaccia standard `Stream` di Arduino. 
+// L'obiettivo architettonico è permettere al resto del codice (es. logica di parsing 
+// o librerie esterne) di leggere e scrivere dati dalla/verso la rete ESP-NOW 
+// esattamente come se fosse una normale connessione seriale via cavo.
+// La latenza è mascherata dall'uso di buffer circolari (Ring Buffers) e indici Lock-Free.
 
 SerialWireless_::operator bool() {
   return true;
@@ -802,6 +826,9 @@ int SerialWireless_::peekBin() {
   return buffer[readIndex];
 }
 
+// Estrae un singolo byte dal buffer circolare di ricezione. 
+// L'uso dell'operatore bitwise (& MASK_READ_SERIAL) sostituisce il costoso operatore modulo (%),
+// garantendo il wrap-around dell'indice in un singolo ciclo di clock.
 int SerialWireless_::read() {
   uint16_t r = _readerSerialRead;
   if (r == _writerSerialRead) return -1;
@@ -823,8 +850,17 @@ int SerialWireless_::readBin() {
   return (int)ret;
 }
 
+// ===================================================================================
+// MOTORE DI PARSING ASINCRONO E GESTIONE MEMORIA LOCK-FREE
+// ===================================================================================
+
+// Questa funzione viene chiamata dal `radioTask`. Ispeziona la coda dati grezzi 
+// (riempita dalla ISR della radio) e la passa istantaneamente alla macchina a stati 
+// del protocollo COBS (`packet.parse`).
 bool SerialWireless_::checkForRxPacket() {
     // 1. Snapshot locale degli indici in questo preciso istante
+    // Questo è il cuore del pattern Lock-Free: leggiamo lo stato corrente senza bloccare 
+    // l'hardware interrupt che potrebbe star scrivendo contemporaneamente.
     uint16_t r = _reader;
     uint16_t w = _writer; // Guardiamo dove è arrivata la callback ESP-NOW
     const uint16_t MASK = FIFO_SIZE_READ - 1;
@@ -851,13 +887,14 @@ bool SerialWireless_::checkForRxPacket() {
     }
 
     // --- BARRIERA DEL COMPILATORE ---
-    // Assicura che la CPU finisca fisicamente di leggere tutti i byte dalla RAM 
-    // PRIMA di dire all'ISR che lo spazio è di nuovo libero. 
+    // Essenziale sulle architetture Xtensa/ARM: Assicura che la CPU finisca 
+    // fisicamente di trasferire tutti i byte dalla RAM cacheata alla RAM principale
+    // PRIMA di dire all'ISR (Interrupt Service Routine) che lo spazio è di nuovo libero. 
     asm volatile ("memw" : : : "memory");
 
     // 5. Sincronizzazione finale ATOMICA
     // Aggiorniamo _reader in RAM una sola volta. Appena viene eseguita questa riga,
-    // la callback RX capisce matematicamente che c'è nuovo spazio libero.
+    // la callback RX capisce matematicamente che c'è nuovo spazio libero per scrivere.
     _reader = r;
 
     return true;
@@ -887,6 +924,15 @@ int SerialWireless_::availableForWriteBin() {
   return (readIndex - writeIndex - 1) & (BUFFER_SIZE - 1);
 }
 
+// ===================================================================================
+// TRASMISSIONE DATI: PRODUCER-CONSUMER PATTERN
+// ===================================================================================
+
+// In una seriale hardware, `flush` blocca il thread finché l'ultimo bit non lascia il pin TX. 
+// Qui invece il flush impacchetta i dati nel ring buffer e "sveglia" il task radio. 
+// Se il buffer di rete è saturo, usiamo taskYIELD per cedere volontariamente il controllo 
+// al sistema operativo (FreeRTOS) permettendo al task radio di trasmettere e liberare spazio, 
+// prevenendo così i Watchdog Timeout e mantenendo il sistema responsivo.
 void SerialWireless_::flush() {
   // 1. Il flush deve attendere finché ci sono dati nel buffer di scrittura seriale
   while (availableBufferSerialWrite() > 0) {
@@ -905,6 +951,9 @@ void SerialWireless_::flush() {
   }
 }
 
+// Fase di preparazione: Preleva i dati seriali in attesa, applica lo stuffing COBS, 
+// incapsula il tutto in un pacchetto con ID e CRC, e lo deposita nel buffer pronto 
+// per essere spedito in etere.
 bool SerialWireless_::flush_sem() {
   bool packed_data = false;
   
@@ -925,6 +974,10 @@ bool SerialWireless_::flush_sem() {
 
     if (space_in_radio > overhead) {
       uint16_t max_payload = space_in_radio - overhead;
+      
+      // Strategia di frammentazione dinamica:
+      // Se i dati superano il limite fisico di un singolo pacchetto ESP-NOW o la capacità 
+      // del payload (200 byte per sicurezza), spezziamo l'invio in chunk più piccoli.
       uint16_t len_to_pack = std::min((uint16_t)available_tx, std::min((uint16_t)200, max_payload));
 
       uint16_t firstChunk = FIFO_SIZE_WRITE_SERIAL - r;
@@ -951,6 +1004,7 @@ bool SerialWireless_::flush_sem() {
   portEXIT_CRITICAL(&mux_serial_tx); 
 
   // API di sistema
+  // Segnaliamo al Task Radio asincrono che ci sono nuovi pacchetti pronti al decollo.
   if (packed_data) {
     esp_timer_stop(timer_handle_serial);
     xTaskNotifyGive(xRadioTaskHandle);
@@ -961,6 +1015,7 @@ bool SerialWireless_::flush_sem() {
   return false; 
 }
 
+// Fase di lancio: Questa funzione "spinge" fisicamente i bit nell'hardware radio ESP-NOW.
 void SerialWireless_::SendData_sem() {
   // 1. Snapshot locale degli indici
   const uint16_t r = readIndex;
@@ -977,6 +1032,10 @@ void SerialWireless_::SendData_sem() {
   uint16_t len_tx = available_data;
 
   // 4. ALLINEAMENTO PACCHETTI (Prevenzione "taglio")
+  // ESP-NOW ha un limite hardware rigido di 250 byte per payload.
+  // Se tronchiamo un frame a metà distruggiamo il protocollo COBS in ricezione.
+  // Pertanto, analizziamo il buffer a ritroso cercando un byte terminatore (0xFF) 
+  // e allineiamo il taglio garantendo l'invio di pacchetti logicamente integri.
   if (available_data > ESP_NOW_MAX_DATA_LEN) {
     uint16_t aligned_len = 0;
     
@@ -1062,6 +1121,8 @@ size_t SerialWireless_::write(const uint8_t *data, size_t len) {
       portEXIT_CRITICAL(&mux_serial_tx); // --- FINE LOCK ---
 
       // Ora siamo al sicuro: avviamo il timer se necessario!
+      // Usiamo un timer hardware per garantire che anche piccoli payload (che non 
+      // saturano il buffer) vengano flushati regolarmente senza rimanere incastrati.
       if (start_timer) {
         esp_timer_start_once(timer_handle_serial, TIMER_HANDLE_SERIAL_DURATION_MICROS);
       }
@@ -1082,6 +1143,8 @@ size_t SerialWireless_::write(const uint8_t *data, size_t len) {
 
 size_t SerialWireless_::writeBin(const uint8_t *data, size_t len) {
   // 1. Usa lo stesso lucchetto di SendPacket per coerenza e velocità
+  // Un mutex hardware disabilita gli interrupt momentaneamente: usiamolo
+  // per il minimo tempo indispensabile.
   portENTER_CRITICAL(&mux_radio_tx);
 
   uint16_t w = writeIndex;
@@ -1179,12 +1242,26 @@ void SerialWireless_::write_on_rx_serialBuffer(const uint8_t *data, int len) {
   }
 }
 
+bool SerialWireless_::end() {
+
+  vTaskDelete(xRadioTaskHandle);
+  // vTaskDelete(xUSBTaskHandle); // questo va solo nel dongle
+  
+  esp_err_t err = esp_now_deinit();
+  if (err != ESP_OK) {
+    //Serial.printf("esp_now_deinit failed! 0x%x", err);
+    return false;
+  }
+  WiFi.disconnect(true);
+  WiFi.mode(WIFI_OFF); // Disattiva il WiFi
+  esp_timer_delete(timer_handle_serial);
+  return true;
+}
+
+
 void SerialWireless_::init_wireless() {
   configST myConfig; // variabile di utilità per configurazione
-
-  myConfig.port         = &Serial; // questo andrà tolta - rimasta solo per contabilità =========================================
-  myConfig.debug        = false; //true; //false; //true;
-  myConfig.debugPort    = &Serial;
+  
   myConfig.timeout      = DEFAULT_TIMEOUT; // 50ms
   myConfig.callbacks    = callbackArr;
   myConfig.callbacksLen = sizeof(callbackArr) / sizeof(functionPtr);
@@ -1244,7 +1321,7 @@ void SerialWireless_::begin() {
 
 
   WiFi.mode(WIFI_STA); 
-  WiFi.disconnect();  // ??? SI va messo
+  WiFi.disconnect();
   
 
   esp_err_t err = esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11G); // | WIFI_PROTOCOL_11N);
@@ -1314,23 +1391,21 @@ void SerialWireless_::begin() {
   TinyUSBDevices.wireless_mode = WIRELESS_MODE::ENABLE_ESP_NOW_TO_DONGLE;
 }
 
-bool SerialWireless_::end() {
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  vTaskDelete(xRadioTaskHandle);
-  // vTaskDelete(xUSBTaskHandle); // questo va solo nel dongle
-  
-  esp_err_t err = esp_now_deinit();
-  if (err != ESP_OK) {
-    //Serial.printf("esp_now_deinit failed! 0x%x", err);
-    return false;
-  }
-  WiFi.disconnect(true);
-  WiFi.mode(WIFI_OFF); // Disattiva il WiFi
-  esp_timer_delete(timer_handle_serial);
-  return true;
-}
+// ===================================================================================
+// HANDSHAKE PROTOCOL: MACCHINA A STATI DI CONNESSIONE
+// ===================================================================================
+// Questa è l'implementazione della complessa danza di accoppiamento tra i dispositivi.
+// La logica è asimmetrica: 
+// - La GUN fa da "Faro" (Master) e spara pacchetti in broadcast sui vari canali.
+// - Il DONGLE e il PEDAL fanno da "Ascoltatori" (Slave) in Promiscuous Mode.
+// Una volta trovati, si scambiano i MAC Address (per passare dall'insicuro broadcast 
+// a una comunicazione Unicast punto-a-punto) e le informazioni USB (Spoofing).
 
-// ============ NUOVA IMPLEMNTAZIONE == LA GUN FA IL FARO ================================
+// ============ NUOVA IMPLEMNTAZIONE DONGLE == LA GUN FA IL FARO ================================
+#ifdef DONGLE
 bool SerialWireless_::connection_dongle() {
     
   #if defined(DONGLE) && defined(USES_DISPLAY)
@@ -1358,40 +1433,39 @@ bool SerialWireless_::connection_dongle() {
     
   // ====================================================
 
+  // FASE 1: ATTESA DEL FARO
+  // Il Dongle apre le porte per accettare i pacchetti Broadcast della Gun
   broadcast_receiver = true;
 
   while(stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED) { 
     if (stato_connessione_wireless == CONNECTION_STATE::NONE_CONNECTION) {
       lastMillis_start_dialogue = millis ();
     }
+    // Timeout di Sicurezza: Se la Gun sparisce a metà handshake, resettiamo lo stato
     if (((millis() - lastMillis_start_dialogue) > TIMEOUT_DONGLE_DIALOGUE) && stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED) {
       stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION;
     }
     taskYIELD();
   }
   
+  // FASE 2: UNICAST LOCK-IN
+  // Connessione stabilita. Chiudiamo le porte al broadcast per sicurezza e per 
+  // alleggerire il carico CPU sulla ricezione di pacchetti vaganti.
   broadcast_receiver = false;
 
   //Serial.println("DONGLE - Negosazione completata - associazione dei dispositivi GUN/DONGLE");
   if (esp_now_del_peer(peerAddress) != ESP_OK) {  // cancella il broadcast dai peer
     //Serial.println("DONGLE - Errore nella cancellazione del peer broadcast");
   }
+  
+  // Registriamo la Gun come unico peer valido per la comunicazione
   memcpy(peerAddress, mac_esp_another_card, 6);
   memcpy(peerInfo.peer_addr, peerAddress, 6);
   if (esp_now_add_peer(&peerInfo) != ESP_OK) {  // inserisce il dongle nei peer
     //Serial.println("DONGLE - Errore nell'aggiunta del nuovo peer della GUN");
   } else esp_now_set_peer_rate_config(peerAddress, &rate_config);
 
-  #ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO // ==========================================================
-    if (espnow_wifi_power_auto) {
-      SerialWireless.SendPacket((const uint8_t *)aux_buffer, 1, PACKET_TX::RSSI_FEEDBACK);
-      SerialWireless.SendPacket((const uint8_t *)aux_buffer, 1, PACKET_TX::RSSI_FEEDBACK);
-      SerialWireless.SendPacket((const uint8_t *)aux_buffer, 1, PACKET_TX::RSSI_FEEDBACK);
-      //espnow_wifi_power = 45;
-    }
-  #endif //OPENFIRE_ESPNOW_WIFI_POWER_AUTO // ==========================================================
-
-
+  
   TinyUSBDevices.onBattery = true;
   
     #if defined(DONGLE) && defined(USES_DISPLAY)
@@ -1403,8 +1477,18 @@ bool SerialWireless_::connection_dongle() {
   
   return true; 
 }
+#endif // DONGLE
+// ============ FINE NUOVA IMPLEMNTAZIONE DONGLE == LA GUN FA IL FARO ================================
 
+// ===================================================================================
+// RICONNESSIONE RAPIDA (FAST RECOVERY)
+// ===================================================================================
+// Funzioni utilizzate per riprendere la comunicazione senza dover rifare tutta
+// la lenta procedura di Handshake. Se i dispositivi conoscono già i rispettivi 
+// MAC Address (es. salvati in EEPROM/Flash in futuro), "bussano" direttamente 
+// alla porta specifica.
 
+#ifdef GUN
 bool SerialWireless_::connection_gun_at_last_dongle() {
   #define TIMEOUT_TX_PACKET_LAST_DONGLE 300 // in millisecondi - tempo di invio pacchetti ogni millisecondi quindi 4-5 pacchetti
   #define TIMEOUT_DIALOGUE_LAST_DONGLE 2000 // in millisecondi - tempo massimo per ricerca ultimo dongle
@@ -1433,6 +1517,7 @@ bool SerialWireless_::connection_gun_at_last_dongle() {
     TinyUSBDevices.onBattery = true;
     return true;
   } else {
+    // Fallimento Fast Recovery: prepariamo il terreno per il Full Handshake.
     stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION;
     lastDongleSave=false;
     esp_now_deinit();
@@ -1440,7 +1525,9 @@ bool SerialWireless_::connection_gun_at_last_dongle() {
     return false;
   }
 }
+#endif // GUN
 
+#ifdef GUN
 bool SerialWireless_::connection_gun_at_last_pedal() {
   #define TIMEOUT_TX_PACKET_LAST_PEDAL 300 // in millisecondi - tempo di invio pacchetti ogni millisecondi quindi 4-5 pacchetti
   #define TIMEOUT_DIALOGUE_LAST_PEDAL 2000 // in millisecondi - tempo massimo per ricerca ultimo pedal
@@ -1505,9 +1592,14 @@ bool SerialWireless_::connection_gun_at_last_pedal() {
     return false;
   }
 }
+#endif // GUN
 
+// ===================================================================================
+// LATO MASTER (GUN): PROCEDURA COMPLETA DI HANDSHAKE
+// ===================================================================================
 
 // ======================= NUOVA IMPLEMENTAZIONE DOVE LA GUN FA IL FARO ===============
+#ifdef GUN
 bool SerialWireless_::connection_gun() {
   
   channel_display = espnow_wifi_channel;
@@ -1562,6 +1654,9 @@ bool SerialWireless_::connection_gun() {
  
   broadcast_receiver = true;
 
+  // LOOP DI RICERCA (CHANNEL HOPPING)
+  // La Gun cambia fisicamente il canale WiFi ogni TIMEOUT_GUN_CHANGE_CHANNEL (250ms)
+  // e spara pacchetti beacon (80ms). Se riceve risposta passa allo stato successivo.
   while (!TinyUSBDevice.mounted() && stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED) {
     if (stato_connessione_wireless == CONNECTION_STATE::NONE_CONNECTION) {
       if (((millis() - lastMillis_change_channel) > TIMEOUT_GUN_CHANGE_CHANNEL) && 
@@ -1593,6 +1688,7 @@ bool SerialWireless_::connection_gun() {
       lastMillis_start_dialogue = millis();
     }
     else {
+      // Timeout se l'handshake si blocca a metà
       if (((millis() - lastMillis_start_dialogue) > TIMEOUT_GUN_DIALOGUE) && stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED) {
         stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION;
         //Serial.println("DONGLE - Non si è conclusa la negoziazione tra DONGLE/GUN e si riparte da capo");
@@ -1620,14 +1716,6 @@ bool SerialWireless_::connection_gun() {
       //Serial.println("DONGLE - Errore nell'aggiunta del nuovo peer della GUN");
     } else esp_now_set_peer_rate_config(peerAddress, &rate_config);
 
-    #ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO // ==========================================================
-      if (espnow_wifi_power_auto) {
-        SerialWireless.SendPacket((const uint8_t *)aux_buffer, 1, PACKET_TX::RSSI_FEEDBACK);
-        SerialWireless.SendPacket((const uint8_t *)aux_buffer, 1, PACKET_TX::RSSI_FEEDBACK);
-        SerialWireless.SendPacket((const uint8_t *)aux_buffer, 1, PACKET_TX::RSSI_FEEDBACK);
-        //espnow_wifi_power = 45;
-      }
-    #endif //OPENFIRE_ESPNOW_WIFI_POWER_AUTO // ==========================================================
 
 
     #if defined(GUN) && defined(USES_DISPLAY)
@@ -1652,8 +1740,11 @@ bool SerialWireless_::connection_gun() {
   return false; 
 
 }
+#endif // GUN
+// ======================= FINE NUOVA IMPLEMENTAZIONE DOVE LA GUN FA IL FARO ===============
 
 // ======================= NUOVA IMPLEMENTAZIONE DOVE LA GUN FA IL FARO per connetersi al pedal ===============
+#ifdef GUN
 bool SerialWireless_::connection_gun_at_pedal() {
   
   uint8_t seconds = 10; 
@@ -1747,6 +1838,7 @@ bool SerialWireless_::connection_gun_at_pedal() {
 
   memcpy(peerAddress, peerAddress_copy, 6);
 
+  // Forza al pedale lo stato "vivo" inviando un segnale fasullo
   for (uint8_t i=0; i<3; i++) {
     SerialWireless.SendPacket((const uint8_t *)&TinyUSBDevices.is_pedal_wireless, 1, PACKET_TX::PEDAL_TX);
     vTaskDelay(pdMS_TO_TICKS(69));
@@ -1764,14 +1856,6 @@ bool SerialWireless_::connection_gun_at_pedal() {
 
     setupTimerPedal();  // CREA IL TIMER PER GESTIRE IN SICUREZZA IL PEDALE
 
-    #ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO // ==========================================================
-      if (espnow_wifi_power_auto) {
-        SerialWireless.SendPacket((const uint8_t *)aux_buffer, 1, PACKET_TX::RSSI_FEEDBACK);
-        SerialWireless.SendPacket((const uint8_t *)aux_buffer, 1, PACKET_TX::RSSI_FEEDBACK);
-        SerialWireless.SendPacket((const uint8_t *)aux_buffer, 1, PACKET_TX::RSSI_FEEDBACK);
-        //espnow_wifi_power = 45;
-      }
-    #endif //OPENFIRE_ESPNOW_WIFI_POWER_AUTO // ==========================================================
 
 
     #if defined(GUN) && defined(USES_DISPLAY)
@@ -1796,9 +1880,11 @@ bool SerialWireless_::connection_gun_at_pedal() {
   return false; 
 
 }
-
+#endif // GUN
+// ======================= FINE NUOVA IMPLEMENTAZIONE DOVE LA GUN FA IL FARO per connetersi al pedal ===============
 
 // ======================= IMPLEMENTAZIONE PEDAL - RIMANE IN ASCOLTO SU TUTTI I CANALI ===============
+#ifdef PEDAL
 bool SerialWireless_::connection_pedal() {
   
     
@@ -1867,20 +1953,24 @@ bool SerialWireless_::connection_pedal() {
       //Serial.println("DONGLE - Errore nell'aggiunta del nuovo peer della GUN");
     } else esp_now_set_peer_rate_config(peerAddress, &rate_config);
 
-    #ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO // ==========================================================
-      if (espnow_wifi_power_auto) {
-        SerialWireless.SendPacket((const uint8_t *)aux_buffer, 1, PACKET_TX::RSSI_FEEDBACK);
-        SerialWireless.SendPacket((const uint8_t *)aux_buffer, 1, PACKET_TX::RSSI_FEEDBACK);
-        SerialWireless.SendPacket((const uint8_t *)aux_buffer, 1, PACKET_TX::RSSI_FEEDBACK);
-        //espnow_wifi_power = 45;
-      }
-    #endif //OPENFIRE_ESPNOW_WIFI_POWER_AUTO // ==========================================================
   
     TinyUSBDevices.onBattery = true;
     return true;  
       
 }
+#endif // PEDAL
+// ======================= FINE IMPLEMENTAZIONE PEDAL - RIMANE IN ASCOLTO SU TUTTI I CANALI ===============
 
+// ===================================================================================
+// CALLBACK LEVEL: DECODIFICA DEI PACCHETTI RICEVUTI
+// ===================================================================================
+// Questo blocco contiene il cervello del parsing. In base al target (#ifdef)
+// i pacchetti vengono smistati verso funzioni diverse (es. il Dongle invierà
+// l'HID Report al PC, mentre la Gun decodificherà il Force Feedback per muovere i motori).
+// Viene eseguito in un task (non in interrupt) ma deve comunque essere velocissimo.
+
+// ======================= CALLBACK PACKET DONGLE =========================================
+#ifdef DONGLE
 void packet_callback_read_dongle() {
   switch (SerialWireless.packet.currentPacketID()) {
     case PACKET_TX::SERIAL_TX:
@@ -1956,31 +2046,6 @@ void packet_callback_read_dongle() {
       break;  
     } // Chiusura del blocco del case
     #endif // OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
-    #ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO
-    case PACKET_TX::DUMMY_PACKET:
-      /* pacchetto vuoto - non fare nulla - per eventuali test - da implementare se necessario */
-      /* code */  
-      break; 
-    case PACKET_TX::RSSI_FEEDBACK:
-      /* richiesta di inviare rssi quindi inviare un pacchetto rssi_report con l'rssi */
-      aux_buffer[0] = last_rssi_percepito;
-      SerialWireless.SendPacket((const uint8_t *)aux_buffer, 1, PACKET_TX::RSSI_REPORT);
-      break; 
-    case PACKET_TX::RSSI_REPORT:
-      /* ricevuto ul pacchetto rssi, quindi adattare la potenza di trasmissione in base a tale valore */
-      {
-        memcpy(aux_buffer, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead);
-        int8_t rssi_misurato_dall_altro = (int8_t)aux_buffer[0];
-        uint8_t mia_nuova_potenza = calcolaPotenzaOttimale(rssi_misurato_dall_altro);
-        if (esp_wifi_set_max_tx_power(mia_nuova_potenza) == ESP_OK) {
-          espnow_wifi_power = mia_nuova_potenza;
-          espnow_rssi_ricevuto = rssi_misurato_dall_altro;
-          ultimo_rssi_trasmesso = last_rssi_percepito;
-          //espnow_wifi_power = 41;
-        }
-      }
-      break; 
-    #endif //OPENFIRE_ESPNOW_WIFI_POWER_AUTO
     case PACKET_TX::CHECK_CONNECTION_LAST_DONGLE:
       memcpy(aux_buffer, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead);
       switch (aux_buffer[0])
@@ -1992,6 +2057,9 @@ void packet_callback_read_dongle() {
               aux_buffer[0] = CONNECTION_STATE::TX_CONFERM_CONNECTION_LAST_DONGLE; 
               memcpy(&aux_buffer[1], SerialWireless.mac_esp_inteface, 6);
               memcpy(&aux_buffer[7], peerAddress, 6);
+              
+              // CRITICITA' ARCHITETTURALE: Il Dongle deve inviare 3 conferme consecutive, ma
+              // nel frattempo non deve fare nient'altro per assicurare l'accoppiamento pulito.
               // valutare se inviarlo un paio di volte il pacchetto o solo una volta
               // lo invia 3 volte - una volta ogni 70ms
               for (uint8_t i = 0; i<3; i++) {
@@ -2012,7 +2080,6 @@ void packet_callback_read_dongle() {
       memcpy(aux_buffer, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead); //sizeof(aux_buffer));
       //Serial.println("DONGLE - arrivato richiesta di connessione");
       switch (aux_buffer[0]) {
-        // =========================== NUOVI ==================================
         case CONNECTION_STATE::TX_GUN_SEARCH_DONGLE_BROADCAST:
           if ((SerialWireless.stato_connessione_wireless == CONNECTION_STATE::NONE_CONNECTION) &&
               (aux_buffer[13] == espnow_wifi_channel))
@@ -2034,7 +2101,7 @@ void packet_callback_read_dongle() {
              (memcmp(&aux_buffer[7],SerialWireless.mac_esp_inteface,6) == 0) &&
               SerialWireless.stato_connessione_wireless == CONNECTION_STATE::TX_DONGLE_TO_GUN_PRESENCE) {
               
-                // SALVA I DATI RELATIVI ALLA GUN VID, PID, PLAYER , ECC.ECC.
+                // SALVA I DATI RELATIVI ALLA GUN VID, PID, PLAYER , ECC.ECC. (USB Spoofing)
               memcpy(&usb_data_wireless, &aux_buffer[13], sizeof(usb_data_wireless));
               
               aux_buffer[0] = CONNECTION_STATE::TX_DONGLE_TO_GUN_CONFERM;
@@ -2055,8 +2122,6 @@ void packet_callback_read_dongle() {
               SerialWireless.stato_connessione_wireless = CONNECTION_STATE::DEVICES_CONNECTED;
           }
           break;          
-        // =========================== FINE NUOVI =============================
-
         default:
           break;
       }
@@ -2065,7 +2130,11 @@ void packet_callback_read_dongle() {
       break;
   }
 }
+#endif // DONGLE
+// ======================= FINE CALLBACK PACKET DONGLE =========================================
 
+// ======================= CALLBACK PACKET GUN =========================================
+#ifdef GUN
 void packet_callback_read_gun() {
   switch (SerialWireless.packet.currentPacketID()) {
     case PACKET_TX::SERIAL_TX:
@@ -2092,31 +2161,6 @@ void packet_callback_read_gun() {
         if (TinyUSBDevices.pedals_wireless_state) esp_timer_start_once(timer_handle_pedal, MAX_TIMEOUT_LAST_PACKET);
       }
       break;
-    #ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO
-    case PACKET_TX::DUMMY_PACKET:
-      /* pacchetto vuoto - non fare nulla - per eventuali test - da implementare se necessario */
-      /* code */  
-      break; 
-    case PACKET_TX::RSSI_FEEDBACK:
-      /* richiesta di inviare rssi quindi inviare un pacchetto rssi_report con l'rssi */
-      aux_buffer[0] = last_rssi_percepito;
-      SerialWireless.SendPacket((const uint8_t *)aux_buffer, 1, PACKET_TX::RSSI_REPORT);
-      break; 
-    case PACKET_TX::RSSI_REPORT:
-      /* ricevuto ul pacchetto rssi, quindi adattare la potenza di trasmissione in base a tale valore */
-      {
-        memcpy(aux_buffer, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead);
-        int8_t rssi_misurato_dall_altro = (int8_t)aux_buffer[0];
-        uint8_t mia_nuova_potenza = calcolaPotenzaOttimale(rssi_misurato_dall_altro);
-        if (esp_wifi_set_max_tx_power(mia_nuova_potenza) == ESP_OK) {
-          espnow_wifi_power = mia_nuova_potenza;
-          espnow_rssi_ricevuto = rssi_misurato_dall_altro;
-          ultimo_rssi_trasmesso = last_rssi_percepito;
-          //espnow_wifi_power = 41;
-        }
-      }      
-      break;
-    #endif //OPENFIRE_ESPNOW_WIFI_POWER_AUTO
     case PACKET_TX::CHECK_CONNECTION_LAST_DONGLE:
       memcpy(aux_buffer, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead);
       switch (aux_buffer[0])
@@ -2150,7 +2194,7 @@ void packet_callback_read_gun() {
     case PACKET_TX::CONNECTION:
       memcpy(aux_buffer, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead); //13); //sizeof(aux_buffer)); // qui va bene anche 13 come dati da copiare
       switch (aux_buffer[0]) {
-        // ================== NUOVI ==================== // AL PRIMO PACCHETTO IL DONGLE TRASMETTE ANCHE IL CANALE PER EVITARE CHE NEL FRATTEMPO IL CICLO VADA AVANTI ED IL CANALE 
+        // AL PRIMO PACCHETTO IL DONGLE TRASMETTE ANCHE IL CANALE PER EVITARE CHE NEL FRATTEMPO IL CICLO VADA AVANTI ED IL CANALE 
         case CONNECTION_STATE::TX_DONGLE_TO_GUN_PRESENCE:
           if ((memcmp(&aux_buffer[7],SerialWireless.mac_esp_inteface,6) == 0) && SerialWireless.stato_connessione_wireless == CONNECTION_STATE::NONE_CONNECTION) {
             memcpy(SerialWireless.mac_esp_another_card, &aux_buffer[1], 6);
@@ -2171,7 +2215,6 @@ void packet_callback_read_gun() {
             SerialWireless.stato_connessione_wireless = CONNECTION_STATE::DEVICES_CONNECTED;
         }
           break;
-        // ================== FINE NUOVI =================
         default:
           break;
       }
@@ -2179,7 +2222,7 @@ void packet_callback_read_gun() {
     case PACKET_TX::CONNECTION_PEDAL:
       memcpy(aux_buffer, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead); //13); //sizeof(aux_buffer)); // qui va bene anche 13 come dati da copiare
       switch (aux_buffer[0]) {
-        // ================== NUOVI ==================== // AL PRIMO PACCHETTO IL DONGLE TRASMETTE ANCHE IL CANALE PER EVITARE CHE NEL FRATTEMPO IL CICLO VADA AVANTI ED IL CANALE 
+        // AL PRIMO PACCHETTO IL DONGLE TRASMETTE ANCHE IL CANALE PER EVITARE CHE NEL FRATTEMPO IL CICLO VADA AVANTI ED IL CANALE 
         case CONNECTION_STATE::TX_PEDAL_TO_GUN_PRESENCE:
           if ((memcmp(&aux_buffer[7],SerialWireless.mac_esp_inteface,6) == 0) && SerialWireless.stato_connessione_wireless == CONNECTION_STATE::NONE_CONNECTION) {
             memcpy(SerialWireless.mac_esp_another_card, &aux_buffer[1], 6);
@@ -2200,7 +2243,6 @@ void packet_callback_read_gun() {
             SerialWireless.stato_connessione_wireless = CONNECTION_STATE::DEVICES_CONNECTED;
         }
           break;
-        // ================== FINE NUOVI =================
         default:
           break;
       }
@@ -2209,7 +2251,11 @@ void packet_callback_read_gun() {
       break;
   }
 }
+#endif // GUN
+// ======================= FINE CALLBACK PACKET GUN =========================================
 
+// ======================= CALLBACK PACKET PEDAL =========================================
+#ifdef PEDAL
 void packet_callback_read_pedal() {
   switch (SerialWireless.packet.currentPacketID()) {
     case PACKET_TX::SERIAL_TX:
@@ -2225,31 +2271,6 @@ void packet_callback_read_pedal() {
       break;  
     } 
     #endif // OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
-    #ifdef OPENFIRE_ESPNOW_WIFI_POWER_AUTO
-    case PACKET_TX::DUMMY_PACKET:
-      /* pacchetto vuoto - non fare nulla - per eventuali test - da implementare se necessario */
-      /* code */  
-      break; 
-    case PACKET_TX::RSSI_FEEDBACK:
-      /* richiesta di inviare rssi quindi inviare un pacchetto rssi_report con l'rssi */
-      aux_buffer[0] = last_rssi_percepito;
-      SerialWireless.SendPacket((const uint8_t *)aux_buffer, 1, PACKET_TX::RSSI_REPORT);
-      break; 
-    case PACKET_TX::RSSI_REPORT:
-      /* ricevuto ul pacchetto rssi, quindi adattare la potenza di trasmissione in base a tale valore */
-      {
-        memcpy(aux_buffer, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead);
-        int8_t rssi_misurato_dall_altro = (int8_t)aux_buffer[0];
-        uint8_t mia_nuova_potenza = calcolaPotenzaOttimale(rssi_misurato_dall_altro);
-        if (esp_wifi_set_max_tx_power(mia_nuova_potenza) == ESP_OK) {
-          espnow_wifi_power = mia_nuova_potenza;
-          espnow_rssi_ricevuto = rssi_misurato_dall_altro;
-          ultimo_rssi_trasmesso = last_rssi_percepito;
-          //espnow_wifi_power = 41;
-        }
-      }
-      break; 
-    #endif //OPENFIRE_ESPNOW_WIFI_POWER_AUTO
     case PACKET_TX::CHECK_CONNECTION_LAST_PEDAL:
       memcpy(aux_buffer, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead);
       switch (aux_buffer[0])
@@ -2281,7 +2302,6 @@ void packet_callback_read_pedal() {
       memcpy(aux_buffer, &SerialWireless.packet.rxBuff[PREAMBLE_SIZE], SerialWireless.packet.bytesRead); //sizeof(aux_buffer));
       //Serial.println("DONGLE - arrivato richiesta di connessione");
       switch (aux_buffer[0]) {
-        // =========================== NUOVI ==================================
         case CONNECTION_STATE::TX_GUN_SEARCH_PEDAL_BROADCAST:
           if ((SerialWireless.stato_connessione_wireless == CONNECTION_STATE::NONE_CONNECTION) &&
               (aux_buffer[13] == espnow_wifi_channel))  // sistema espnow_wifi_channel
@@ -2323,8 +2343,6 @@ void packet_callback_read_pedal() {
               SerialWireless.stato_connessione_wireless = CONNECTION_STATE::DEVICES_CONNECTED;
           }
           break;          
-        // =========================== FINE NUOVI =============================
-
         default:
           break;
       }
@@ -2333,7 +2351,18 @@ void packet_callback_read_pedal() {
       break;
   }
 }
+#endif // PEDAL
+// ======================= FINE CALLBACK PACKET PEDAL =========================================
 
+// ===================================================================================
+// LOW-LEVEL ESP-NOW INTERRUPT (ISR)
+// ===================================================================================
+// Queste due funzioni sono eseguite direttamente dal sottosistema WiFi (FreeRTOS ISR).
+// È assolutamente vietato usare funzioni bloccanti o semafori al loro interno.
+
+// =================== CALLBACK DI RICEZIONE ED INVIO DI ESP-NOW ========================
+
+// CALLBACK RICEZIONE ESP-NOW
 static void _esp_now_rx_cb(const esp_now_recv_info_t *info, const uint8_t *data, int len) {
   
   // 1. Filtro broadcast (invariato)
@@ -2391,6 +2420,7 @@ static void _esp_now_rx_cb(const esp_now_recv_info_t *info, const uint8_t *data,
   }
 }
 
+// CALLBACK SPEDIZIONE ESP-NOW
 static void _esp_now_tx_cb(const esp_now_send_info_t *tx_info, esp_now_send_status_t status) { 
   // 1. Liberiamo la radio per il prossimo pacchetto
   radioFree = true;
@@ -2407,9 +2437,18 @@ static void _esp_now_tx_cb(const esp_now_send_info_t *tx_info, esp_now_send_stat
     }
   }
 }
+// =================== FINE CALLBACK DI RICEZIONE ED INVIO DI ESP-NOW ========================
+
+
+// ===================================================================================
+// HARDWARE TIMERS (SERIALE E PEDALE)
+// ===================================================================================
+// L'uso di esp_timer (alta risoluzione hardware) invece di delay() o millis() 
+// garantisce un'esecuzione prioritaria e precisa, essenziale per sbloccare la 
+// seriale intasata o per dichiarare un pedale "morto" se si perdono pacchetti.
 
 // ================================== TIMER PER SERIALE ===================================
-// CALLBACK
+// CALLBACK per timer Serial
 
 void timer_callback_serial(void* arg) {
   while (SerialWireless.availableBufferSerialWrite() > 0) {
@@ -2422,8 +2461,6 @@ void timer_callback_serial(void* arg) {
   }
 }
 
-// ===============================================================================
-
 void SerialWireless_::setupTimerSerial() {
     esp_timer_create_args_t timer_args = {
         .callback = &timer_callback_serial,
@@ -2435,27 +2472,17 @@ void SerialWireless_::setupTimerSerial() {
     esp_timer_create(&timer_args, &timer_handle_serial);
 }
 
-void SerialWireless_::stopTimer_serial() {
-    esp_timer_stop(timer_handle_serial);
-}
-
-void SerialWireless_::resetTimer_serial(uint64_t duration_us) {
-    //esp_timer_stop(timer_handle_serial);
-    //esp_timer_start_once(timer_handle_serial, duration_us);
-    esp_timer_restart(timer_handle_serial, duration_us);
-}
 
 // ==========================   FINE TIMER PER SERIALE ====================================
 
 
 // ================================== TIMER PER PEDAL ===================================
-// CALLBACK
+// CALLBACK per timer Pedal
 void timer_callback_pedal(void* arg) {
   
   TinyUSBDevices.pedals_wireless_state = 0;
  
 }
-// ===============================================================================
 
 void setupTimerPedal() {
     esp_timer_create_args_t timer_args = {
@@ -2467,15 +2494,22 @@ void setupTimerPedal() {
     
     esp_timer_create(&timer_args, &timer_handle_pedal);
 }
-
 // ======================== FINE TIMER PER PEDAL =============================
 
-// NON VA DEFINITA IN QUANTO SOSTITUISCE QUELLA DI DEFAULT CHE NON FA NULLA
+// ===================================================================================
+// CALLBACK DI SISTEMA: TINYUSB
+// ===================================================================================
+
+// ============ CALLBACK PER SPEDIZIONE TINYUSB =============================
 #ifdef DONGLE
+// NON VA DEFINITA IN QUANTO SOSTITUISCE QUELLA DI DEFAULT CHE NON FA NULLA (e' gia' definita dentro la libreria tinyUSB)
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+// Questa callback viene invocata dal driver USB a basso livello ogni volta che 
+// il PC "assorbe" i dati HID inviati dal Dongle. Noi la intercettiamo per
+// risvegliare l'usbTask e inviare immediatamente il pacchetto successivo.
 void tud_hid_report_complete_cb(uint8_t instance, uint8_t const* report, uint16_t len) {
     // Il PC ha appena liberato il buffer. Svegliamo usbTask!
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
@@ -2490,5 +2524,7 @@ void tud_hid_report_complete_cb(uint8_t instance, uint8_t const* report, uint16_
 #endif
 
 #endif // DONGLE
+// ============ FINE CALLBACK PER SPEDIZIONE TINYUSB =============================
+
 
 #endif //OPENFIRE_WIRELESS_ENABLE
