@@ -2143,7 +2143,7 @@ void ExecGunModeDocked()
     unsigned long aStickChecked = millis();
     unsigned long currentMillis = millis();
 
-    char buf[64];
+    char buf[96];
     int pos = sprintf(&buf[0], "%.1f"
                                 #ifdef GIT_HASH
                                 "-%s"
@@ -2153,6 +2153,9 @@ void ExecGunModeDocked()
                                 , GIT_HASH
                                 #endif // GIT_HASH
                       );
+#ifdef OPENFIRE_APP_FORK_BUILD
+    pos += snprintf(&buf[pos], sizeof(buf) - (size_t)pos, "+%s", OPENFIRE_APP_FORK_TAG_STR);
+#endif
     buf[pos++] = OF_Const::serialTerminator;
     pos += sprintf(&buf[pos], "%s", OPENFIRE_BOARD);
     buf[pos++] = OF_Const::serialTerminator;

@@ -106,6 +106,12 @@ bool display_init = false;
 
 // The main show!
 void setup() {
+  // ESP32-S3 SuperMini + SSD1306: cold attach over USB often ramps 3V3/OLED after the chip
+  // is already running; I2C then NACKs until a manual reset. Brief delay stabilizes power.
+  #if defined(USES_OLED_DISPLAY)
+    delay(400);
+  #endif
+
   // =========================== X GESTIONE DUAL CORE =============================== 
   #if defined(DUAL_CORE) && defined(ESP_PLATFORM) && false
     xTaskCreatePinnedToCore(
@@ -160,19 +166,28 @@ void setup() {
 
   #if defined(USES_OLED_DISPLAY)
     Wire.begin(OLED_SDA, OLED_SCL);
-    display_init = display.begin(SSD1306_SWITCHCAPVCC, OLED_I2C_ADDR);
-    if (!display_init) {
-      // Fallback to common alternate address.
-      display_init = display.begin(SSD1306_SWITCHCAPVCC, 0x3D);
+    Wire.setClock(100000);
+
+    display_init = false;
+    for (uint8_t attempt = 0; attempt < 6 && !display_init; attempt++) {
+      if (attempt) {
+        delay(120);
+      }
+      display_init = display.begin(SSD1306_SWITCHCAPVCC, OLED_I2C_ADDR);
+      if (!display_init) {
+        display_init = display.begin(SSD1306_SWITCHCAPVCC, 0x3D);
+      }
     }
 
-    display.clearDisplay();
-    display.setTextSize(1);
-    display.setTextColor(SSD1306_WHITE);
-    display.setCursor(20, 0);
-    display.println("OpenFIRE DONGLE");
-    display.drawBitmap(40, 15, customSplash, CUSTSPLASH_WIDTH, CUSTSPLASH_HEIGHT, SSD1306_WHITE);
-    display.display();
+    if (display_init) {
+      display.clearDisplay();
+      display.setTextSize(1);
+      display.setTextColor(SSD1306_WHITE);
+      display.setCursor(20, 0);
+      display.println("OpenFIRE DONGLE");
+      display.drawBitmap(40, 15, customSplash, CUSTSPLASH_WIDTH, CUSTSPLASH_HEIGHT, SSD1306_WHITE);
+      display.display();
+    }
   #endif
 
   // ===================================================================================

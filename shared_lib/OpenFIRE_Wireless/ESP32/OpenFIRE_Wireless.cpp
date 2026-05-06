@@ -1481,7 +1481,23 @@ bool SerialWireless_::connection_dongle() {
   broadcast_receiver = true;
 
 #if defined(DONGLE) && defined(USES_OLED_DISPLAY)
-  unsigned long dongle_oled_last_poll = 0;
+  // SuperMini-class dongle only: re-apply RF + broadcast peer after findBestChannel / USB power-up.
+  {
+    esp_wifi_set_promiscuous(true);
+    (void)esp_wifi_set_channel(espnow_wifi_channel, WIFI_SECOND_CHAN_NONE);
+    esp_wifi_set_promiscuous(false);
+    peerInfo.channel = espnow_wifi_channel;
+    if (esp_now_mod_peer(&peerInfo) != ESP_OK) {
+      (void)esp_now_del_peer(peerAddress);
+      memcpy(peerInfo.peer_addr, peerAddress, 6);
+      peerInfo.channel = espnow_wifi_channel;
+      if (esp_now_add_peer(&peerInfo) == ESP_OK) {
+        esp_now_set_peer_rate_config(peerAddress, &rate_config);
+      }
+    } else {
+      esp_now_set_peer_rate_config(peerAddress, &rate_config);
+    }
+  }
 #endif
 
   while(stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED) { 
@@ -1492,12 +1508,6 @@ bool SerialWireless_::connection_dongle() {
     if (((millis() - lastMillis_start_dialogue) > TIMEOUT_DONGLE_DIALOGUE) && stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED) {
       stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION;
     }
-#if defined(DONGLE) && defined(USES_OLED_DISPLAY)
-    if (millis() - dongle_oled_last_poll >= 150UL) {
-      dongle_oled_last_poll = millis();
-      dongle_oled_draw_link_status();
-    }
-#endif
     taskYIELD();
   }
   
@@ -2123,20 +2133,55 @@ void packet_callback_read_dongle() {
       //Serial.println("DONGLE - arrivato richiesta di connessione");
       switch (aux_buffer[0]) {
         case CONNECTION_STATE::TX_GUN_SEARCH_DONGLE_BROADCAST:
+#if defined(DONGLE) && defined(USES_OLED_DISPLAY)
+          {
+            uint8_t cur_rf = 0;
+            wifi_second_chan_t second = WIFI_SECOND_CHAN_NONE;
+            (void)esp_wifi_get_channel(&cur_rf, &second);
+            const uint8_t gun_ch = aux_buffer[13];
+            const bool ch_matches_var = (gun_ch == espnow_wifi_channel);
+            const bool ch_matches_radio =
+                (gun_ch >= 1 && gun_ch <= 13 && cur_rf >= 1 && cur_rf <= 13 && gun_ch == cur_rf);
+            const bool ch_ok =
+                (gun_ch >= 1 && gun_ch <= 13) && (ch_matches_var || ch_matches_radio);
+            if ((SerialWireless.stato_connessione_wireless == CONNECTION_STATE::NONE_CONNECTION) &&
+                ch_ok) {
+              if (!ch_matches_var && ch_matches_radio) {
+                espnow_wifi_channel = gun_ch;
+                channel_display = gun_ch;
+                peerInfo.channel = espnow_wifi_channel;
+                if (esp_now_mod_peer(&peerInfo) != ESP_OK) {
+                  (void)esp_now_del_peer(peerAddress);
+                  memcpy(peerInfo.peer_addr, peerAddress, 6);
+                  peerInfo.channel = espnow_wifi_channel;
+                  (void)esp_now_add_peer(&peerInfo);
+                  esp_now_set_peer_rate_config(peerAddress, &rate_config);
+                } else {
+                  esp_now_set_peer_rate_config(peerAddress, &rate_config);
+                }
+              }
+              memcpy(SerialWireless.mac_esp_another_card, &aux_buffer[1], 6);
+              aux_buffer[0] = CONNECTION_STATE::TX_DONGLE_TO_GUN_PRESENCE;
+              memcpy(&aux_buffer[1], SerialWireless.mac_esp_inteface, 6);
+              memcpy(&aux_buffer[7], SerialWireless.mac_esp_another_card, 6);
+              aux_buffer[13] = espnow_wifi_channel;
+              SerialWireless.SendPacket((const uint8_t *)aux_buffer, 14, PACKET_TX::CONNECTION);
+              SerialWireless.stato_connessione_wireless = CONNECTION_STATE::TX_DONGLE_TO_GUN_PRESENCE;
+            }
+          }
+#else
           if ((SerialWireless.stato_connessione_wireless == CONNECTION_STATE::NONE_CONNECTION) &&
               (aux_buffer[13] == espnow_wifi_channel))
-          { // prende la prima gun disposnibile
+          {
             memcpy(SerialWireless.mac_esp_another_card, &aux_buffer[1], 6);
-            // invia richiesta connessione
             aux_buffer[0] = CONNECTION_STATE::TX_DONGLE_TO_GUN_PRESENCE;
             memcpy(&aux_buffer[1], SerialWireless.mac_esp_inteface, 6);
             memcpy(&aux_buffer[7], SerialWireless.mac_esp_another_card, 6);
             aux_buffer[13] = espnow_wifi_channel;
             SerialWireless.SendPacket((const uint8_t *)aux_buffer, 14, PACKET_TX::CONNECTION);
             SerialWireless.stato_connessione_wireless = CONNECTION_STATE::TX_DONGLE_TO_GUN_PRESENCE;
-            // assicurati che i dati siano stati spediti
-
           }
+#endif
           break;
         case CONNECTION_STATE::TX_GUN_TO_DONGLE_ACCEPT:
           if ((memcmp(&aux_buffer[1],SerialWireless.mac_esp_another_card,6) == 0) && 

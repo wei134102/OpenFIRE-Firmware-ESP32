@@ -44,4 +44,15 @@
 // Numero combinato della versione precedente compatibile
 #define OPENFIRE_COMPATIBLE_NUMBER (OPENFIRE_COMPATIBLE_MAJOR * 10000 + OPENFIRE_COMPATIBLE_MINOR * 100 + OPENFIRE_COMPATIBLE_PATCH)
 
+// ---------------------------------------------------------------------------
+// App 配对渠道标记（方案 A）：在 platformio 中定义 OPENFIRE_APP_FORK_BUILD 后，
+// Dock 串口首段版本号末尾会追加 "+<tag>"，与官方固件区分且 semver 仍为 6.x。
+// 可选在编译参数中覆盖：-D OPENFIRE_APP_FORK_TAG_STR=\"mytag\"
+// ---------------------------------------------------------------------------
+#ifdef OPENFIRE_APP_FORK_BUILD
+#ifndef OPENFIRE_APP_FORK_TAG_STR
+#define OPENFIRE_APP_FORK_TAG_STR "cnwei"
+#endif
+#endif
+
 #endif  // OPENFIRE_VERSION_H

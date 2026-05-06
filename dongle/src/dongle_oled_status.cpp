@@ -11,6 +11,7 @@
 #include <Adafruit_SSD1306.h>
 
 extern Adafruit_SSD1306 display;
+extern bool display_init;
 extern volatile uint8_t dongle_oled_sniff_channel;
 extern volatile uint8_t channel_display;
 
@@ -18,6 +19,9 @@ static uint8_t dongle_oled_spin_scan = 0;
 static uint8_t dongle_oled_spin_link = 0;
 
 void dongle_oled_draw_scan_status(void) {
+  if (!display_init) {
+    return;
+  }
   const char* rotazione = "-\\|/-\\|/";
   dongle_oled_spin_scan = (dongle_oled_spin_scan + 1) % 8;
   uint8_t sniff = dongle_oled_sniff_channel;
@@ -40,6 +44,9 @@ void dongle_oled_draw_scan_status(void) {
 }
 
 void dongle_oled_draw_link_status(void) {
+  if (!display_init) {
+    return;
+  }
   const char* rotazione = "-\\|/-\\|/";
   dongle_oled_spin_link = (dongle_oled_spin_link + 1) % 8;
   uint8_t ch = channel_display;
