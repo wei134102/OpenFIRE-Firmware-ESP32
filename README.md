@@ -1,3 +1,9 @@
+<a id="english-version"></a>
+
+<p align="center">
+  <a href="#english-version"><img src="docs/img/gb.png" width="20" alt="English"> English Version</a> &nbsp;•&nbsp; <a href="#versione-italiana"><img src="docs/img/it.png" width="20" alt="Italiano"> Versione Italiana</a>
+</p>
+
 # OpenFIRE Firmware for ESP32
 
 <p align="center">
@@ -107,7 +113,16 @@ We chose PCBWay for their:
 </p>
 
 ---
+
+<p align="center"> 🔸 🔸 🔸 </p>
+
 ---
+
+<a id="versione-italiana"></a>
+
+<p align="center">
+  <a href="#english-version"><img src="docs/img/gb.png" width="20" alt="English"> English Version</a> &nbsp;•&nbsp; <a href="#versione-italiana"><img src="docs/img/it.png" width="20" alt="Italiano"> Versione Italiana</a>
+</p>
 
 # OpenFIRE Firmware per ESP32
 
