@@ -18,7 +18,11 @@
 > 🛠️ **Hardware sponsored by [PCBWay](https://www.pcbway.com)**
 ---
 
-This repository contains the port of the original [OpenFIRE-firmware](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware) project, developed by TeamOpenFIRE, adapted and optimized for the ESP32-S3 microcontroller. The main goal of this work is to extend the exceptional tracking capabilities of the OpenFIRE system by introducing **high-performance native wireless connectivity**.
+This repository hosts an advanced port of the [OpenFIRE-firmware](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware) project, developed by TeamOpenFIRE, adapted and optimized for the **ESP32-S3** microcontroller architecture.
+
+The main goal of this work is to introduce native support for **wireless gameplay via ESP-NOW**. The aim is to enable completely cable-free operation while simultaneously maintaining real-time responsiveness and behavior aligned with a directly connected PC system under typical usage conditions.
+
+Furthermore, the **tracking system has been refined**. The integration of anti-jitter techniques, better rotation handling, and increased tolerance to the temporary loss of IR emitter visibility contribute to a more stable and fluid cursor behavior. The result is more consistent tracking across different usage scenarios, with good precision even near the edges of the screen and greater flexibility in the operating distance from the monitor.
 
 ## Main Features and Capabilities
 The firmware transforms the microcontroller into a highly advanced lightgun controller, offering the following core features (inherited from the original project):
@@ -138,7 +142,11 @@ We chose PCBWay for their:
 > 🛠️ **Hardware sponsored by [PCBWay](https://www.pcbway.com)**
 ---
 
-Questo repository contiene il porting del progetto originale [OpenFIRE-firmware](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware), sviluppato dal TeamOpenFIRE, adattato e ottimizzato per il microcontrollore ESP32-S3. L'obiettivo principale di questo lavoro è estendere le eccezionali capacità di tracciamento del sistema OpenFIRE introducendo la **connettività wireless nativa ad alte prestazioni**.
+Questo repository ospita un porting avanzato del progetto [OpenFIRE-firmware](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware), sviluppato dal TeamOpenFIRE, adattato e ottimizzato per l'architettura del microcontrollore **ESP32-S3**.
+
+L'obiettivo principale di questo lavoro è introdurre un supporto nativo al **gameplay wireless tramite ESP-NOW**. Lo scopo è consentire un'operatività totalmente priva di cavi, pur mantenendo al contempo una reattività in tempo reale e un comportamento allineato a un sistema con connessione diretta al PC in condizioni d'uso tipiche.
+
+Inoltre, il **sistema di tracciamento è stato affinato**. L'integrazione di tecniche anti-jitter, una migliore gestione della rotazione e una maggiore tolleranza alla perdita temporanea della visibilità degli emettitori IR contribuiscono a un comportamento del cursore più stabile e fluido. Il risultato è un tracciamento più consistente tra i diversi scenari d’uso, con buona precisione anche vicino ai bordi dello schermo e una maggiore flessibilità nella distanza di utilizzo dal monitor.
 
 ## Caratteristiche e Funzionalità Principali
 Il firmware trasforma il microcontrollore in un controller per lightgun estremamente avanzato, offrendo le seguenti funzionalità di base (ereditate dal progetto originale):
