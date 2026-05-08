@@ -1,6 +1,17 @@
 # OpenFIRE Firmware for ESP32
 
 <p align="center">
+  <a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases">
+    <img src="https://img.shields.io/github/v/release/alessandro-satanassi/OpenFIRE-Firmware-ESP32?include_prereleases&style=flat-square&color=007ec6&label=latest%20version" alt="Latest Version">
+  </a>
+  <img src="https://img.shields.io/github/languages/top/alessandro-satanassi/OpenFIRE-Firmware-ESP32?style=flat-square&color=success" alt="Top Language">
+  <img src="https://img.shields.io/badge/Platform-PlatformIO-orange?style=flat-square&logo=platformio" alt="PlatformIO">
+  <a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/alessandro-satanassi/OpenFIRE-Firmware-ESP32?style=flat-square" alt="License">
+  </a>
+</p>
+
+<p align="center">
   <img src="docs/img/immagine_di_copertina.png" alt="OpenFIRE Firmware ESP32 Cover" width="100%">
 </p>
 
@@ -106,6 +117,26 @@ We chose PCBWay for their:
 ---
 
 # OpenFIRE Firmware per ESP32
+
+Ottima idea, è fondamentale avere entrambe le versioni allineate e con la stessa identica struttura "Pro".
+
+Ho recuperato il testo italiano che avevamo perfezionato e ripulito, e ho inserito i nuovi badge dinamici all'inizio, proprio come nella versione inglese. Per coerenza con la lingua, ho anche tradotto internamente le etichette dei badge (ad esempio, ora la release mostrerà "ultima versione" invece di "latest version").
+
+Ecco il codice del tuo README.md in italiano definitivo e completo di tutto:
+
+Markdown
+# OpenFIRE Firmware per ESP32
+
+<p align="center">
+  <a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases">
+    <img src="https://img.shields.io/github/v/release/alessandro-satanassi/OpenFIRE-Firmware-ESP32?include_prereleases&style=flat-square&color=007ec6&label=ultima%20versione" alt="Ultima Versione">
+  </a>
+  <img src="https://img.shields.io/github/languages/top/alessandro-satanassi/OpenFIRE-Firmware-ESP32?style=flat-square&color=success" alt="Linguaggio Principale">
+  <img src="https://img.shields.io/badge/Platform-PlatformIO-orange?style=flat-square&logo=platformio" alt="PlatformIO">
+  <a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/alessandro-satanassi/OpenFIRE-Firmware-ESP32?style=flat-square" alt="Licenza">
+  </a>
+</p>
 
 <p align="center">
   <img src="docs/img/immagine_di_copertina.png" alt="OpenFIRE Firmware ESP32 Cover" width="100%">
