@@ -526,9 +526,11 @@ void setup() {
         
         Serial_OpenFIRE_Stream = &SerialWireless;
         // ======================== PEDAL   //696969
-        if (lastPedalSave && (lastPedalChannel == espnow_wifi_channel)) {
-            if (!SerialWireless.connection_gun_at_last_pedal()) SerialWireless.connection_gun_at_pedal();
-        } else SerialWireless.connection_gun_at_pedal();
+        if((OF_Prefs::pins[OF_Const::btnPedal] == -1) && (OF_Prefs::pins[OF_Const::btnPedal2] == -1)) {
+            if (lastPedalSave && (lastPedalChannel == espnow_wifi_channel)) {
+                if (!SerialWireless.connection_gun_at_last_pedal()) SerialWireless.connection_gun_at_pedal();
+            } else SerialWireless.connection_gun_at_pedal();
+        }
         // ======================== FINE PEDAL
 
         
