@@ -18,6 +18,14 @@
 > 🛠️ **Hardware sponsored by [PCBWay](https://www.pcbway.com)**
 ---
 
+## Introduction - what is OpenFIRE-firmware *(The Open Four Infra-Red Emitter Light Gun System)*
+*... from the [OpenFIRE](https://openfirelightgun.org/) project homepage:*
+>OpenFIRE Lightgun is a feature-rich open-source firmware to allow lightgun enthusiasts to build their own lightgun that will work on modern flat screen displays. OpenFIRE uses small infrared LEDs mounted to the perimeter of your display arranged in a rectangle pattern with two on top and two on bottom (dual sensor bar) or a diamond pattern (one at the middle of each side). An infrared detecting camera mounted inside the lightgun is used to track the position of the infrared LEDs to aim your lightgun.
+>The OpenFIRE firmware is software that is programmed onto a microcontroller circuit board inside your lightgun. When the trigger is pulled or a button pressed, the firmware sends the appropriate command to your emulator via USB or Bluetooth. The firmware also controls feedbacks such as a solenoid, rumble motor or RGB LEDs to enhance your gaming experience.
+>The [OpenFIRE App/GUI](https://github.com/TeamOpenFIRE/OpenFIRE-App) is software that runs on your Windows or Linux computer and is used to configure and test your OpenFIRE lightgun.
+
+## What is the OpenFIRE-firmware port for ESP32
+
 This repository hosts an advanced port of the [OpenFIRE-firmware](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware) project, developed by TeamOpenFIRE, adapted and optimized for the **ESP32-S3** microcontroller architecture.
 
 The main goal of this work is to introduce native support for **wireless gameplay via ESP-NOW**. The aim is to enable completely cable-free operation while simultaneously maintaining real-time responsiveness and behavior aligned with a directly connected PC system under typical usage conditions.
@@ -141,6 +149,15 @@ We chose PCBWay for their:
 ---
 > 🛠️ **Hardware sponsored by [PCBWay](https://www.pcbway.com)**
 ---
+
+## Premessa - cos'è OpenFIRE-firmware *(The Open Four Infra-Red Emitter Light Gun System)*
+*... dal homepage del progetto [OpenFIRE](https://openfirelightgun.org/):*
+>OpenFIRE Lightgun è un firmware open source ricco di funzionalità che consente agli appassionati di costruire la propria lightgun compatibile con i moderni schermi piatti. OpenFIRE utilizza piccoli LED a infrarossi montati sul perimetro del display, disposti secondo uno schema rettangolare con due in alto e due in basso (configurazione a doppia barra sensore) oppure a diamante (uno al centro di ogni lato). Una telecamera a infrarossi montata all'interno della lightgun viene utilizzata per tracciare la posizione dei LED e consentire il puntamento.
+>Il firmware OpenFIRE è il software che viene programmato sulla scheda del microcontrollore all'interno della lightgun. Quando viene premuto il grilletto o un pulsante, il firmware invia il comando appropriato all'emulatore tramite USB o Bluetooth. Il firmware gestisce inoltre i sistemi di feedback, come solenoidi, motori rumble o LED RGB, per arricchire l'esperienza di gioco.
+>L' [App/GUI OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-App) è il software applicativo, compatibile con sistemi Windows o Linux, utilizzato per configurare e testare la tua lightgun OpenFIRE.
+
+
+## Cos'è il porting di OpenFIRE-firmware per ESP32
 
 Questo repository ospita un porting avanzato del progetto [OpenFIRE-firmware](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware), sviluppato dal TeamOpenFIRE, adattato e ottimizzato per l'architettura del microcontrollore **ESP32-S3**.
 
