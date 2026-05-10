@@ -161,7 +161,7 @@ In the **Operational Manual**, you will find all the essential information on:
 * 💾 **Profile Management:** How to switch between profiles and save your configurations to the gun's internal memory.
 * ⚙️ **On-the-Fly Adjustments:** How to turn the Rumble and Solenoid on/off directly from the gun and adjust the IR camera sensitivity.
 
-👉 **[CLICK HERE TO READ THE FULL OPERATIONAL MANUAL](src/readme.md)**
+👉 **[CLICK HERE TO READ THE FULL OPERATIONAL MANUAL](src/README.md)**
 
 ---
 
@@ -332,5 +332,5 @@ Nel **Manuale Operativo** troverai tutte le informazioni essenziali su:
 * 💾 **Gestione dei Profili:** Come passare da un profilo all'altro e salvare le tue configurazioni sulla memoria della pistola.
 * ⚙️ **Regolazioni On-the-Fly:** Come accendere/spegnere Rumble e Solenoide direttamente dalla pistola e regolare la sensibilità della telecamera IR.
 
-👉 **[CLICCA QUI PER LEGGERE IL MANUALE OPERATIVO COMPLETO](src/readme.md)**
+👉 **[CLICCA QUI PER LEGGERE IL MANUALE OPERATIVO COMPLETO](src/README.md)**
 
