@@ -1,26 +1,181 @@
-> [!WARNING]
-> **🚧 Work in Progress 🚧**
+<a id="english-version"></a>
+
+<p align="center">
+  <a href="#english-version"><img src="../docs/img/gb.png" width="20" alt="English"> English Version</a> &nbsp;•&nbsp; <a href="#versione-italiana"><img src="../docs/img/it.png" width="20" alt="Italiano"> Versione Italiana</a>
+</p>
+
+# Lightgun Firmware (ESP32-S3)
+
+This section contains specific documentation for building and programming the main Lightgun module based on the ESP32-S3.
+
+---
+
+## 🛠️ Hardware Requirements
+
+OpenFIRE's flexibility allows you to build a lightgun ranging from the most basic configuration to a complete arcade system with full feedback.
+
+### Mandatory Components (Essentials)
+For the basic operation of the aiming and shooting system, the following are indispensable:
+
+* **Microcontroller:** An **ESP32-S3** to run the firmware. Recommended and tested boards are:
+  * *ESP32-S3-WROOM1-DevKitC-1*
+  * *Waveshare ESP32-S3-PICO*
+* **Optical Sensor:** **DFRobot SEN0158** IR positioning camera. *(Alternatively, for experts, an original **Wii CAM** can be used, desoldered from a Wii controller, configuring a specific microcontroller pin to generate the clock signal required for its operation).*
+* **IR Emitters:** 4x Infrared LEDs. Although standard Wii sensor bars might work at very close distances, using OSRAM SFH 4547 LEDs with 5.6Ω resistors is **HIGHLY recommended**.
+* **Primary Input:** At least 1 switch to use as a trigger.
+
+### Highly Recommended Components
+Although the lightgun can work with just the trigger, to fully enjoy almost all existing retro lightgun games, it is highly recommended to add:
+* **A and B Buttons:** 2 additional switches to handle reloads or secondary actions.
+
+### Optional Modules:
+Feel free to integrate the components you prefer for your custom build:
+
+**🔘 Switches (Buttons):**
+The firmware natively manages up to 13 additional switches/buttons (besides the trigger), all fully configurable via the OpenFIRE Desktop App (refer to the subsequent pinout images for mappings):
+* **C Button:** An additional switch alongside A and B.
+* **D-Pad Module:** A 5-way directional navigation switch (Up, Down, Left, Right, Center).
+* **System Buttons:** 2 additional switches dedicated to *Start* and *Select*.
+* **Pump Switch:** A switch to simulate pump action reloading.
+* **Pedal Button:** A switch for the main pedal *(n.b. do not configure this if using the wireless pedal)*.
+* **Alt Pedal Button:** A switch for the secondary pedal, useful for games that require it *(n.b. do not configure this if using the wireless pedal)*.
+
+**🕹️ Additional Controls:**
+* **Analog Joystick:** A 2-axis analog joystick module.
+
+**💥 Force Feedback, Haptics, and Hardware Switches:**
+* **Solenoid (12V-24V):** Any solenoid paired with its respective MOSFET driver board *(requires a separate adjustable 12-24V power supply)*.
+  * *Note for Wireless builds:* Alternatively, strictly for 12V solenoids and 100% wireless builds, you can use a high-discharge (minimum 10A) 3.7V Li-ion battery paired with a powerful booster board like the **MP3429** (3.7V -> 12V). Although both 18650 and 21700 formats are supported, the **21700** is highly recommended to ensure acceptable battery life.
+  * *Beware of Interference (EMI):* Solenoids can cause USB or radio disconnections if the wiring is too thin. Solenoid power cables should be at least **24AWG**.
+* **Temperature Sensor (TMP36):** To be placed in contact with the solenoid to monitor and prevent component overheating during long gaming sessions.
+* **Rumble Motor (5V):** Any gamepad vibration motor with a basic driver board.
+* **2-way SPDT Switches:** Very useful for directly adjusting (via hardware on/off) the Rumble, Solenoid, or Rapid Fire state *(note: if you do not install these physical switches, these functions can still be adjusted via software from the menu).*
+
+**💡 Lighting and Display:**
+* **NeoPixel:** You can use NeoPixel WS2812B modules for dynamic lighting and real-time in-game reactions.
+* **RGB LED:** You can use standard 4-pin RGB LEDs for dynamic lighting and real-time in-game reactions.
+* **OLED Display:** A small 128x64 I2C-based (2-wire/4-pin) **SSD1306** screen, extremely useful for providing a visual interface for the menu, connection status, and health/ammo counter feedback.
+
+### Resources and Assembly Guides
+You can find purchase links for the components and detailed assembly instructions within my hardware project **[PICON-AS](https://alessandro-satanassi.github.io/OpenFIRE-PICON-AS-ESP32/)**.
+
+I am also attaching some graphic guides for DIY building and component wiring, originally provided by the OpenFIRE project. *Please note: although the images show connections on a Raspberry Pi Pico (RP2040), the wiring logic is identical and applicable to any configured ESP32-S3 pin.*
+* [OpenFIRE Hardware Guide](docs/guide/OpenFIRE-Hardware-Guide.pdf)
+* [Wii CAM Wiring Guide](docs/guide/wii_cam.jpg)
+
+---
+
+## 📌 Default Board Pinouts
+
+Refer to the following images for the default pinouts of the two recommended boards. 
+> **Warning:** Each board supports fully custom layouts. If you decide to solder components to different pins for wiring convenience, you can freely reassign them using the **OpenFIRE Desktop App**.
+
+| ESP32-S3-DevKitC-1 | Waveshare ESP32-S3-PICO |
+| :---: | :---: |
+| <img src="docs/board_scheme/LIGHTGUN-ESP32S3-Devkit-C.svg" width="100%" alt="Pinout DevKitC-1"> | <img src="docs/board_scheme/LIGHTGUN-esp32-s3-pico.svg" width="100%" alt="Pinout S3-PICO"> |
+
+---
+
+## 💻 Firmware Installation and Flashing
+
+Unlike RP2040 microcontrollers (which use `.UF2` file drag-and-drop), the ESP32-S3 requires flashing binary (`.bin`) files via serial communication. 
+
+To make this process as easy as possible, you will find ready-made packages for each supported board on the **[Releases](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases)** page.
+
+### Method 1: Simplified Script Procedure (Recommended)
+This is the fastest method and does not require installing additional software. Packages are available for **Windows, Linux, and MacOS**.
+
+1. Go to the **[Releases](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases)** page and download the "Simplified Procedure" ZIP for your board (e.g., `DevKitC-1` or `PICO`).
+2. Extract the entire content of the ZIP archive into a folder on your PC.
+3. Connect the ESP32-S3 board to your computer via USB cable *(make sure it is a data cable, not just for charging)*.
+4. Run the `flash_firmware` script (on Windows it will be a `.bat` file).
+5. The script will automatically search for the serial port and guide you through the installation.
+
+> **ℹ️ Update vs. Clean Install (NoFS vs. Full)**
+> During the guided procedure for the Lightgun, you will be asked which version to install:
+> * **Base Version (NoFS):** Ideal for updates. It only updates the application code, **keeping your calibrations and button mappings intact**.
+> * **Complete Version (Full):** To be used for first-time installation. Formats the microcontroller and installs the factory filesystem, **erasing** any previous settings.
+
+### Method 2: Manual Installation
+For advanced users who prefer to use GUI tools like **NodeMCU PyFlasher** or the **esptool** command-line utility, individual "merged" `.bin` files ready to be flashed directly to base address `0x0` are also provided on the Release page.
+
+---
+
+### ⚠️ Troubleshooting
+
+* **Flashing won't start (Connecting...):** Some ESP32-S3 boards can be "stubborn" about automatically entering download mode. If you see `Connecting...` repeating during the script without progressing, hold down the small physical **BOOT** (or `B`) button on your ESP32 board until the installation begins.
+* **Antivirus False Positive (Windows):** The script uses the original `esptool.exe` from Espressif. Some antivirus software might block it or flag it as a false positive. The file is 100% safe; you may need to add it to your temporary exceptions.
+* **Post-Installation Configuration:** Remember that these scripts are *only* for installing the firmware. To configure the lightgun (map pins, buttons, perform IR calibration) you must use the original **OpenFIRE Desktop App**. Check the release notes to download the App version compatible with the firmware.
+
+## 👨‍💻 Technical Information for Developers
+
+If you want to modify the source code, customize low-level mapping, or contribute to the project, the reference development environment for this ESP32 port is **PlatformIO**.
+
+* **Configuration Manual:** We are preparing a technical file dedicated to using and configuring PlatformIO specifically for this project. *(Documentation coming soon)*
+* **Compiling the Firmware:** For detailed instructions on how to set up the environment, install the necessary libraries, and compile the firmware from scratch, refer to the developer guide. *(Documentation coming soon)*
+
+## 🚀 Boot Sequence and Connectivity
+
+Upon powering on the lightgun, the firmware executes a precise initialization sequence. Here is what happens step by step:
+
+### 1. Automatic Joystick Calibration
+If you have an analog joystick installed, the system detects its center (zero point) as soon as it receives power.
+> [!IMPORTANT]
+> The procedure takes about two seconds. During this phase, **DO NOT touch the joystick** to ensure proper calibration.
+
+### 2. Connectivity Management (USB vs Wireless)
+The system intelligently determines how to communicate with the PC:
+* **Wired Connection:** If the USB cable is already connected to the PC at startup, the lightgun immediately enters wired mode, disabling the radio to save power.
+* **Wireless Connection (ESP-NOW):** If the USB cable is disconnected, the wireless sequence begins:
+  1. The **Dongle** (already connected to the PC) scans the environment, selects the Wi-Fi channel with the least interference for optimal transmission, and starts listening.
+  2. The **Lightgun** repeatedly advertises its presence on all channels until a free Dongle responds. *(Note: if you decide to plug in the USB cable during this waiting phase, the system interrupts the search and instantly switches to wired mode).*
+  3. Once the Dongle is detected, **Pairing** occurs. From this moment on, the PC will handle the peripheral exactly as if it were connected via cable, with no difference in performance.
+
+### 3. Wireless Pedal Search (Optional)
+Immediately after pairing with the Dongle (and provided a *wired* pedal is not already configured directly to the lightgun), the gun opens a **10-second** window during which it searches for a free wireless Pedal on the newly agreed radio channel.
+* If it finds a Pedal, it pairs it to its profile. The LEDs on the pedal will physically indicate which Player it has been assigned to.
+* If no Pedal is found after 10 seconds, the boot process concludes normally, and you are ready to play (the pedal is entirely optional).
+
+### 4. Fast Reconnection
+In the event the lightgun alone is powered off and restarted (for example, due to shutdown from a low battery), the system will prioritize searching for the last Dongle and Pedal it was paired with to ensure a near-instant connection. 
+* *Note:* This fast reconnection only occurs if the Dongle and Pedal have remained continuously powered on since the initial pairing. If they have been restarted, they will revert to a "new search" state, and the lightgun will need to perform a full channel scan.
+
+### 5. Connection Status (Visual Feedback)
+If your lightgun is equipped with an OLED display, the main interface will show an icon at the top to confirm the working status:
+* 🛜 **Wi-Fi Icon:** Connection established via wireless Dongle.
+* 🔌 **USB Icon:** Wired connection active.
+
+---
+
+## 📖 Operational Manual and User Instructions
+
+> [!IMPORTANT]
+> **Have you finished assembling and flashing the firmware? Great job, but you're not done yet!**
 > 
-> This documentation is currently being written. The information provided may be partial, incomplete, or subject to change. Please check back soon!
+> To properly use your lightgun and fully exploit its potential, it is **crucial** to understand how to interact with the system. The gun features internal menus, button combinations, and specific calibration procedures that you need to know.
 
+In the **Operational Manual**, you will find all the essential information on:
+
+* 🎯 **Calibration Procedure:** How to perform the on-screen calibration to ensure perfect line-of-sight aiming.
+* 🎮 **Controls and Shortcuts:** What the default button functions are and how to access "Pause Mode".
+* 💾 **Profile Management:** How to switch between profiles and save your configurations to the gun's internal memory.
+* ⚙️ **On-the-Fly Adjustments:** How to turn the Rumble and Solenoid on/off directly from the gun and adjust the IR camera sensitivity.
+
+👉 **[CLICK HERE TO READ THE FULL OPERATIONAL MANUAL](src/readme.md)**
 
 ---
 
-> [!WARNING]
-> **🚧 Documentazione in Lavorazione 🚧**
-> 
-> Questo file è attualmente in fase di stesura. Le informazioni contenute potrebbero essere parziali, incomplete o soggette a modifiche. Torna a visitarlo presto per la versione definitiva!
+<p align="center"> 🔸 🔸 🔸 </p>
 
 ---
----
----
 
-> [!WARNING]
-> **🚧 Documentazione in Lavorazione 🚧**
-> 
-> Questo file è attualmente in fase di stesura.
+<a id="versione-italiana"></a>
 
-# 🔫 Lightgun Firmware (ESP32-S3)
+<p align="center">
+  <a href="#english-version"><img src="../docs/img/gb.png" width="20" alt="English"> English Version</a> &nbsp;•&nbsp; <a href="#versione-italiana"><img src="../docs/img/it.png" width="20" alt="Italiano"> Versione Italiana</a>
+</p>
+
+# Lightgun Firmware (ESP32-S3)
 
 Questa sezione contiene la documentazione specifica per la costruzione e la programmazione del modulo principale della Lightgun basato su ESP32-S3.
 
@@ -36,7 +191,7 @@ Per il funzionamento di base del sistema di puntamento e sparo, sono indispensab
 * **Microcontrollore:** Un **ESP32-S3** per eseguire il firmware. Le schede consigliate e testate sono:
   * *ESP32-S3-WROOM1-DevKitC-1*
   * *Waveshare ESP32-S3-PICO*
-* **Sensore Ottico:** Telecamera di posizionamento IR **DFRobot SEN0158**. *(In alternativa, è possibile utilizzare una **Wii CAM** originale, configurando un pin specifico del microcontrollore per generare il segnale di clock necessario al suo funzionamento).*
+* **Sensore Ottico:** Telecamera di posizionamento IR **DFRobot SEN0158**. *(In alternativa, per gli esperti, è possibile utilizzare una **Wii CAM** originale, da smontare da un controller Wii, configurando un pin specifico del microcontrollore per generare il segnale di clock necessario al suo funzionamento).*
 * **Emettitori IR:** 4x LED Infrarossi. Sebbene le normali barre sensore della Wii possano funzionare a distanze molto ravvicinate, è **ALTAMENTE consigliato** l'utilizzo di LED OSRAM SFH 4547 con resistenze da 5.6Ω.
 * **Input Primario:** Almeno 1 interruttore da utilizzare come grilletto (Trigger).
 
@@ -44,28 +199,40 @@ Per il funzionamento di base del sistema di puntamento e sparo, sono indispensab
 Sebbene la lightgun possa funzionare con il solo grilletto, per poter fruire appieno della quasi totalità dei giochi retrogame per lightgun si consiglia caldamente di aggiungere:
 * **Pulsanti A e B:** 2 interruttori aggiuntivi per gestire le ricariche o le azioni secondarie.
 
-### Moduli Opzionali (Controlli Avanzati e Feedback)
-Il firmware può gestire nativamente fino a 13 interruttori aggiuntivi (oltre al grilletto) e input analogici, tutti completamente rimappabili tramite la OpenFIRE Desktop App. Sentiti libero di integrare i componenti che preferisci per la tua build personalizzata:
+### Moduli Opzionali:
+Sentiti libero di integrare i componenti che preferisci per la tua build personalizzata:
 
-* **Input Aggiuntivi:**
-  * Un ulteriore pulsante C.
-  * Modulo di navigazione direzionale (D-Pad a 5 vie) + 2 pulsanti per Start e Select.
-  * Switch per la ricarica a pompa (Pump action).
-  * Joystick analogico a 2 assi.
-  * Interruttori SPDT a 2 vie: per regolare via hardware l'attivazione di rumble, solenoide o fuoco rapido *(tali funzioni rimangono comunque attivabili via software).*
-* **Feedback di Forza (Rinculo):** Qualsiasi solenoide a 12V-24V con relativa scheda driver MOSFET.
-  * *Nota per build Wireless:* Richiede un'alimentazione separata (es. trasformatore 12V-24V). Per le build 100% senza fili con solenoide a 12V, è possibile utilizzare una batteria Li-ion da 3.7V (sia formato 18650 che 21700, ma la **21700** è altamente consigliata per garantire una durata accettabile visti i consumi elevati) ad alta scarica (minimo 10A) abbinata a un modulo step-up/booster potente come l'**MP3429** (3.7V -> 12V).
-  * *Controllo Termico:* Si consiglia un sensore di temperatura **TMP36** da posizionare sul solenoide per monitorare ed evitare surriscaldamenti durante le lunghe sessioni.
-* **Feedback Aptico:** Qualsiasi motore rumble per gamepad a 5V con relativa scheda driver di base.
-* **Feedback Visivo:** * Display OLED 128x64 I2C (SSD1306) per interfaccia utente, menu e contatori (vita/munizioni).
-  * LED RGB (NeoPixel WS2812B o moduli a 4 pin) per l'illuminazione dinamica e le reazioni in-game.
+**🔘 Interruttori (Pulsanti):**
+Il firmware può gestire nativamente fino a 13 interruttori/pulsanti aggiuntivi (oltre al grilletto), tutti completamente configurabili tramite la OpenFIRE Desktop App (fai riferimento alle immagini dei pinout successivi per le mappature):
+* **Pulsante C:** Un ulteriore interruttore oltre ad A e B.
+* **Modulo D-Pad:** Un interruttore di navigazione direzionale a 5 vie (Su, Giù, Sinistra, Destra, Centro).
+* **Pulsanti di Sistema:** 2 interruttori aggiuntivi dedicati a *Start* e *Select*.
+* **Switch a Pompa:** Un interruttore per simulare la ricarica a pompa (Pump action).
+* **Pulsante Pedal:** Un interruttore per il pedale principale *(n.b. non configurarlo se si utilizza il pedale wireless)*.
+* **Pulsante Alt Pedal:** Un interruttore per il secondo pedale, utile per i giochi che lo richiedono *(n.b. non configurarlo se si utilizza il pedale wireless)*.
+
+**🕹️ Controlli Aggiuntivi:**
+* **Joystick Analogico:** Un modulo joystick analogico a 2 assi.
+
+**💥 Feedback di Forza, Aptico e Interruttori Hardware:**
+* **Solenoide (12V-24V):** Qualsiasi solenoide abbinato alla relativa scheda driver MOSFET *(richiede un alimentatore separato regolabile da 12-24V)*.
+  * *Nota per build Wireless:* In alternativa, solo per solenoidi a 12V e build 100% senza fili, è possibile utilizzare una batteria Li-ion da 3.7V ad alta scarica (minimo 10A) abbinata a una scheda booster potente come l'**MP3429** (3.7V -> 12V). Sebbene siano supportati i formati 18650 e 21700, la **21700** è altamente consigliata per garantire una durata accettabile.
+  * *Attenzione alle interferenze (EMI):* I solenoidi possono causare disconnessioni USB o radio se il cablaggio è troppo sottile. I cavi per l'alimentazione del solenoide dovrebbero essere di almeno **24AWG**.
+* **Sensore di Temperatura (TMP36):** Da posizionare a contatto sul solenoide per monitorare ed evitare surriscaldamenti del componente dopo lunghe sessioni di gioco.
+* **Motore Rumble (5V):** Qualsiasi motorino di vibrazione per gamepad con relativa scheda driver di base.
+* **Interruttori SPDT a 2 vie:** Utilissimi per regolare direttamente via hardware (on/off) lo stato di Rumble, Solenoide o Fuoco Rapido *(nota: se non installi questi switch fisici, tali funzioni potranno comunque essere regolate via software dal menu).*
+
+**💡 Illuminazione e Display:**
+* **NeoPixel:** È possibile utilizzare i moduli NeoPixel WS2812B per l'illuminazione dinamica e le reazioni in-game in tempo reale.
+* **LED RGB:** È possibile utilizzare i classici LED RGB a 4 pin per l'illuminazione dinamica e le reazioni in-game in tempo reale.
+* **Display OLED:** Un piccolo schermo 128x64 basato su I2C (2 fili/4 pin) modello **SSD1306**, utilissimo per avere un'interfaccia visiva per il menu, lo stato della connessione e il feedback dei contatori di vita/munizioni.
 
 ### Risorse e Guide all'Assemblaggio
 Puoi trovare link per l'acquisto dei componenti e istruzioni di montaggio dettagliate all'interno del mio progetto hardware **[PICON-AS](https://alessandro-satanassi.github.io/OpenFIRE-PICON-AS-ESP32/)**.
 
 Allego inoltre alcune guide grafiche per l'autocostruzione e la connessione dei componenti, originariamente fornite dal progetto OpenFIRE. *Nota bene: sebbene le immagini mostrino i collegamenti su un Raspberry Pi Pico (RP2040), la logica di cablaggio è identica e applicabile a qualsiasi pin configurato dell'ESP32-S3.*
-* [Guida Componenti OpenFIRE](docs/NOME_FILE_GUIDA.pdf)
-* [Guida Cablaggio Wii CAM](docs/NOME_FILE_WII.jpg)
+* [Guida Componenti OpenFIRE](docs/guide/OpenFIRE-Hardware-Guide.pdf)
+* [Guida Cablaggio Wii CAM](docs/guide/wii_cam.jpg)
 
 ---
 
@@ -76,7 +243,7 @@ Fai riferimento alle seguenti immagini per i pinout predefiniti delle due schede
 
 | ESP32-S3-DevKitC-1 | Waveshare ESP32-S3-PICO |
 | :---: | :---: |
-| <img src="docs/NOME_FILE_DEVKIT.png" width="100%" alt="Pinout DevKitC-1"> | <img src="docs/NOME_FILE_PICO.png" width="100%" alt="Pinout S3-PICO"> |
+| <img src="docs/board_scheme/LIGHTGUN-ESP32S3-Devkit-C.svg" width="100%" alt="Pinout DevKitC-1"> | <img src="docs/board_scheme/LIGHTGUN-esp32-s3-pico.svg" width="100%" alt="Pinout S3-PICO"> |
 
 ---
 
@@ -111,182 +278,59 @@ Per gli utenti avanzati che preferiscono utilizzare tool grafici come **NodeMCU 
 * **Falso Positivo Antivirus (Windows):** Lo script utilizza `esptool.exe` originale di Espressif. Alcuni antivirus potrebbero bloccarlo o segnalarlo come falso positivo. Il file è sicuro al 100%, potresti doverlo aggiungere alle eccezioni temporanee.
 * **Configurazione Post-Installazione:** Ricorda che questi script servono *solo* a installare il firmware. Per configurare la lightgun (mappare i pin, i pulsanti, effettuare la calibrazione IR) dovrai utilizzare la **OpenFIRE Desktop App** originale. Controlla le note di release per scaricare la versione dell'App compatibile con il firmware.
 
----
----
----
+## 👨‍💻 Informazioni Tecniche per gli Sviluppatori
 
-## Requisiti
-INDISPENSABILI:
-* Un microcontrollore **ESP32-S3** per eseguire il firmware. Le schede consigliate sono: ESP32-S3-WROOM1-DevKitC-1, Waveshare ESP32-S3-PICO;
+Se desideri modificare il codice sorgente, personalizzare la mappatura a basso livello o contribuire al progetto, l'ambiente di sviluppo di riferimento per questo porting ESP32 è **PlatformIO**.
 
-* Telecamera di posizionamento IR DFRobot SEN0158 (alternativamente si può utilizzare una Wii CAM ed utilizzare un pin del micro per generale il Wii CAM clock necessario per il funzionamento della CAM);
+* **Manuale di Configurazione:** Stiamo preparando un file tecnico dedicato all'uso e alla configurazione di PlatformIO specifico per questo progetto. *(Documentazione in arrivo)*
+* **Compilazione del Firmware:** Per le istruzioni dettagliate su come configurare l'ambiente, installare le librerie necessarie e compilare il firmware da zero, fai riferimento alla guida per sviluppatori. *(Documentazione in arrivo)*
 
-* 4 Emettitori LED IR: le normali barre sensore della Wii potrebbero funzionare per brevi distanze, ma è ALTAMENTE consigliato l'utilizzo di LED OSRAM SFH 4547 con resistenze da 5.6Ω (ohm);
+## 🚀 Sequenza di Avvio e Connettività
 
-* 1 interruttore con funzioni di grilletto;
+All'accensione della lightgun, il firmware esegue una sequenza di inizializzazione precisa. Ecco cosa succede passo dopo passo:
 
-Anche se non sono obbligatori, sono altamente consigliati almeno altri 2 interruttori (A e B), che permettono un utilizzo completo di quasi tutti i giochi esistenti retrogame per lightgun;
+### 1. Calibrazione Automatica del Joystick
+Se hai installato un joystick analogico, il sistema ne rileva il centro (punto zero) non appena riceve alimentazione.
+> [!IMPORTANT]
+> La procedura dura circa due secondi. Durante questa fase **NON toccare il joystick** per garantire una calibrazione corretta.
 
-OPZIONALI che possono essere gestiti dalla lightgun:
+### 2. Gestione della Connettività (USB vs Wireless)
+Il sistema determina in modo intelligente come comunicare con il PC:
+* **Connessione via Cavo:** Se all'accensione il cavo USB è già collegato al PC, la lightgun entra immediatamente in modalità cablata disabilitando la radio per risparmiare energia.
+* **Connessione Wireless (ESP-NOW):** Se il cavo USB è scollegato, inizia la sequenza senza fili:
+  1. Il **Dongle** (già collegato al PC) scansiona l'ambiente, seleziona il canale Wi-Fi con minori interferenze per garantire una trasmissione ottimale e si mette in ascolto.
+  2. La **Lightgun** trasmette ("pubblicizza") la sua presenza su tutti i canali a ripetizione, fino a quando un Dongle libero non le risponde. *(Nota: se in questa fase di attesa decidi di collegare il cavo USB, il sistema interrompe la ricerca e passa istantaneamente alla modalità cablata).*
+  3. Una volta rilevato il Dongle, avviene l'**associazione (Pairing)**. Da questo momento, il PC gestirà la periferica esattamente come se fosse collegata via cavo, senza alcuna differenza di prestazioni.
 
-Innterruttori (pulsanti): oltre al grilletto, il firmware può gestire altri 13 interruttori/pulsanti completamente configurabili tramite la OpenFIRE Desktop App (vedi immagini seguenti dei micro ove si mostra la mappatura dei pulsanti);
-  Opzionale: oltre ai pulsanti A e B (altamente consigliati) anche un ulteriore pulsante C;
-  Opzionale: Modulo di navigazione direzionale 5D D-Pad + ulteriori 2 pulsanti (start e select);
-  Opzionale: switch per pompa;
+### 3. Ricerca del Pedale Wireless (Opzionale)
+Subito dopo l'associazione con il Dongle (e a patto che non sia già stato configurato un pedale *cablato* direttamente alla lightgun), la pistola avvia una finestra di **10 secondi** in cui cerca un Pedale wireless libero sul canale radio appena concordato.
+* Se trova un Pedale, lo associa al suo profilo. I LED sul pedale indicheranno fisicamente a quale Player è stato assegnato.
+* Se non trova alcun Pedale allo scadere dei 10 secondi, il processo di avvio si conclude regolarmente e si è pronti a giocare (il pedale è del tutto facoltativo).
 
-Opzionale: Qualsiasi solenoide a 12-24V, con relativa scheda driver *(Richiede un alimentatore separato regolabile da 12-24V, oppure, solo per solenoidi 12V una batteria li-ion 3,7V (18650 o 21700) con corrente di scarica di almeno 10A e scheda booster potente tipo una MP3429 (3,7V -> 12V))*;
+### 4. Riconnessione Rapida
+In caso di spegnimento e riavvio della sola lightgun (ad esempio per spegnimento per batteria scarica), il sistema cercherà prioritariamente l'ultimo Dongle e l'ultimo Pedale a cui era associata per garantire una connessione quasi istantanea. 
+* *Nota bene:* Questa riconnessione veloce avviene solo se il Dongle e il Pedale sono rimasti ininterrottamente alimentati dopo il primo pairing. Se sono stati riavviati, torneranno in stato di "nuova ricerca" e la lightgun dovrà effettuare una scansione completa dei canali.
 
-Opzionale: Un sensore ti temperatura TMP36 da posizionare sul solenoide per evitare surriscaldamenti dopo lunghe sessioni;
-
-Opzionale: Qualsiasi motore rumble per gamepad a 5V, con relativa scheda driver;
-
-Opzionale: Joystick analogico a 2 assi;
-
-Opzionale: Qualsiasi interruttore SPDT a 2 vie, per regolare via hardware lo stato di rumble/solenoide/fuoco rapido (può essere regolato via software se non disponibile!).
-
-Opzionale: Qualsiasi NeoPixel WS2812B GRB, o qualsiasi LED RGB a quattro pin per illuminazione e reazioni in tempo reale; 
-
-Opzionale: Display OLED 128x64 basato su I2C (2 fili/4 pin) SSD1306 per un'interfaccia visiva e per il supporto al feedback dei contatori di vita/munizioni;
-
-Poi trovare link per acquisto e istruzioni sul mio progetto [PICON-AS](https://alessandro-satanassi.github.io/OpenFIRE-PICON-AS-ESP32/) nella sezione hardware e istruzioni, ma sentiti libero di utilizzare qualsiasi tipo di compoente che vorrai provare, per la tua lightgun personalizzata.
-
-Allego inoltre una guida di auto-costruuzione/connessione di alcuni componenti, reperibile sul sito del progetto originale OpenFIRE (tale guida grafica mostra come micro un Raspberry P Pico RP2040, ma è applicabile allo stesso modo a qualsiasi pin dell ESP32-S3, configurato) Guida componenti __ guida wii cam.
-
-
-
-Fai riferimento alle seguenti board per i pinout predefiniti delle varie schede; tieni presente, tuttavia, che ogni scheda supporta layout di pin completamente personalizzati, configurabili tramite la OpenFIRE Desktop App. Questi layout possono anche essere visualizzati dalla nuova Desktop App.
-
-foto delle board due board, fare tabella con due celle ove all'interno si mette foto delle board
-
-## Installazione:
-
-Scarica l'ultimo binario .UF2 per la tua rispettiva scheda dalla pagina delle release e trascina il file sul tuo microcontrollore mentre è avviato in modalità Bootloader; l'RP2040 viene montato automaticamente in questo modo quando non c'è alcun programma caricato, ma può essere forzato in questa modalità tenendo premuto il tasto BOOTSEL mentre lo si collega al computer: apparirà come un dispositivo di archiviazione rimovibile chiamato RPI-RP2.
-
-## Informazioni aggiuntive
-
-Dai un'occhiata al manuale di istruzioni allegato! Per gli sviluppatori, consultate la documentazione sulla configurazione e la compilazione del firmware OpenFIRE.
-
-## Problemi noti:
-
-
-
-## Da fare (TODO):
-
-Inventare battute migliori.
-
-## Nota
-I solenoidi possono causare disconnessioni dovute a interferenze elettromagnetiche (EMI) se il cablaggio è troppo sottile. I cavi per questo cablaggio dovrebbero essere di almeno 24AWG, altrimenti si trasformeranno in antenne in caso di uso prolungato, facendo scattare le soglie di sicurezza USB del PC per proteggere le porte.
-
-
-
-===================================================================================================
-===================================================================================================
-===================================================================================================
-
-# OpenFIRE-Firmware-ESP32
-
-> 🛠️ **Hardware sponsored by [PCBWay](https://www.pcbway.com)**
+### 5. Stato della Connessione (Feedback Visivo)
+Se la tua lightgun è dotata di un display OLED, l'interfaccia principale mostrerà un'icona in alto per confermare lo stato di lavoro:
+* 🛜 **Icona Wi-Fi:** Connessione stabilita tramite Dongle wireless.
+* 🔌 **Icona USB:** Connessione cablata attiva.
 
 ---
 
-## PICON-AS: Wireless Lightgun Hardware
-Se vuoi costruire una lightgun wireless funzionante completamente a batteria basata su questo firmware, dai un'occhiata al progetto **PICON-AS**. Trovi tutte le istruzioni per l'hardware e il montaggio a questo indirizzo: [Istruzioni PICON-AS](https://alessandro-satanassi.github.io/OpenFIRE-PICON-AS-ESP32/)
-> [!NOTE]
-> Nota: Il sito è già fruibile e i contenuti tecnici sono corretti; stiamo solo ultimando la stesura dettagliata di alcune sezioni delle istruzioni. Al momento il sito è solo in lingua italiana, sarà tradotto in inglese quando sarà completato.
+## 📖 Manuale Operativo e Istruzioni d'Uso
 
----
-If you want to build a fully battery-powered wireless lightgun based on this firmware, check out the **PICON-AS** project. You can find all the hardware and assembly instructions at this link: [PICON-AS Instructions](https://alessandro-satanassi.github.io/OpenFIRE-PICON-AS-ESP32/)
-> [!NOTE]
-> Note: The website is already functional and all technical data is correct; we are currently finalizing the detailed step-by-step instructions. "Currently, the website is only available in Italian; it will be translated into English once it is completed
----
+> [!IMPORTANT]
+> **Hai terminato l'assemblaggio e flashato il firmware? Ottimo lavoro, ma non è finita qui!**
+> 
+> Per poter utilizzare correttamente la tua lightgun e sfruttarne appieno le potenzialità, è **fondamentale** capire come interagire con il sistema. La pistola possiede menu interni, combinazioni di pulsanti e procedure di calibrazione specifiche che devi conoscere.
 
-## ... porting OpenFIRE-firmware for EPS32
+Nel **Manuale Operativo** troverai tutte le informazioni essenziali su:
 
-Questo repository è un porting del progetto originale 'OpenFIRE-firmware' del TeamOpenFIRE, adattato per funzionare sul microcontrollore ESP32S3.
-Il progetto è stato sviluppato utilizzando PlatformIO e, salvo alcuni adattamenti e piccole modifiche, il codice rimane sostanzialmente fedele all'originale del TeamOpenFIRE.
-Ho inoltre implementato la connessione wireless utilizzando il protocollo ESP-NOW per ESP32. Per farlo, ho sviluppato un dongle ESP32S3 da collegare al PC, il cui codice è disponibile in questo stesso repository.
-Grazie a questa soluzione, il PC non rileva alcuna differenza tra la connessione diretta via USB e quella wireless tramite dongle.
-Il codice di questo repository funziona anche sul microcontrollore RP2040, ma in questo caso supporta solo il collegamento diretto tramite USB, senza connessione wireless.
-Ogni volta che verranno apportate modifiche al progetto originale 'OpenFIRE-firmware' del TeamOpenFIRE, aggiornerò di conseguenza anche il codice di questo repository.
-Ringrazio di cuore il TeamOpenFIRE per la creazione del progetto 'OpenFIRE-firmware': a loro vanno tutti i meriti e la mia piena gratitudine.
-Questo è semplicemente un adattamento per il funzionamento su ESP32S3, con l'aggiunta della connessione wireless tramite ESP-NOW.
+* 🎯 **Procedura di Calibrazione:** Come effettuare la calibrazione a schermo per garantire una mira perfetta (line-of-sight).
+* 🎮 **Comandi e Scorciatoie:** Quali sono le funzioni dei pulsanti predefiniti e come accedere alla "Modalità Pausa".
+* 💾 **Gestione dei Profili:** Come passare da un profilo all'altro e salvare le tue configurazioni sulla memoria della pistola.
+* ⚙️ **Regolazioni On-the-Fly:** Come accendere/spegnere Rumble e Solenoide direttamente dalla pistola e regolare la sensibilità della telecamera IR.
 
-## Sequenza di avvio del firmware
-
-1. **Calibrazione automatica del joystick analogico**
-   > **IMPORTANTE:** La procedura dura circa due secondi. Durante questa fase **non toccare il joystick** per garantire una calibrazione corretta.
-
-2. **Gestione della connettività**
-   * **Connessione via Cavo:** Se il cavo USB è collegato al PC, la lightgun si connette direttamente in modalità cablata.
-   * **Connessione Wireless (USB scollegato):**
-     * La lightgun scansiona l'ambiente e seleziona il canale Wi-Fi con minori interferenze per una trasmissione ottimale.
-     * Rimane in ascolto di un **dongle**. Se durante l'attesa viene collegato un cavo USB, la connessione passa immediatamente su cavo.
-     * Una volta rilevato un dongle libero, esegue l'associazione. Il PC gestirà la periferica esattamente come se fosse collegata via cavo (nessuna differenza di funzionamento).
-     * **Riconnessione automatica:** In caso di spegnimento, al riavvio cercherà prioritariamente l'ultimo dongle associato per una connessione istantanea. Se non lo trova, farà una nuova scansione dei canali.
-
-3. **Stato della connessione**
-   Una volta stabilito il collegamento con il PC, l'interfaccia mostrerà lo stato attuale:
-   * **Icona Wi-Fi**: Connessione tramite dongle wireless.
-   * **Icona USB**: Connessione tramite cavo fisico.
-
----
----
-
-This repository is a porting of the original 'OpenFIRE-firmware' project by TeamOpenFIRE, adapted to work on the ESP32S3 microcontroller.
-The project was developed using PlatformIO and, apart from some adaptations and small adjustments, the code remains essentially faithful to the original by TeamOpenFIRE.
-I have also implemented wireless connectivity using the ESP-NOW protocol for ESP32. To achieve this, I developed an ESP32S3 dongle to connect to the PC, and its code is available in this same repository.
-Thanks to this solution, the PC does not detect any difference between a direct USB connection and a wireless connection via dongle.
-The code in this repository also works on the RP2040 microcontroller, but in this case, it only supports direct USB connection without wireless connectivity.
-Whenever there are changes to the original 'OpenFIRE-firmware' project by TeamOpenFIRE, I will adapt the code in this repository accordingly.
-I sincerely thank TeamOpenFIRE for creating the 'OpenFIRE-firmware' project; all credit and gratitude go to them for their work.
-This is simply an adaptation to make it work on ESP32S3, with the addition of wireless connectivity via ESP-NOW.
-
-## Firmware boot sequence
-
-1. **Automatic analog joystick calibration**
-   > **IMPORTANT:** This process takes approximately two seconds. During this phase, **do not touch the joystick** to ensure correct calibration.
-
-2. **Connectivity management**
-   * **Wired Connection:** If the USB cable is connected to the PC, the lightgun will connect directly in wired mode.
-   * **Wireless Connection (USB disconnected):**
-     * The lightgun scans the environment and selects the Wi-Fi channel with the least interference for optimal transmission.
-     * It remains in listening mode for a **dongle**. If a USB cable is connected during this wait, the connection immediately switches to wired mode.
-     * Once a free dongle is detected, it performs the pairing. The PC will handle the peripheral exactly as if it were connected via cable (no difference in functionality).
-     * **Automatic reconnection:** In case of power-off, upon restart, it will prioritize searching for the last paired dongle for an instantaneous connection. If not found, it will perform a new channel scan.
-
-3. **Connection status**
-   Once the connection with the PC is established, the interface will show the current status:
-   * **Wi-Fi Icon**: Connection via wireless dongle.
-   * **USB Icon**: Connection via physical cable.
-
----
-
-## 🤝 Sponsorship & Support
-
-A special thanks to **[PCBWay](https://www.pcbway.com)** for sponsoring the hardware development of this project. Their professional PCB manufacturing service has been fundamental in transforming our schematics into reliable, high-quality physical boards.
-
-We chose PCBWay for their:
-* **Manufacturing Precision:** Excellent solder mask and silkscreen quality even on dense designs.
-* **Reliability:** Consistent build quality across different batches.
-* **Fast Prototyping:** Quick turnaround times that significantly accelerated our testing phase.
-
-<p align="left">
-  <a href="https://www.pcbway.com">
-    <img src="docs/img/pcbway-logo.png" alt="PCBWay - PCB Prototype & Fabrication" width="200">
-  </a>
-</p>
-
----
-
-![Waveshare-esp32-s3-pico](https://github.com/user-attachments/assets/5f7bf9ae-6ab5-4240-b930-d8cf20cb1c75)
-
-![YD-esp32-s3-wroom1-DevKitC-1-N16R8](https://github.com/user-attachments/assets/6e865f2a-d90f-4dd0-9b57-c992bfd7377f)
-
-
-## ... segue il link della la pagina originale del progetto
-## ... follow the link to the original project page
-
-### OpenFIRE - The Open *Four Infa-Red Emitter* Light Gun System [https://github.com/TeamOpenFIRE/OpenFIRE-Firmware](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware)
-
-![BannerDark](docs/of_bannerLoD.png#gh-dark-mode-only)![BannerLight](docs/of_bannerDoL.png#gh-light-mode-only)
+👉 **[CLICCA QUI PER LEGGERE IL MANUALE OPERATIVO COMPLETO](src/readme.md)**
 
