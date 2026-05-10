@@ -109,6 +109,30 @@ Hardware manual: **[PICON-AS Documentation Site](https://alessandro-satanassi.gi
 > [!NOTE]
 > The site is already usable and the technical content is correct; we are just finalizing the drafting of some instruction sections. Currently, the site is only available in Italian, but it will be translated into English once completed.
 
+## ⚖️ License, Commercial Use, and Forks
+
+In full compliance with the original license and the vision of the OpenFIRE creators, this port adheres to the following guidelines regarding forks and commercial use:
+
+* **No Rebranding:** Forks created solely for "rebranding" purposes (changing names and logos to present the project as one's own) are strongly **DISCOURAGED**. All forks derived from this repository must maintain the OpenFIRE name and credit both the original core authors (That One Seong, Samco, Prow7) and the author of this specific ESP32 Wireless port (Alessandro Satanassi).
+
+* **Commercial Integrations:** Products intended to integrate OpenFIRE using this firmware (e.g., within pre-assembled lightguns for sale) must make its usage extremely clear and provide appropriate credits to both the core authors and the port author. Although it is Free Software, we ask anyone profiting from this volunteer work to consider a donation or sponsorship to the project.
+  * For commercial inquiries, collaborations, or licensing regarding this specific **ESP32 port and the wireless ecosystem (Dongle/Pedal)**, please contact *Alessandro Satanassi* (`alessandro@cittini.it`).
+  * For commercial or licensing inquiries regarding the **original OpenFIRE core**, please open a thread in the Discussions section of the [original repository](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware) or contact *That One Seong* (`SeongsSeongs@gmail.com`) and/or *Samuel Ballantyne* (`samuelballantyne@hotmail.com`).
+
+* **GNU LGPL Compliance:** As established by the *GNU Lesser General Public License*, any entity (private or commercial) wishing to incorporate parts or the entirety of this firmware's components **must make their source code modifications available to the public upon request**. 
+
+* **Free Software (Anti-Scam):** OpenFIRE is Free Software, both in terms of "liberty" and "cost". If you have been charged any amount to download or use the OpenFIRE firmware, **you have been scammed and should demand an immediate refund!**
+
+## 🙏 Credits & Acknowledgments
+
+A special thanks to the original authors and the OpenFIRE community, without whom this port and the ecosystem expansions (Dongle and Pedal) would never have existed:
+* **That One Seong** (`SeongsSeongs@gmail.com`): The lead developer and coordinator of the OpenFIRE project.
+* **Samuel Ballantyne (Samco)** (`samuelballantyne@hotmail.com`): For his original SAMCO project, the gorgeous OpenFIRE branding, and perspective-based tracking system.
+* **Mike Lynch (Prow7)**: For his enhanced SAMCO fork which provided the basis of pause mode and saving subsystems.
+* **Odwalla-J, mrkylegp, RG2020 & lemmingDev**: For prerelease consultation, bug testing, and feedback.
+* **The IR-GUN4ALL testers**: For their early feedback and feature requests. This wouldn't have happened without you lot!
+* **Chris Young**: For his TinyUSB compatible library (now part of `TinyUSB_Devices`).
+
 ## 🤝 Sponsorship & Support
 
 A special thanks to **[PCBWay](https://www.pcbway.com)** for sponsoring the hardware development of this project. Their professional PCB manufacturing service has been fundamental in transforming our schematics into reliable, high-quality physical boards.
@@ -241,6 +265,31 @@ Manuale hardware: **[Sito Documentazione PICON-AS](https://alessandro-satanassi.
 
 > [!NOTE]
 > Il sito è già fruibile e i contenuti tecnici sono corretti; stiamo solo ultimando la stesura di alcune sezioni delle istruzioni. Al momento il sito è solo in lingua italiana, sarà tradotto in inglese quando sarà completato.
+
+## ⚖️ Licenza, Uso Commerciale e Fork
+
+Nel pieno rispetto della licenza originale e del volere dei creatori di OpenFIRE, questo porting aderisce alle seguenti linee guida per i fork e l'uso commerciale:
+
+* **No al Rebranding:** I fork creati al solo scopo di fare "rebranding" (cambiare nome e logo per far sembrare proprio il progetto) sono fortemente **SCONSIGLIATI**. Tutti i fork derivati da questo repository dovrebbero mantenere il nome OpenFIRE e accreditare sia gli autori originali del core (That One Seong, Samco, Prow7) sia l'autore di questo specifico porting per ESP32 Wireless (Alessandro Satanassi).
+
+* **Integrazioni Commerciali:** I prodotti che desiderano integrare OpenFIRE utilizzando questo firmware (ad esempio, all'interno di lightgun pre-assemblate destinate alla vendita) devono rendere estremamente chiaro il suo utilizzo e fornire i crediti appropriati sia agli autori del core che all'autore del porting. Sebbene si tratti di Software Libero, si chiede a chiunque tragga profitto da questo lavoro volontario di considerare una donazione o sponsorizzazione al progetto.
+  * Per questioni commerciali, collaborazioni o licenze riguardanti lo specifico **porting ESP32 e l'ecosistema wireless (Dongle/Pedale)**, si prega di contattare *Alessandro Satanassi* (`alessandro@cittini.it`).
+  * Per questioni commerciali o di licenza riguardanti il **core originale di OpenFIRE**, si prega di aprire un thread nella sezione Discussions del [repository originale](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware) o di contattare *That One Seong* (`SeongsSeongs@gmail.com`) e/o *Samuel Ballantyne* (`samuelballantyne@hotmail.com`).
+
+* **Conformità GNU LGPL:** Come stabilito dalla *GNU Lesser General Public License*, qualsiasi entità (privata o commerciale) che desideri incorporare in parte o in toto i componenti di questo firmware **deve rendere pubbliche le proprie modifiche al codice sorgente su richiesta**. 
+
+* **Software Libero (Anti-Scam):** OpenFIRE è Software Libero (Free Software), sia nel senso di "libertà" che di "gratuito". Se ti è stata addebitata una qualsiasi somma per scaricare o utilizzare il firmware OpenFIRE, **sei stato truffato e dovresti esigerne l'immediato rimborso!**
+
+## 🙏 Crediti e Ringraziamenti
+
+Un ringraziamento speciale agli autori originali e alla community del progetto OpenFIRE, senza i quali questo porting e le espansioni dell'ecosistema (Dongle e Pedale) non sarebbero mai esistiti:
+
+* **That One Seong** (`SeongsSeongs@gmail.com`): Lo sviluppatore principale e coordinatore del progetto OpenFIRE.
+* **Samuel Ballantyne (Samco)** (`samuelballantyne@hotmail.com`): Per il suo progetto originale SAMCO, il magnifico branding OpenFIRE e il sistema di tracciamento basato sulla prospettiva.
+* **Mike Lynch (Prow7)**: Per il suo fork migliorato di SAMCO, che ha fornito le basi per la modalità pausa e per i sottosistemi di salvataggio.
+* **Odwalla-J, mrkylegp, RG2020 & lemmingDev**: Per la consulenza tecnica in fase di pre-release, la ricerca dei bug e i preziosi feedback.
+* **Tutti i tester di IR-GUN4ALL**: Per i feedback iniziali e le richieste di nuove funzionalità. Tutto questo non sarebbe successo senza di voi!
+* **Chris Young**: Per la sua libreria compatibile TinyUSB (ora parte di `TinyUSB_Devices`).
 
 ## 🤝 Sponsorizzazione e Supporto
 
