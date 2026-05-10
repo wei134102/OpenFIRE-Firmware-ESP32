@@ -1,5 +1,9 @@
 ## OpenFIRE-PEDAL for EPS32
 
+<p align="center">
+  <img src="docs/img/copertina_pedal.png" alt="OpenFIRE Firmware ESP32 pedal" width="100%">
+</p>
+
 https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/pedal/docs/pedal_bb.png
 
 

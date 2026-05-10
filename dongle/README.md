@@ -1,5 +1,9 @@
 ## OpenFIRE-DONGLE for EPS32
 
+<p align="center">
+  <img src="docs/img/copertina_dongle.png" alt="OpenFIRE Firmware ESP32 dongle" width="100%">
+</p>
+
 
 ![foto_dongle](https://github.com/user-attachments/assets/a38d7390-f7e7-42d7-844c-ad8388670f6d)
 
