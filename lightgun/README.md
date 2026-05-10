@@ -6,6 +6,10 @@
 
 # Lightgun Firmware (ESP32-S3)
 
+<p align="center">
+  <img src="docs/img/cornice_lightgun.png" alt="OpenFIRE Firmware ESP32 lightgun" width="100%">
+</p>
+
 This section contains specific documentation for building and programming the main Lightgun module based on the ESP32-S3.
 
 ---
@@ -176,6 +180,10 @@ In the **Operational Manual**, you will find all the essential information on:
 </p>
 
 # Lightgun Firmware (ESP32-S3)
+
+<p align="center">
+  <img src="docs/img/cornice_lightgun.png" alt="OpenFIRE Firmware ESP32 lightgun" width="100%">
+</p>
 
 Questa sezione contiene la documentazione specifica per la costruzione e la programmazione del modulo principale della Lightgun basato su ESP32-S3.
 
