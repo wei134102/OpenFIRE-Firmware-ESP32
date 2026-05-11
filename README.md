@@ -7,7 +7,7 @@
 # OpenFIRE Firmware for ESP32
 
 <p align="center">
-  <a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases"><img src="https://img.shields.io/github/v/release/alessandro-satanassi/OpenFIRE-Firmware-ESP32?include_prereleases&style=flat-square&color=007ec6&label=latest%20version" alt="Latest Version"></a> <a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32"><img src="https://img.shields.io/github/languages/top/alessandro-satanassi/OpenFIRE-Firmware-ESP32?style=flat-square&color=success" alt="Top Language"></a> <a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32"><img src="https://img.shields.io/badge/Platform-PlatformIO-orange?style=flat-square&logo=platformio" alt="PlatformIO"></a> <a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/LICENSE"><img src="https://img.shields.io/github/license/alessandro-satanassi/OpenFIRE-Firmware-ESP32?style=flat-square" alt="License"></a>
+  <a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases"><img src="https://img.shields.io/github/v/release/alessandro-satanassi/OpenFIRE-Firmware-ESP32?include_prereleases&style=flat-square&color=007ec6&label=latest%20version" alt="Latest Version"></a> <a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32"><img src="https://img.shields.io/github/languages/top/alessandro-satanassi/OpenFIRE-Firmware-ESP32?style=flat-square&color=success" alt="Top Language"></a> <a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32"><img src="https://img.shields.io/badge/Platform-PlatformIO-orange?style=flat-square&logo=platformio" alt="PlatformIO"></a> <a href="#community-support-english"><img src="https://img.shields.io/badge/Discord-Community-5865F2?style=flat-square&logo=discord&logoColor=white" alt="Discord Community"></a> <a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/LICENSE"><img src="https://img.shields.io/github/license/alessandro-satanassi/OpenFIRE-Firmware-ESP32?style=flat-square" alt="License"></a>
 </p>
 
 <p align="center">
@@ -138,6 +138,30 @@ A special thanks to the original authors and the OpenFIRE community, without who
 * **The IR-GUN4ALL testers**: For their early feedback and feature requests. This wouldn't have happened without you lot!
 * **Chris Young**: For his TinyUSB compatible library (now part of `TinyUSB_Devices`).
 
+<a id="community-support-english"></a>
+
+## 💬 Community and Support
+
+Depending on the type of support you need, you can join two different Discord communities:
+
+* **Official OpenFIRE Server:** The main hub for the firmware. If you have questions about the software, technical issues, or want to follow the updates, this is the right place. **Make sure to visit the `#software-ports` channel**, where we specifically discuss this ESP32 port!
+<br><a href="https://discord.gg/G8XMdCR5pf"><img src="https://img.shields.io/badge/Discord-OpenFIRE%20Official-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="OpenFIRE Discord"></a>
+
+* **DIY Lightgun Builders:** The perfect place if you need advice on hardware construction, 3D printing, soldering, or if you simply want to show off your finished PICON-AS (inside this server you will also find a channel dedicated to the **`#Picon-AS`**).
+<br><a href="https://discord.gg/8fm4YUxEsa"><img src="https://img.shields.io/badge/Discord-Hardware%20&%20Builds-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Builders Discord"></a>
+
+**Useful Resources and Websites:**
+In addition to the Discord servers, you can check out the following websites:
+* [OpenFIRE Firmware (Official Site)](https://openfirelightgun.org/)
+* [DIY Lightgun](https://diylightgun.com/lightguns/?pt=lightgun)
+* [Picon-AS (Picon-AS lightgun website)](https://alessandro-satanassi.github.io/OpenFIRE-PICON-AS-ESP32/)
+
+**Related GitHub Repositories:**
+* [OpenFIRE Firmware ESP32 (This repository)](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32)
+* [OpenFIRE Firmware (Original RP2040)](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware)
+* [OpenFIRE App (PC GUI for lightgun configuration)](https://github.com/TeamOpenFIRE/OpenFIRE-App)
+* [OpenFIRE Boards (For developers wanting to add a new board to the project)](https://github.com/TeamOpenFIRE/OpenFIRE-Boards)
+
 ## 🤝 Sponsorship & Support
 
 A special thanks to **[PCBWay](https://www.pcbway.com)** for sponsoring the hardware development of this project. Their professional PCB manufacturing service has been fundamental in transforming our schematics into reliable, high-quality physical boards.
@@ -168,7 +192,7 @@ We chose PCBWay for their:
 # OpenFIRE Firmware per ESP32
 
 <p align="center">
-  <a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases"><img src="https://img.shields.io/github/v/release/alessandro-satanassi/OpenFIRE-Firmware-ESP32?include_prereleases&style=flat-square&color=007ec6&label=ultima%20versione" alt="Ultima Versione"></a> <a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32"><img src="https://img.shields.io/github/languages/top/alessandro-satanassi/OpenFIRE-Firmware-ESP32?style=flat-square&color=success" alt="Linguaggio Principale"></a> <a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32"><img src="https://img.shields.io/badge/Platform-PlatformIO-orange?style=flat-square&logo=platformio" alt="PlatformIO"></a> <a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/LICENSE"><img src="https://img.shields.io/github/license/alessandro-satanassi/OpenFIRE-Firmware-ESP32?style=flat-square" alt="Licenza"></a>
+  <a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases"><img src="https://img.shields.io/github/v/release/alessandro-satanassi/OpenFIRE-Firmware-ESP32?include_prereleases&style=flat-square&color=007ec6&label=ultima%20versione" alt="Ultima Versione"></a> <a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32"><img src="https://img.shields.io/github/languages/top/alessandro-satanassi/OpenFIRE-Firmware-ESP32?style=flat-square&color=success" alt="Linguaggio Principale"></a> <a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32"><img src="https://img.shields.io/badge/Platform-PlatformIO-orange?style=flat-square&logo=platformio" alt="PlatformIO"></a> <a href="#community-support-italiano"><img src="https://img.shields.io/badge/Discord-Community-5865F2?style=flat-square&logo=discord&logoColor=white" alt="Discord Community"></a> <a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/LICENSE"><img src="https://img.shields.io/github/license/alessandro-satanassi/OpenFIRE-Firmware-ESP32?style=flat-square" alt="Licenza"></a>
 </p>
 
 <p align="center">
@@ -300,6 +324,31 @@ Un ringraziamento speciale agli autori originali e alla community del progetto O
 * **Odwalla-J, mrkylegp, RG2020 & lemmingDev**: Per la consulenza tecnica in fase di pre-release, la ricerca dei bug e i preziosi feedback.
 * **Tutti i tester di IR-GUN4ALL**: Per i feedback iniziali e le richieste di nuove funzionalità. Tutto questo non sarebbe successo senza di voi!
 * **Chris Young**: Per la sua libreria compatibile TinyUSB (ora parte di `TinyUSB_Devices`).
+
+<a id="community-support-italiano"></a>
+
+## 💬 Community e Supporto
+
+A seconda del tipo di supporto di cui hai bisogno, puoi unirti a due diverse community su Discord:
+
+* **Server Ufficiale OpenFIRE:** Il fulcro principale per il firmware. Se hai domande sul software, problemi tecnici o vuoi seguire gli aggiornamenti, questo è il posto giusto. **Assicurati di visitare il canale `#software-ports`**, dove parliamo specificatamente di questo porting per ESP32!
+<br><a href="https://discord.gg/G8XMdCR5pf"><img src="https://img.shields.io/badge/Discord-OpenFIRE%20Official-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="OpenFIRE Discord"></a>
+
+* **DIY Lightgun Builders:** Il posto perfetto se ti servono consigli sulla costruzione hardware, la stampa 3D, le saldature, o se vuoi semplicemente mostrare la tua PICON-AS terminata (all'interno di questo server troverai anche un canale dedicato alla **`#Picon-AS`**).
+<br><a href="https://discord.gg/8fm4YUxEsa"><img src="https://img.shields.io/badge/Discord-Hardware%20&%20Builds-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Builders Discord"></a>
+
+**Risorse e Siti Web Utili:**
+Oltre ai server Discord, puoi consultare i seguenti siti web:
+* [OpenFIRE Firmware (Sito Ufficiale)](https://openfirelightgun.org/)
+* [DIY Lightgun](https://diylightgun.com/lightguns/?pt=lightgun)
+* [Picon-AS (Sito della lightgun Picon-AS)](https://alessandro-satanassi.github.io/OpenFIRE-PICON-AS-ESP32/)
+
+**Repository GitHub Correlati:**
+* [OpenFIRE Firmware ESP32 (Questo repository)](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32)
+* [OpenFIRE Firmware (Originale RP2040)](https://github.com/TeamOpenFIRE/OpenFIRE-Firmware)
+* [OpenFIRE App (GUI PC per la configurazione della lightgun)](https://github.com/TeamOpenFIRE/OpenFIRE-App)
+* [OpenFIRE Board (per sviluppatori che vogliono inserire una nuova board al progetto)](https://github.com/TeamOpenFIRE/OpenFIRE-Boards)
+
 
 ## 🤝 Sponsorizzazione e Supporto
 
