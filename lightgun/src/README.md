@@ -160,7 +160,7 @@ These parameters can be saved to and loaded from flash storage space if a custom
 
 ---
 ### 💬 Questions or Issues?
-For technical support and to join the discussion, please refer to the [Community & Support Section](../README.md/#community-support-english) in the Main Repository.
+For technical support and to join the discussion, please refer to the [Community & Support Section](../README.md#community-support-english) in the Main Repository.
 
 
 ---
@@ -370,4 +370,4 @@ Questi parametri possono essere modificati tramite l'App Desktop e salvati/caric
 
 ---
 ### 💬 Domande o Problemi?
-Per supporto tecnico e per unirti alla community, consulta la [Sezione Community e Supporto](../../README.md/#community-support-italiano) nella Home del progetto.
+Per supporto tecnico e per unirti alla community, consulta la [Sezione Community e Supporto](../../README.md#community-support-italiano) nella Home del progetto.
