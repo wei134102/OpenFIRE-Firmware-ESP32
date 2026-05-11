@@ -159,6 +159,11 @@ These are known as the **USB Implementer's Forum (USB-IF) identifiers**, and if 
 These parameters can be saved to and loaded from flash storage space if a customized Device Product ID (PID) & Device Name are detected, which can be committed from the Desktop App.
 
 ---
+### 💬 Questions or Issues?
+For technical support and to join the discussion, please refer to the [Community & Support Section](../README.md/#community-support-english) in the Main Repository.
+
+
+---
 
 <p align="center"> 🔸 🔸 🔸 </p>
 
@@ -362,3 +367,7 @@ Se intendi utilizzare più lightgun OpenFIRE contemporaneamente sullo stesso PC,
 Questi sono noti come **identificatori USB Implementer's Forum (USB-IF)**. Se più dispositivi condividono un nome display e/o un ID Prodotto/Venditore (PID/VID) comune, applicazioni come RetroArch e TeknoParrot (che leggono individualmente i singoli mouse) entreranno fortemente in confusione.
 
 Questi parametri possono essere modificati tramite l'App Desktop e salvati/caricati dallo spazio di archiviazione flash non appena vengono rilevati un Device Product ID (PID) e un Nome Dispositivo personalizzati.
+
+---
+### 💬 Domande o Problemi?
+Per supporto tecnico e per unirti alla community, consulta la [Sezione Community e Supporto](../../README.md/#community-support-italiano) nella Home del progetto.
