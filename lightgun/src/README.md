@@ -1,5 +1,7 @@
 <a id="english-version"></a>
 
+[🏠 Back to Home](../../README.md#english-version) / [Lightgun Firmware](../README.md#english-version) / **Operational Manual**
+
 <p align="center">
   <a href="#english-version"><img src="../../docs/img/gb.png" width="20" alt="English"> English Version</a> &nbsp;•&nbsp; <a href="#versione-italiana"><img src="../../docs/img/it.png" width="20" alt="Italiano"> Versione Italiana</a>
 </p>
@@ -163,6 +165,8 @@ These parameters can be saved to and loaded from flash storage space if a custom
 ---
 
 <a id="versione-italiana"></a>
+
+[🏠 Torna alla Home](../../README.md#versione-italiana) / [Lightgun Firmware](../README.md#versione-italiana) / **Manuale Operativo**
 
 <p align="center">
   <a href="#english-version"><img src="../../docs/img/gb.png" width="20" alt="English"> English Version</a> &nbsp;•&nbsp; <a href="#versione-italiana"><img src="../../docs/img/it.png" width="20" alt="Italiano"> Versione Italiana</a>

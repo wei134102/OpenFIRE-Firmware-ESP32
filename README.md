@@ -14,6 +14,11 @@
   <img src="docs/img/immagine_di_copertina.png" alt="OpenFIRE Firmware ESP32 Cover" width="100%">
 </p>
 
+<p align="center">
+  <b>TECHNICAL DOCUMENTATION:</b><br>
+  <a href="lightgun/README.md#english-version">🔫 Lightgun Module</a> &nbsp; | &nbsp; <a href="dongle/README.md#english-version">📶 Dongle Receiver</a> &nbsp; | &nbsp; <a href="pedal/README.md#english-version">🦶 Wireless Pedal</a>
+</p>
+
 ---
 > 🛠️ **Hardware sponsored by [PCBWay](https://www.pcbway.com)**
 ---
@@ -80,15 +85,15 @@ The project is divided into three modular components, each with specific technic
 
 1. ***Lightgun Firmware***
    The main firmware that manages the IR sensor, button logic, and feedback peripherals (solenoid, rumble, LEDs). It can operate in both wireless and wired modes.
-   Technical documentation: **[Lightgun Folder](./lightgun)**
+   Technical documentation: **[Lightgun Folder](lightgun/README.md#english-version)**
 
 2. ***Receiver Dongle***
    The Dongle acts as an invisible bridge between the lightgun and the PC. It handles the reception of ESP-NOW packets and translates the data into standard HID protocols.
-   Technical documentation: **[Dongle Folder](./dongle)**
+   Technical documentation: **[Dongle Folder](dongle/README.md#english-version)**
 
 3. ***Wireless Pedal***
    An optional but essential accessory for certain cover shooter titles (e.g., Time Crisis). It communicates directly with the lightgun to send ultra-low latency input signals, eliminating the need for bulky wiring on the floor.
-   Technical documentation: **[Pedal Folder](./pedal)**
+   Technical documentation: **[Pedal Folder](pedal/README.md#english-version)**
 
 ## Connectivity Management
 The firmware intelligently manages connection priorities:
@@ -170,6 +175,11 @@ We chose PCBWay for their:
   <img src="docs/img/immagine_di_copertina.png" alt="OpenFIRE Firmware ESP32 Cover" width="100%">
 </p>
 
+<p align="center">
+  <b>DOCUMENTAZIONE TECNICA:</b><br>
+  <a href="lightgun/README.md#versione-italiana">🔫 Modulo Lightgun</a> &nbsp; | &nbsp; <a href="dongle/README.md#versione-italiana">📶 Ricevitore Dongle</a> &nbsp; | &nbsp; <a href="pedal/README.md#versione-italiana">🦶 Pedale Wireless</a>
+</p>
+
 ---
 > 🛠️ **Hardware sponsored by [PCBWay](https://www.pcbway.com)**
 ---
@@ -237,15 +247,15 @@ Il progetto si articola in tre componenti modulari, ognuno dei quali dispone di 
 
 1. ***Lightgun Firmware***
    Il firmware principale che gestisce il sensore IR, la logica dei pulsanti e le periferiche di feedback (solenoide, rumble, LED). Può operare sia in modalità wireless che via cavo.
-   Documentazione tecnica: **[Cartella Lightgun](./lightgun)**
+   Documentazione tecnica: **[Cartella Lightgun](lightgun/README.md#versione-italiana)**
 
 2. ***Dongle Ricevitore***
    Il Dongle agisce come ponte invisibile tra la lightgun e il PC. Gestisce la ricezione dei pacchetti ESP-NOW e traduce i dati in protocolli HID standard.
-   Documentazione tecnica: **[Cartella Dongle](./dongle)**
+   Documentazione tecnica: **[Cartella Dongle](dongle/README.md#versione-italiana)**
 
 3. ***Pedale Wireless***
    Un accessorio opzionale ma fondamentale per alcuni titoli cover shooter (es. Time Crisis). Comunica direttamente con la lightgun per inviare segnali di input a bassissima latenza, eliminando la necessità di cablaggi ingombranti sul pavimento.
-   Documentazione tecnica: **[Cartella Pedal](./pedal)**
+   Documentazione tecnica: **[Cartella Pedal](pedal/README.md#versione-italiana)**
 
 ## Gestione della Connettività
 Il firmware gestisce in modo intelligente la priorità delle connessioni:
