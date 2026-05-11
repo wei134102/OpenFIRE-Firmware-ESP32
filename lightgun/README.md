@@ -1,5 +1,7 @@
 <a id="english-version"></a>
 
+[🏠 Back to Home](../README.md#english-version) / **Lightgun Firmware**
+
 <p align="center">
   <a href="#english-version"><img src="../docs/img/gb.png" width="20" alt="English"> English Version</a> &nbsp;•&nbsp; <a href="#versione-italiana"><img src="../docs/img/it.png" width="20" alt="Italiano"> Versione Italiana</a>
 </p>
@@ -7,7 +9,15 @@
 # Lightgun Firmware (ESP32-S3)
 
 <p align="center">
+  <a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases"><img src="https://img.shields.io/github/v/release/alessandro-satanassi/OpenFIRE-Firmware-ESP32?include_prereleases&style=flat-square&color=007ec6&label=latest%20version" alt="Latest Version"></a> <a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/lightgun"><img src="https://img.shields.io/github/languages/top/alessandro-satanassi/OpenFIRE-Firmware-ESP32?style=flat-square&color=success" alt="Top Language"></a> <a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/lightgun"><img src="https://img.shields.io/badge/Platform-PlatformIO-orange?style=flat-square&logo=platformio" alt="PlatformIO"></a> <a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/LICENSE"><img src="https://img.shields.io/github/license/alessandro-satanassi/OpenFIRE-Firmware-ESP32?style=flat-square" alt="License"></a>
+</p>
+
+<p align="center">
   <img src="docs/img/cornice_lightgun.png" alt="OpenFIRE Firmware ESP32 lightgun" width="100%">
+</p>
+
+<p align="center">
+  📖 <b><a href="src/README.md#english-version">OPERATIONAL MANUAL & USER INSTRUCTIONS</a></b>
 </p>
 
 This section contains specific documentation for building and programming the main Lightgun module based on the ESP32-S3.
@@ -165,7 +175,7 @@ In the **Operational Manual**, you will find all the essential information on:
 * 💾 **Profile Management:** How to switch between profiles and save your configurations to the gun's internal memory.
 * ⚙️ **On-the-Fly Adjustments:** How to turn the Rumble and Solenoid on/off directly from the gun and adjust the IR camera sensitivity.
 
-👉 **[CLICK HERE TO READ THE FULL OPERATIONAL MANUAL](src/README.md)**
+👉 **[CLICK HERE TO READ THE FULL OPERATIONAL MANUAL](src/README.md#english-version)**
 
 ---
 
@@ -175,6 +185,8 @@ In the **Operational Manual**, you will find all the essential information on:
 
 <a id="versione-italiana"></a>
 
+[🏠 Torna alla Home](../README.md#versione-italiana) / **Lightgun Firmware**
+
 <p align="center">
   <a href="#english-version"><img src="../docs/img/gb.png" width="20" alt="English"> English Version</a> &nbsp;•&nbsp; <a href="#versione-italiana"><img src="../docs/img/it.png" width="20" alt="Italiano"> Versione Italiana</a>
 </p>
@@ -182,7 +194,15 @@ In the **Operational Manual**, you will find all the essential information on:
 # Lightgun Firmware (ESP32-S3)
 
 <p align="center">
+  <a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases"><img src="https://img.shields.io/github/v/release/alessandro-satanassi/OpenFIRE-Firmware-ESP32?include_prereleases&style=flat-square&color=007ec6&label=latest%20version" alt="Latest Version"></a> <a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/lightgun"><img src="https://img.shields.io/github/languages/top/alessandro-satanassi/OpenFIRE-Firmware-ESP32?style=flat-square&color=success" alt="Top Language"></a> <a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/lightgun"><img src="https://img.shields.io/badge/Platform-PlatformIO-orange?style=flat-square&logo=platformio" alt="PlatformIO"></a> <a href="https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/blob/main/LICENSE"><img src="https://img.shields.io/github/license/alessandro-satanassi/OpenFIRE-Firmware-ESP32?style=flat-square" alt="License"></a>
+</p>
+
+<p align="center">
   <img src="docs/img/cornice_lightgun.png" alt="OpenFIRE Firmware ESP32 lightgun" width="100%">
+</p>
+
+<p align="center">
+  📖 <b><a href="src/README.md#versione-italiana">MANUALE OPERATIVO E ISTRUZIONI PER L'USO</a></b>
 </p>
 
 Questa sezione contiene la documentazione specifica per la costruzione e la programmazione del modulo principale della Lightgun basato su ESP32-S3.
@@ -340,5 +360,5 @@ Nel **Manuale Operativo** troverai tutte le informazioni essenziali su:
 * 💾 **Gestione dei Profili:** Come passare da un profilo all'altro e salvare le tue configurazioni sulla memoria della pistola.
 * ⚙️ **Regolazioni On-the-Fly:** Come accendere/spegnere Rumble e Solenoide direttamente dalla pistola e regolare la sensibilità della telecamera IR.
 
-👉 **[CLICCA QUI PER LEGGERE IL MANUALE OPERATIVO COMPLETO](src/README.md)**
+👉 **[CLICCA QUI PER LEGGERE IL MANUALE OPERATIVO COMPLETO](src/README.md#versione-italiana)**
 
