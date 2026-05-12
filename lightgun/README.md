@@ -78,8 +78,7 @@ The firmware natively manages up to 13 additional switches/buttons (besides the 
 You can find purchase links for the components and detailed assembly instructions within my hardware project **[PICON-AS](https://alessandro-satanassi.github.io/OpenFIRE-PICON-AS-ESP32/)**.
 
 I am also attaching some graphic guides for DIY building and component wiring, originally provided by the OpenFIRE project. *Please note: although the images show connections on a Raspberry Pi Pico (RP2040), the wiring logic is identical and applicable to any configured ESP32-S3 pin.*
-* [OpenFIRE Hardware Guide](docs/guide/OpenFIRE-Hardware-Guide.pdf)
-* [Wii CAM Wiring Guide](docs/guide/wii_cam.jpg)
+* **[OpenFIRE Hardware Guide](docs/guide/OpenFIRE-Hardware-Guide_1.2.pdf)**
 
 ---
 
@@ -271,8 +270,7 @@ Il firmware può gestire nativamente fino a 13 interruttori/pulsanti aggiuntivi 
 Puoi trovare link per l'acquisto dei componenti e istruzioni di montaggio dettagliate all'interno del mio progetto hardware **[PICON-AS](https://alessandro-satanassi.github.io/OpenFIRE-PICON-AS-ESP32/)**.
 
 Allego inoltre alcune guide grafiche per l'autocostruzione e la connessione dei componenti, originariamente fornite dal progetto OpenFIRE. *Nota bene: sebbene le immagini mostrino i collegamenti su un Raspberry Pi Pico (RP2040), la logica di cablaggio è identica e applicabile a qualsiasi pin configurato dell'ESP32-S3.*
-* [Guida Componenti OpenFIRE](docs/guide/OpenFIRE-Hardware-Guide.pdf)
-* [Guida Cablaggio Wii CAM](docs/guide/wii_cam.jpg)
+* **[Guida Componenti OpenFIRE](docs/guide/OpenFIRE-Hardware-Guide_1.2.pdf)**
 
 ---
 
