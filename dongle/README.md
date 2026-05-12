@@ -38,7 +38,7 @@ These boards are designed with a USB connector integrated directly into the PCB 
 
 | LILYGO T-Dongle-S3 | ESP32-S3 Pocket Dongle S3 | Installation Example |
 | :---: | :---: | :---: |
-| <img src="docs/board_scheme/LILYGO-T-Dongle-S3-ESP32-S3.svg" width="200" alt="LILYGO T-Dongle-S3"> | <img src="docs/board_scheme/esp32-s3-pocket-dongle-s3.svg" width="200" alt="Pocket Dongle S3"> | <img src="docs/img/dongle_on_PC.jpg" width="200" alt="Dongle on PC example"> |
+| <img src="docs/board_scheme/LILYGO-T-Dongle-S3-ESP32-S3.svg" width="100%" alt="LILYGO T-Dongle-S3"> | <img src="docs/board_scheme/esp32-s3-pocket-dongle-s3.svg" width="100%" alt="Pocket Dongle S3"> | <img src="docs/img/dongle_on_PC.jpg" width="100%" alt="Dongle on PC example"> |
 
 ### 2. "Do-It-Yourself" Solution (Wiring on standard development boards)
 If you prefer to use a standard development board or want to integrate the receiver into your custom case, you can use boards like the **Waveshare ESP32-S3-PICO**, the ultra-compact **Waveshare ESP32-S3-ZERO**, or the classic **ESP32-S3-DevKitC-1**.
@@ -155,7 +155,7 @@ Queste schede sono progettate con un connettore USB integrato direttamente nel P
 
 | LILYGO T-Dongle-S3 | ESP32-S3 Pocket Dongle S3 | Esempio Installazione |
 | :---: | :---: | :---: |
-| <img src="docs/board_scheme/LILYGO-T-Dongle-S3-ESP32-S3.svg" width="200" alt="LILYGO T-Dongle-S3"> | <img src="docs/board_scheme/esp32-s3-pocket-dongle-s3.svg" width="200" alt="Pocket Dongle S3"> | <img src="docs/img/dongle_on_PC.jpg" width="200" alt="Esempio Dongle su PC"> |
+| <img src="docs/board_scheme/LILYGO-T-Dongle-S3-ESP32-S3.svg" width="100%" alt="LILYGO T-Dongle-S3"> | <img src="docs/board_scheme/esp32-s3-pocket-dongle-s3.svg" width="100%" alt="Pocket Dongle S3"> | <img src="docs/img/dongle_on_PC.jpg" width="100%" alt="Esempio Dongle su PC"> |
 
 ### 2. Soluzione "Fai-da-te" (Cablaggio su schede di sviluppo standard)
 Se preferisci utilizzare una scheda di sviluppo standard o vuoi integrare il ricevitore all'interno di un tuo case personalizzato, puoi utilizzare board come la **Waveshare ESP32-S3-PICO**, la compattissima **Waveshare ESP32-S3-ZERO** o la classica **ESP32-S3-DevKitC-1**.
