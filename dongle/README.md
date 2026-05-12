@@ -31,18 +31,14 @@ To build the Dongle receiver, you can choose two paths: use a pre-assembled "sti
 
 ### 1. "Plug & Play" Solutions (No soldering)
 
-<img src="docs/img/dongle_on_PC.jpg" width="220" align="right" alt="Example of LILYGO T-Dongle-S3 connected to the PC">
-
 These boards are designed with a USB connector integrated directly into the PCB or feature a ready-to-use male USB port. They do not require any soldering or additional hardware wiring.
 
 * **LILYGO T-Dongle-S3:** Excellent choice. It is compact, features a plastic shell, and has a small built-in color LCD display that the firmware uses to show the connection status and the project logo.
 * **ESP32-S3 Pocket Dongle S3:** Another excellent pre-assembled alternative, also equipped with a screen and immediately ready to be connected to the PC or USB hub.
 
-<br clear="all">
-
-| LILYGO T-Dongle-S3 | ESP32-S3 Pocket Dongle S3 |
-| :---: | :---: |
-| <img src="docs/board_scheme/LILYGO-T-Dongle-S3-ESP32-S3.svg" width="250" alt="LILYGO T-Dongle-S3"> | <img src="docs/board_scheme/esp32-s3-pocket-dongle-s3.svg" width="250" alt="Pocket Dongle S3"> |
+| LILYGO T-Dongle-S3 | ESP32-S3 Pocket Dongle S3 | Installation Example |
+| :---: | :---: | :---: |
+| <img src="docs/board_scheme/LILYGO-T-Dongle-S3-ESP32-S3.svg" width="200" alt="LILYGO T-Dongle-S3"> | <img src="docs/board_scheme/esp32-s3-pocket-dongle-s3.svg" width="200" alt="Pocket Dongle S3"> | <img src="docs/img/dongle_on_PC.jpg" width="200" alt="Dongle on PC example"> |
 
 ### 2. "Do-It-Yourself" Solution (Wiring on standard development boards)
 If you prefer to use a standard development board or want to integrate the receiver into your custom case, you can use boards like the **Waveshare ESP32-S3-PICO**, the ultra-compact **Waveshare ESP32-S3-ZERO**, or the classic **ESP32-S3-DevKitC-1**.
@@ -152,18 +148,14 @@ Per realizzare il ricevitore Dongle, puoi optare per due strade: utilizzare una 
 
 ### 1. Soluzioni "Plug & Play" (Nessuna saldatura)
 
-<img src="docs/img/dongle_on_PC.jpg" width="220" align="right" alt="Esempio di LILYGO T-Dongle-S3 collegato al PC">
-
 Queste schede sono progettate con un connettore USB integrato direttamente nel PCB o dispongono di una porta USB maschio pronta all'uso. Non richiedono alcun tipo di saldatura o cablaggio hardware aggiuntivo.
 
 * **LILYGO T-Dongle-S3:** Ottima scelta. È compatta, dispone di un guscio in plastica e di un piccolo display LCD a colori integrato che il firmware utilizza per mostrare lo stato della connessione e il logo del progetto.
 * **ESP32-S3 Pocket Dongle S3:** Un'altra eccellente alternativa pre-assemblata, anch'essa dotata di schermo e immediatamente pronta per essere collegata al PC o all'hub USB.
 
-<br clear="all">
-
-| LILYGO T-Dongle-S3 | ESP32-S3 Pocket Dongle S3 |
-| :---: | :---: |
-| <img src="docs/board_scheme/LILYGO-T-Dongle-S3-ESP32-S3.svg" width="250" alt="LILYGO T-Dongle-S3"> | <img src="docs/board_scheme/esp32-s3-pocket-dongle-s3.svg" width="250" alt="Pocket Dongle S3"> |
+| LILYGO T-Dongle-S3 | ESP32-S3 Pocket Dongle S3 | Esempio Installazione |
+| :---: | :---: | :---: |
+| <img src="docs/board_scheme/LILYGO-T-Dongle-S3-ESP32-S3.svg" width="200" alt="LILYGO T-Dongle-S3"> | <img src="docs/board_scheme/esp32-s3-pocket-dongle-s3.svg" width="200" alt="Pocket Dongle S3"> | <img src="docs/img/dongle_on_PC.jpg" width="200" alt="Esempio Dongle su PC"> |
 
 ### 2. Soluzione "Fai-da-te" (Cablaggio su schede di sviluppo standard)
 Se preferisci utilizzare una scheda di sviluppo standard o vuoi integrare il ricevitore all'interno di un tuo case personalizzato, puoi utilizzare board come la **Waveshare ESP32-S3-PICO**, la compattissima **Waveshare ESP32-S3-ZERO** o la classica **ESP32-S3-DevKitC-1**.
