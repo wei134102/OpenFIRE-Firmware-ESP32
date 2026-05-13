@@ -173,18 +173,33 @@ void OF_FFB::TemperatureUpdate()
 {
     currentMillis = millis();
     if(currentMillis - previousMillisTemp > TEMP_UPDATE_INTERVAL) {
-        previousMillisTemp = currentMillis;
-
+        previousMillisTemp = currentMillis;           
+        
+        #ifdef ARDUINO_ARCH_ESP32  // 696969
+        uint32_t millivolts = analogReadMilliVolts(OF_Prefs::pins[OF_Const::tempPin]);
+        if (millivolts < 80 || millivolts > 2000) {
+        #else
         unsigned int analogValue = analogRead(OF_Prefs::pins[OF_Const::tempPin]);
         if (analogValue < 100 || analogValue > 2500) {
-            // Out-of-range reading: treat as sensor fault / ADC malfunction.
-            // This can also happen if the sensor is disconnected and the pin floats.
+            #endif // ARDUINO_ARCH_ESP32                
+            // Out of range reading, set to fatal value. Ranges out of 100-2500 correspond to
+            // -40°C to 150°C which is outside the expected operating range :)
+            // This case can happen if the sensor is faulty or the µC ADC is malfunctioning.
+            // In case no sensor is connected the pin is floating and may read out-of-range values but
+            // mostly return low values which makes it impossible to detect a disconnected sensor by
+            // simple thresholding.
             tempStatus = Temp_Fatal;
             temperatureCurrent = OF_Const::TEMPERATURE_SENSOR_ERROR_VALUE;
             return;
         }
 
+        
+        #ifdef ARDUINO_ARCH_ESP32  // 696969
+        temperatureGraph[tempGraphIndex] = ((int32_t)millivolts - 500) / 10;
+        #else
         temperatureGraph[tempGraphIndex] = (((analogValue * 3.3) / 4096) - 0.5) * 100; // Convert reading from mV->3.3->12-bit->Celsius
+        #endif // ARDUINO_ARCH_ESP32
+        
         if(tempGraphIndex < 3) {
             tempGraphIndex++;
         } else {
