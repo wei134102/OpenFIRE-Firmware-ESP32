@@ -236,8 +236,13 @@ void setup() {
         strncpy(usb_data_wireless.deviceManufacturer,MANUFACTURER_NAME,sizeof(usb_data_wireless.deviceManufacturer));
         strncpy(usb_data_wireless.deviceName,DEVICE_NAME, sizeof(usb_data_wireless.deviceName)); // cambia
         usb_data_wireless.deviceVID = DEVICE_VID;
-        usb_data_wireless.devicePID = PLAYER_NUMBER; // cambia
-        usb_data_wireless.devicePlayer = PLAYER_NUMBER;
+        #ifdef PLAYER_NUMBER
+            usb_data_wireless.devicePID = PLAYER_NUMBER; // cambia
+            usb_data_wireless.devicePlayer = PLAYER_NUMBER;
+        #else
+            usb_data_wireless.devicePID = 1; //PLAYER 1 DEFAULT
+            usb_data_wireless.devicePlayer = 1; // PLAYER 1 DEFAULT
+        #endif // PLAYER_NUMBER
         usb_data_wireless.channel = espnow_wifi_channel;
     #endif // defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
     // ===============================================================
