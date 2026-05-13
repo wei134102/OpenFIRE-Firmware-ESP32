@@ -134,14 +134,21 @@ void setup() {
         digitalWrite(23, HIGH);
     #endif
 
-    // IMPOSTA VALORI PER PORTE ANALOGICHE - DOVREBBERO ESSERE GIA' QUELLI DI DEFAULT MA NON SI SA MAI
+    // ===================================================================================
+    // FORZATURA HARDWARE ADC (Previene futuri bug se cambiano i default di libreria)
+    // ===================================================================================
     #if defined(ARDUINO_ARCH_ESP32) && defined(USES_ANALOG)
-        // Fissa la risoluzione a 12-bit (0-4095) per evitare sorprese
+        
+        // Fissa l'ADC a 12-bit (scala 0-4095). 
+        // Vitale: tutte le costanti (es. centro a 2048) e le formule dipendono da questo.
         analogReadResolution(12); 
     
-        // Fissa l'attenuazione massima (11dB) vitale per poter leggere fino a ~3.1V (3100mV)
+        // Fissa l'attenuazione a 11dB (misura fino a ~3.1V).
+        // Vitale: impedisce che l'ADC saturi a tensioni basse, garantendo
+        // l'escursione totale del joystick e la corretta lettura del TMP36.
         analogSetAttenuation(ADC_11db);
-    #endif 
+        
+    #endif // defined(ARDUINO_ARCH_ESP32) && defined(USES_ANALOG)
 
 
 // ===================================================================================
@@ -389,14 +396,26 @@ void setup() {
         FW_Common::OLED.TopPanelUpdate(" CALIBRATION READY "); 
     #endif //USES_DISPLAY
 
+    // ===================================================================================
+    // CALCOLO DEL CENTRO MECCANICO PURO
+    // ===================================================================================
+    // Il centro va calcolato ORA, basandosi solo sul rumore grezzo della molla.
+    // ATTENZIONE: Non spostare mai questo calcolo sotto il blocco del 'buffer'. 
+    // Se venisse calcolato dopo il constrain(), un taglio asimmetrico dei limiti 
+    // sbilancerebbe il centro del joystick in game.
     ANALOG_STICK_DEADZONE_X_CENTER = (ANALOG_STICK_DEADZONE_X_MIN + ANALOG_STICK_DEADZONE_X_MAX) / 2; 
     ANALOG_STICK_DEADZONE_Y_CENTER = (ANALOG_STICK_DEADZONE_Y_MIN + ANALOG_STICK_DEADZONE_Y_MAX) / 2; 
     
-    // Espansione di tolleranza (buffer zona morta) per assorbire piccoli rimbalzi meccanici
-    ANALOG_STICK_DEADZONE_X_MIN -= 400;
-    ANALOG_STICK_DEADZONE_X_MAX += 400;
-    ANALOG_STICK_DEADZONE_Y_MIN -= 400;
-    ANALOG_STICK_DEADZONE_Y_MAX += 400;
+    // Espansione di tolleranza (buffer zona morta) per assorbire piccoli rimbalzi meccanici   
+    // Espansione di tolleranza con PROTEZIONE (Clamping)
+    // Sottraiamo/Aggiungiamo 400 ma forziamo il risultato a rimanere nel recinto 0-4095
+    int buffer = 400; 
+    ANALOG_STICK_DEADZONE_X_MIN = constrain((int)ANALOG_STICK_DEADZONE_X_MIN - buffer, 0, 4095);
+    ANALOG_STICK_DEADZONE_X_MAX = constrain((int)ANALOG_STICK_DEADZONE_X_MAX + buffer, 0, 4095);
+    ANALOG_STICK_DEADZONE_Y_MIN = constrain((int)ANALOG_STICK_DEADZONE_Y_MIN - buffer, 0, 4095);
+    ANALOG_STICK_DEADZONE_Y_MAX = constrain((int)ANALOG_STICK_DEADZONE_Y_MAX + buffer, 0, 4095);
+
+
     #endif
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // 696969 == FINE CODICE CALIBRAZIONE STICK ========================================
@@ -2223,9 +2242,35 @@ void ExecGunModeDocked()
                 if(FW_Common::analogIsValid && currentMillis - aStickChecked >= 100) {
                     aStickChecked = currentMillis;
 
+                    #ifdef ARDUINO_ARCH_ESP32
+                    // LETTURA HARDWARE (uint16_t per coerenza ADC 12-bit)
+                    uint16_t rawX = (uint16_t)analogRead(OF_Prefs::pins[OF_Const::analogX]);
+                    uint16_t rawY = (uint16_t)analogRead(OF_Prefs::pins[OF_Const::analogY]);
+
+                    // NORMALIZZAZIONE (Identica alla funzione AnalogStickPoll)
+                    uint16_t analogValueX, analogValueY;
+
+                    // Normalizzazione Asse X
+                    if (rawX < ANALOG_STICK_DEADZONE_X_MIN) 
+                        analogValueX = (uint16_t)map(rawX, 0, ANALOG_STICK_DEADZONE_X_MIN, 0, ANALOG_STICK_CENTER_X);
+                    else if (rawX > ANALOG_STICK_DEADZONE_X_MAX) 
+                        analogValueX = (uint16_t)map(rawX, ANALOG_STICK_DEADZONE_X_MAX, 4095, ANALOG_STICK_CENTER_X, 4095);
+                    else 
+                        analogValueX = ANALOG_STICK_CENTER_X;
+
+                    // Normalizzazione Asse Y
+                    if (rawY < ANALOG_STICK_DEADZONE_Y_MIN) 
+                        analogValueY = (uint16_t)map(rawY, 0, ANALOG_STICK_DEADZONE_Y_MIN, 0, ANALOG_STICK_CENTER_Y);
+                    else if (rawY > ANALOG_STICK_DEADZONE_Y_MAX) 
+                        analogValueY = (uint16_t)map(rawY, ANALOG_STICK_DEADZONE_Y_MAX, 4095, ANALOG_STICK_CENTER_Y, 4095);
+                    else 
+                        analogValueY = ANALOG_STICK_CENTER_Y;
+                    #else                  
+                    // Leggiamo il valore puro dall'ADC (0-4095)
                     uint16_t analogValueX = analogRead(OF_Prefs::pins[OF_Const::analogX]);
                     uint16_t analogValueY = analogRead(OF_Prefs::pins[OF_Const::analogY]);
-
+                    #endif // COMMENTO
+                    
                     buf[0] = OF_Const::sAnalogPosUpd;
                     memcpy(&buf[1], (uint8_t*)&analogValueX, sizeof(uint16_t));
                     memcpy(&buf[3], (uint8_t*)&analogValueY, sizeof(uint16_t));
@@ -2327,6 +2372,7 @@ void TriggerNotFire()
 }
 
 #ifdef USES_ANALOG
+// =================== 696969 ========== funzione ottimizzata con calibrazione
 void AnalogStickPoll()
 {
     int analogValueX = analogRead(OF_Prefs::pins[OF_Const::analogX]);
@@ -2504,8 +2550,8 @@ void AnalogStickPoll()
         }
         FW_Common::aStickADCLastPos = newPos;
     }
-        
 }
+// =========== 696969 fine funzione ottimizzata con calibrazione =======================
 #endif // USES_ANALOG
 
 void SendEscapeKey()
