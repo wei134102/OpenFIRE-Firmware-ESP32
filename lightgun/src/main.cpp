@@ -132,6 +132,16 @@ void setup() {
         digitalWrite(23, HIGH);
     #endif
 
+    // IMPOSTA VALORI PER PORTE ANALOGICHE - DOVREBBERO ESSERE GIA' QUELLI DI DEFAULT MA NON SI SA MAI
+    #if defined(ARDUINO_ARCH_ESP32) && defined(USES_ANALOG)
+        // Fissa la risoluzione a 12-bit (0-4095) per evitare sorprese
+        analogReadResolution(12); 
+    
+        // Fissa l'attenuazione massima (11dB) vitale per poter leggere fino a ~3.1V (3100mV)
+        analogSetAttenuation(ADC_11db);
+    #endif 
+
+
 // ===================================================================================
 // DATA INTEGRITY & PROFILAZIONE
 // ===================================================================================
