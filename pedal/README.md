@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/img/copertina_pedal.png" alt="OpenFIRE Firmware ESP32 pedal" width="100%">
+  <img src="docs/img/copertina_pedal.jpg" alt="OpenFIRE Firmware ESP32 pedal" width="100%">
 </p>
 
 ---
@@ -119,7 +119,7 @@ For technical support and to join the discussion, please refer to the [Community
 </p>
 
 <p align="center">
-  <img src="docs/img/copertina_pedal.png" alt="OpenFIRE Firmware ESP32 pedal" width="100%">
+  <img src="docs/img/copertina_pedal.jpg" alt="OpenFIRE Firmware ESP32 pedal" width="100%">
 </p>
 
 ---

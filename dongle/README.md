@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/img/copertina_dongle.png" alt="OpenFIRE Firmware ESP32 dongle" width="100%">
+  <img src="docs/img/copertina_dongle.jpg" alt="OpenFIRE Firmware ESP32 dongle" width="100%">
 </p>
 
 ---
@@ -139,7 +139,7 @@ For technical support and to join the discussion, please refer to the [Community
 </p>
 
 <p align="center">
-  <img src="docs/img/copertina_dongle.png" alt="OpenFIRE Firmware ESP32 dongle" width="100%">
+  <img src="docs/img/copertina_dongle.jpg" alt="OpenFIRE Firmware ESP32 dongle" width="100%">
 </p>
 
 ---

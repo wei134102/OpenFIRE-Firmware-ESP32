@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/img/cornice_lightgun.png" alt="OpenFIRE Firmware ESP32 lightgun" width="100%">
+  <img src="docs/img/cornice_lightgun.jpg" alt="OpenFIRE Firmware ESP32 lightgun" width="100%">
 </p>
 
 <p align="center">
@@ -205,7 +205,7 @@ For technical support and to join the discussion, please refer to the [Community
 </p>
 
 <p align="center">
-  <img src="docs/img/cornice_lightgun.png" alt="OpenFIRE Firmware ESP32 lightgun" width="100%">
+  <img src="docs/img/cornice_lightgun.jpg" alt="OpenFIRE Firmware ESP32 lightgun" width="100%">
 </p>
 
 <p align="center">

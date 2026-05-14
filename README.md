@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/img/immagine_di_copertina.png" alt="OpenFIRE Firmware ESP32 Cover" width="100%">
+  <img src="docs/img/immagine_di_copertina.jpg" alt="OpenFIRE Firmware ESP32 Cover" width="100%">
 </p>
 
 <p align="center">
@@ -196,7 +196,7 @@ In full compliance with the original license and the vision of the OpenFIRE crea
 </p>
 
 <p align="center">
-  <img src="docs/img/immagine_di_copertina.png" alt="OpenFIRE Firmware ESP32 Cover" width="100%">
+  <img src="docs/img/immagine_di_copertina.jpg" alt="OpenFIRE Firmware ESP32 Cover" width="100%">
 </p>
 
 <p align="center">
