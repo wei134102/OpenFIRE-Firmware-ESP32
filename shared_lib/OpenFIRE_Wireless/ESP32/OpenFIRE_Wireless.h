@@ -287,6 +287,7 @@ class SerialWireless_ : public Stream
   bool connection_gun_at_last_dongle();
   bool connection_gun_at_pedal();
   bool connection_gun_at_last_pedal();
+  void tx_gun_at_dongle_pedal_ready();
 
   // ===============================
   // ===== per i timer ================

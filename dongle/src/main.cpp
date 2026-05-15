@@ -165,7 +165,7 @@ void setup() {
     tft.setTextSize(2);
     tft.setTextColor(RED);
     tft.setCursor(0, 40);
-    tft.printf("Attesa PEDAL");
+    tft.printf("AWAIT PEDAL");
   }
   #endif // USES_DISPLAY
 
