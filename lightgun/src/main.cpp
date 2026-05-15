@@ -565,6 +565,10 @@ void setup() {
                 if (!SerialWireless.connection_gun_at_last_pedal()) SerialWireless.connection_gun_at_pedal();
             } else SerialWireless.connection_gun_at_pedal();
         }
+        else {
+            // invia segnale al dongle che la procedura del PEDAL è completa
+              SerialWireless.tx_gun_at_dongle_pedal_ready();
+        }
         // ======================== FINE PEDAL
 
         

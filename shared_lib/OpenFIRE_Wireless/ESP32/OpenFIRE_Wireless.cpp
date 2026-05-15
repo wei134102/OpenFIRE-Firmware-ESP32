@@ -1805,7 +1805,16 @@ bool SerialWireless_::connection_gun() {
 }
 #endif // GUN
 // ======================= FINE NUOVA IMPLEMENTAZIONE DOVE LA GUN FA IL FARO ===============
-
+// ============ INVIO PACCHETTO AL DONGLE DI CONNESSIONE AL PEDAL COMPLETATA =============================
+#ifdef GUN
+void SerialWireless_::tx_gun_at_dongle_pedal_ready() {
+  for (uint8_t i=0; i<3; i++) {
+    SerialWireless.SendPacket((const uint8_t *)&TinyUSBDevices.is_pedal_wireless, 1, PACKET_TX::PEDAL_TX);
+    vTaskDelay(pdMS_TO_TICKS(69));
+  }
+}
+#endif // GUN
+// ============ INVIO PACCHETTO AL DONGLE DI CONNESSIONE AL PEDAL COMPLETATA =============================
 // ======================= NUOVA IMPLEMENTAZIONE DOVE LA GUN FA IL FARO per connetersi al pedal ===============
 #ifdef GUN
 bool SerialWireless_::connection_gun_at_pedal() {
@@ -1901,11 +1910,16 @@ bool SerialWireless_::connection_gun_at_pedal() {
 
   memcpy(peerAddress, peerAddress_copy, 6);
 
+  // ================================
   // Forza al pedale lo stato "vivo" inviando un segnale fasullo
+  SerialWireless.tx_gun_at_dongle_pedal_ready();
+  /*
   for (uint8_t i=0; i<3; i++) {
     SerialWireless.SendPacket((const uint8_t *)&TinyUSBDevices.is_pedal_wireless, 1, PACKET_TX::PEDAL_TX);
     vTaskDelay(pdMS_TO_TICKS(69));
   }
+  */
+  // ================================
 
   if (stato_connessione_wireless == CONNECTION_STATE::DEVICES_CONNECTED) {
     //Serial.println("DONGLE - Negosazione completata - associazione dei dispositivi GUN/DONGLE");

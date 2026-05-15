@@ -502,18 +502,18 @@ public:
                                      /*30*/ unavailable,    unavailable,    unavailable,    unavailable,    unavailable,
                                      /*35*/ btnHome,        btnGunA,        btnGunB,        btnSelect,      btnStart,
                                      /*40*/ btnGunUp,       btnGunDown,     btnGunLeft,     unavailable,    unavailable,
-                                     /*45*/ btnPump,        btnPedal2,      btnPedal,       unavailable                        }},
+                                     /*45*/ btnPump,        btnUnmapped,    btnUnmapped,    unavailable                        }},
         //=====================================================================================================================
         // Waveshare ESP32 S3 Pico
         // Board Type: ESP32
         {"waveshare-esp32-s3-pico", {/*00*/ unavailable,    btnUnmapped,    btnUnmapped,    unavailable,    camSDA,
-                                     /*05*/ camSCL,         btnPedal2,      analogY,        analogX,        tempPin,
+                                     /*05*/ camSCL,         btnUnmapped,    analogY,        analogX,        tempPin,
                                      /*10*/ btnUnmapped,    btnGunA,        btnGunB,        btnGunC,        btnStart,
                                      /*15*/ btnSelect,      btnHome,        btnGunUp,       btnGunDown,     unavailable,
                                      /*20*/ unavailable,    unavailable,    unavailable,    unavailable,    unavailable,
                                      /*25*/ unavailable,    unavailable,    unavailable,    unavailable,    unavailable,
                                      /*30*/ unavailable,    unavailable,    unavailable,    btnGunLeft,     btnGunRight,
-                                     /*35*/ periphSDA,      periphSCL,      neoPixel,       btnPump,        btnPedal,
+                                     /*35*/ periphSDA,      periphSCL,      neoPixel,       btnPump,        btnUnmapped,
                                      /*40*/ btnTrigger,     rumblePin,      solenoidPin,    unavailable,    unavailable,
                                      /*45*/ unavailable,    unavailable,    unavailable,    unavailable                     }},
         //=====================================================================================================================
