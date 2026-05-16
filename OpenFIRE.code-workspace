@@ -20,6 +20,10 @@
       "name": "SHARED LIB",
       "path": "shared_lib"
     },
+	{
+      "name": "WIKI",
+      "path": "../OpenFIRE-Firmware-ESP32.wiki" 
+    },
     {
       "name": "HOME",
       "path": "."
