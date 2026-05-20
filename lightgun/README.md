@@ -38,6 +38,7 @@ For the basic operation of the aiming and shooting system, the following are ind
 * **Microcontroller:** An **ESP32-S3** to run the firmware. Recommended and tested boards are:
   * *ESP32-S3-WROOM1-DevKitC-1*
   * *Waveshare ESP32-S3-PICO*
+  * *Waveshare ESP32-S3-ZERO (Mini)* *(not yet tested)*  
 * **Optical Sensor:** **DFRobot SEN0158** IR positioning camera. *(Alternatively, for experts, an original **Wii CAM** can be used, desoldered from a Wii controller, configuring a specific microcontroller pin to generate the clock signal required for its operation).*
 * **IR Emitters:** 4x Infrared LEDs. Although standard Wii sensor bars might work at very close distances, using OSRAM SFH 4547 LEDs with 5.6Ω resistors is **HIGHLY recommended**.
 * **Primary Input:** At least 1 switch to use as a trigger.
@@ -230,6 +231,7 @@ Per il funzionamento di base del sistema di puntamento e sparo, sono indispensab
 * **Microcontrollore:** Un **ESP32-S3** per eseguire il firmware. Le schede consigliate e testate sono:
   * *ESP32-S3-WROOM1-DevKitC-1*
   * *Waveshare ESP32-S3-PICO*
+  * *Waveshare ESP32-S3-ZERO (Mini)* *(non ancora testata)*
 * **Sensore Ottico:** Telecamera di posizionamento IR **DFRobot SEN0158**. *(In alternativa, per gli esperti, è possibile utilizzare una **Wii CAM** originale, da smontare da un controller Wii, configurando un pin specifico del microcontrollore per generare il segnale di clock necessario al suo funzionamento).*
 * **Emettitori IR:** 4x LED Infrarossi. Sebbene le normali barre sensore della Wii possano funzionare a distanze molto ravvicinate, è **ALTAMENTE consigliato** l'utilizzo di LED OSRAM SFH 4547 con resistenze da 5.6Ω.
 * **Input Primario:** Almeno 1 interruttore da utilizzare come grilletto (Trigger).
