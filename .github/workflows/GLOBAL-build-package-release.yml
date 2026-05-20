@@ -65,6 +65,13 @@ jobs:
             flash_mode: 'dio'
             flash_freq: '80m'
             address_littleFS: '0xc90000'
+          - name: 'ESP32_S3_WROOM1_DevKitC_1_N8R2' 
+            boards: 'ESP32_S3_WROOM1_DevKitC_1_N8R2'
+            chip: 'esp32s3'
+            flash_size: '8MB'
+            flash_mode: 'dio'
+            flash_freq: '80m'
+            address_littleFS: '0x670000'
           - name: 'WAVESHARE_ESP32_S3_PICO' 
             boards: 'WAVESHARE_ESP32_S3_PICO'
             chip: 'esp32s3'
@@ -72,6 +79,20 @@ jobs:
             flash_mode: 'dio'
             flash_freq: '80m'       
             address_littleFS: '0xc90000'
+          - name: 'WAVESHARE_ESP32_S3_ZERO_N8R8' 
+            boards: 'WAVESHARE_ESP32_S3_ZERO_N8R8'
+            chip: 'esp32s3'
+            flash_size: '8MB'
+            flash_mode: 'dio'
+            flash_freq: '80m'
+            address_littleFS: '0x670000'       
+          - name: 'WAVESHARE_ESP32_S3_ZERO_N4R2' 
+            boards: 'WAVESHARE_ESP32_S3_ZERO_N4R2'
+            chip: 'esp32s3'
+            flash_size: '4MB'
+            flash_mode: 'dio'
+            flash_freq: '80m'
+            address_littleFS: '0x290000'                                 
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -118,18 +139,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - name: 'ESP32_S3_WROOM1_DevKitC_1_N16R8' 
-            boards: 'ESP32_S3_WROOM1_DevKitC_1_N16R8'
-            chip: 'esp32s3'
-            flash_size: '16MB'
-            flash_mode: 'dio'
-            flash_freq: '80m'
-          - name: 'WAVESHARE_ESP32_S3_PICO' 
-            boards: 'WAVESHARE_ESP32_S3_PICO'
-            chip: 'esp32s3'
-            flash_size: '16MB'
-            flash_mode: 'dio'
-            flash_freq: '80m'       
           - name: 'LILYGO_T_DONGLE_S3' 
             boards: 'LILYGO_T_DONGLE_S3'
             chip: 'esp32s3'
@@ -142,6 +151,36 @@ jobs:
             flash_size: '16MB'
             flash_mode: 'dio'
             flash_freq: '80m'
+          - name: 'ESP32_S3_WROOM1_DevKitC_1_N16R8' 
+            boards: 'ESP32_S3_WROOM1_DevKitC_1_N16R8'
+            chip: 'esp32s3'
+            flash_size: '16MB'
+            flash_mode: 'dio'
+            flash_freq: '80m'
+          - name: 'ESP32_S3_WROOM1_DevKitC_1_N8R2' 
+            boards: 'ESP32_S3_WROOM1_DevKitC_1_N8R2'
+            chip: 'esp32s3'
+            flash_size: '8MB'
+            flash_mode: 'dio'
+            flash_freq: '80m'
+          - name: 'WAVESHARE_ESP32_S3_PICO' 
+            boards: 'WAVESHARE_ESP32_S3_PICO'
+            chip: 'esp32s3'
+            flash_size: '16MB'
+            flash_mode: 'dio'
+            flash_freq: '80m'    
+          - name: 'WAVESHARE_ESP32_S3_ZERO_N8R8' 
+            boards: 'WAVESHARE_ESP32_S3_ZERO_N8R8'
+            chip: 'esp32s3'
+            flash_size: '8MB'
+            flash_mode: 'dio'
+            flash_freq: '80m'       
+          - name: 'WAVESHARE_ESP32_S3_ZERO_N4R2' 
+            boards: 'WAVESHARE_ESP32_S3_ZERO_N4R2'
+            chip: 'esp32s3'
+            flash_size: '4MB'
+            flash_mode: 'dio'
+            flash_freq: '80m'                      
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -182,10 +221,22 @@ jobs:
             flash_size: '16MB'
             flash_mode: 'dio'
             flash_freq: '80m'
+          - name: 'ESP32_S3_WROOM1_DevKitC_1_N8R2' 
+            boards: 'ESP32_S3_WROOM1_DevKitC_1_N8R2'
+            chip: 'esp32s3'
+            flash_size: '8MB'
+            flash_mode: 'dio'
+            flash_freq: '80m'
           - name: 'WAVESHARE_ESP32_S3_PICO' 
             boards: 'WAVESHARE_ESP32_S3_PICO'
             chip: 'esp32s3'
             flash_size: '16MB'
+            flash_mode: 'dio'
+            flash_freq: '80m'       
+          - name: 'WAVESHARE_ESP32_S3_ZERO_N8R8' 
+            boards: 'WAVESHARE_ESP32_S3_ZERO_N8R8'
+            chip: 'esp32s3'
+            flash_size: '8MB'
             flash_mode: 'dio'
             flash_freq: '80m'       
           - name: 'WAVESHARE_ESP32_S3_ZERO_N4R2' 
@@ -232,7 +283,10 @@ jobs:
       matrix:
         boards:
           - { name: 'ESP32_S3_WROOM1_DevKitC_1_N16R8', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
+          - { name: 'ESP32_S3_WROOM1_DevKitC_1_N8R2', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
           - { name: 'WAVESHARE_ESP32_S3_PICO', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
+          - { name: 'WAVESHARE_ESP32_S3_ZERO_N8R8', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
+          - { name: 'WAVESHARE_ESP32_S3_ZERO_N4R2', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
         os_config:
           - { name: windows-64bit, runner: windows-latest, esptool_url: 'https://github.com/espressif/esptool/releases/download/v5.1.0/esptool-v5.1.0-windows-amd64.zip', esptool_tipo_file: zip, esptool_path_in_zip: 'esptool-windows-amd64/', esptool_filename_in_zip: 'esptool.exe', script_name: 'flash_firmware.bat' }
           - { name: linux-amd-64bit, runner: ubuntu-latest, esptool_url: 'https://github.com/espressif/esptool/releases/download/v5.1.0/esptool-v5.1.0-linux-amd64.tar.gz', esptool_tipo_file: tar.gz, esptool_path_in_zip: 'esptool-linux-amd64/', esptool_filename_in_zip: 'esptool', script_name: 'flash_firmware.sh' }
@@ -300,10 +354,13 @@ jobs:
     strategy:
       matrix:
         boards:
-          - { name: 'ESP32_S3_WROOM1_DevKitC_1_N16R8', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
-          - { name: 'WAVESHARE_ESP32_S3_PICO', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
           - { name: 'LILYGO_T_DONGLE_S3', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
-          - { name: 'GNPE_POCKET_DONGLE_S3_N16R8', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
+          - { name: 'GNPE_POCKET_DONGLE_S3_N16R8', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }          
+          - { name: 'ESP32_S3_WROOM1_DevKitC_1_N16R8', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
+          - { name: 'ESP32_S3_WROOM1_DevKitC_1_N8R2', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
+          - { name: 'WAVESHARE_ESP32_S3_PICO', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
+          - { name: 'WAVESHARE_ESP32_S3_ZERO_N8R8', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
+          - { name: 'WAVESHARE_ESP32_S3_ZERO_N4R2', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
         os_config:
           - { name: windows-64bit, runner: windows-latest, esptool_url: 'https://github.com/espressif/esptool/releases/download/v5.1.0/esptool-v5.1.0-windows-amd64.zip', esptool_tipo_file: zip, esptool_path_in_zip: 'esptool-windows-amd64/', esptool_filename_in_zip: 'esptool.exe', script_name: 'flash_firmware.bat' }
           - { name: linux-amd-64bit, runner: ubuntu-latest, esptool_url: 'https://github.com/espressif/esptool/releases/download/v5.1.0/esptool-v5.1.0-linux-amd64.tar.gz', esptool_tipo_file: tar.gz, esptool_path_in_zip: 'esptool-linux-amd64/', esptool_filename_in_zip: 'esptool', script_name: 'flash_firmware.sh' }
@@ -360,7 +417,9 @@ jobs:
       matrix:
         boards:
           - { name: 'ESP32_S3_WROOM1_DevKitC_1_N16R8', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
+          - { name: 'ESP32_S3_WROOM1_DevKitC_1_N8R2', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
           - { name: 'WAVESHARE_ESP32_S3_PICO', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
+          - { name: 'WAVESHARE_ESP32_S3_ZERO_N8R8', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
           - { name: 'WAVESHARE_ESP32_S3_ZERO_N4R2', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
         os_config:
           - { name: windows-64bit, runner: windows-latest, esptool_url: 'https://github.com/espressif/esptool/releases/download/v5.1.0/esptool-v5.1.0-windows-amd64.zip', esptool_tipo_file: zip, esptool_path_in_zip: 'esptool-windows-amd64/', esptool_filename_in_zip: 'esptool.exe', script_name: 'flash_firmware.bat' }
