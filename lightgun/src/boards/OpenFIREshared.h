@@ -56,12 +56,14 @@
     #define OPENFIRE_BOARD "rpipico2"
 #elifdef ARDUINO_RASPBERRY_PI_PICO_2W
     #define OPENFIRE_BOARD "rpipico2w"
-#elifdef ARDUINO_ESP32_S3_WROOM1_DevKitC_1_N16R8
+#elifdef ARDUINO_ESP32_S3_WROOM1_DevKitC_1
     #define OPENFIRE_BOARD "esp32-s3-devkitc-1"
 #elif defined(ARDUINO_ESP32_S3_super_mini)
     #define OPENFIRE_BOARD "esp32-s3-devkitc-1"
 #elifdef ARDUINO_WAVESHARE_ESP32_S3_PICO
     #define OPENFIRE_BOARD "waveshare-esp32-s3-pico"
+#elifdef ARDUINO_WAVESHARE_ESP32_S3_ZERO
+    #define OPENFIRE_BOARD "waveshare-esp32-s3-zero"
 #elifdef ARDUINO_GENERIC_RP2350
     #define OPENFIRE_BOARD "generic-rp2350"
 #else
@@ -491,7 +493,7 @@ public:
         //=====================================================================================================================
         /* more RP-series boards should be added here */
         //=====================================================================================================================
-        // Espressif ESP32 S3 WROOM-1 DevkitC-1 N16R8
+        // Espressif ESP32 S3 WROOM-1 DevkitC-1
         // Board Type: ESP32
         {"esp32-s3-devkitc-1",      {/*00*/ unavailable,    btnTrigger,     btnGunRight,    btnUnmapped,    analogX,
                                      /*05*/ analogY,        tempPin,        btnUnmapped,    camSDA,         camSCL,
@@ -517,6 +519,19 @@ public:
                                      /*40*/ btnTrigger,     rumblePin,      solenoidPin,    unavailable,    unavailable,
                                      /*45*/ unavailable,    unavailable,    unavailable,    unavailable                     }},
         //=====================================================================================================================
+        // Waveshare ESP32 S3 Zero
+        // Board Type: ESP32
+        {"waveshare-esp32-s3-zero", {/*00*/ unavailable,    btnUnmapped,    btnUnmapped,    btnUnmapped,    camSDA,
+                                     /*05*/ camSCL,         btnTrigger,     btnGunA,        btnGunB,        btnGunC,
+                                     /*10*/ btnStart,       btnSelect,      rumblePin,      solenoidPin,    unavailable,
+                                     /*15*/ unavailable,    unavailable,    unavailable,    unavailable,    unavailable,
+                                     /*20*/ unavailable,    unavailable,    unavailable,    unavailable,    unavailable,
+                                     /*25*/ unavailable,    unavailable,    unavailable,    unavailable,    unavailable,
+                                     /*30*/ unavailable,    unavailable,    unavailable,    unavailable,    unavailable,
+                                     /*35*/ unavailable,    unavailable,    unavailable,    unavailable,    unavailable,
+                                     /*40*/ unavailable,    unavailable,    unavailable,    unavailable,    unavailable,
+                                     /*45*/ unavailable,    unavailable,    unavailable,    unavailable                     }},
+        //=====================================================================================================================
         /* more ESP boards should be added here */
     };
 
@@ -534,8 +549,9 @@ public:
         {"adafruitKB2040",          "Adafruit Keeboar KB2040"},
         {"arduinoNanoRP2040",       "Arduino Nano Connect RP2040"},
         {"waveshareZero",           "Waveshare Zero RP2040"},
-        {"esp32-s3-devkitc-1",      "ESP32-S3 WROOM-1 DevkitC-1 (N16R8)"},
+        {"esp32-s3-devkitc-1",      "ESP32-S3 WROOM-1 DevkitC-1"},
         {"waveshare-esp32-s3-pico", "Waveshare ESP32-S3-Pico"},
+        {"waveshare-esp32-s3-zero", "Waveshare ESP32-S3-Zero"},
         // Add more here!
         {"generic-rp2350",          "Unknown RP2350 Board"},
         {"generic",                 "Unknown RP2040 Board"}
@@ -783,6 +799,20 @@ public:
                                      /*40*/ 20 | posLeft,   19 | posRight,  20 | posRight,    posNothing,     posNothing,
                                      /*45*/   posNothing,     posNothing,     posNothing,     posNothing                    }},
         //=====================================================================================================================
+        // Waveshare ESP32 S3 Zero
+        // Board Type: ESP32-S3
+        {"waveshare-esp32-s3-zero", {/*00*/   posNothing,   4  | posLeft,  5  | posLeft,   6  | posLeft,   7  | posLeft,
+                                     /*05*/ 8  | posLeft,   9  | posLeft,  9  | posRight,  8  | posRight,  7  | posRight,
+                                     /*10*/ 6  | posRight,  5  | posRight, 4  | posRight,  3  | posRight,     posNothing,
+                                     /*15*/   posNothing,     posNothing,     posNothing,     posNothing,     posNothing,
+                                     /*20*/   posNothing,     posNothing,     posNothing,     posNothing,     posNothing,
+                                     /*25*/   posNothing,     posNothing,     posNothing,     posNothing,     posNothing,
+                                     /*30*/   posNothing,     posNothing,     posNothing,     posNothing,     posNothing,
+                                     /*35*/   posNothing,     posNothing,     posNothing,     posNothing,     posNothing,
+                                     /*40*/   posNothing,     posNothing,     posNothing,     posNothing,     posNothing,
+                                     /*45*/   posNothing,     posNothing,     posNothing,     posNothing                    }},
+        //=====================================================================================================================
+
         // Insert new ESP layouts below this one!
         // Feel free to use any of the above as a template.
         // ***
