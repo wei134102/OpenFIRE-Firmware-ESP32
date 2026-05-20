@@ -87,9 +87,9 @@ I am also attaching some graphic guides for DIY building and component wiring, o
 Refer to the following images for the default pinouts of the two recommended boards. 
 > **Warning:** Each board supports fully custom layouts. If you decide to solder components to different pins for wiring convenience, you can freely reassign them using the **OpenFIRE Desktop App**.
 
-| ESP32-S3-DevKitC-1 | Waveshare ESP32-S3-PICO |
-| :---: | :---: |
-| <img src="docs/board_scheme/LIGHTGUN-ESP32S3-Devkit-C.svg" width="100%" alt="Pinout DevKitC-1"> | <img src="docs/board_scheme/LIGHTGUN-esp32-s3-pico.svg" width="100%" alt="Pinout S3-PICO"> |
+| ESP32-S3-DevKitC-1 | Waveshare ESP32-S3-PICO | Waveshare ESP32-S3-ZERO |
+| :---: | :---: | :---: |
+| <img src="docs/board_scheme/LIGHTGUN-ESP32S3-Devkit-C.svg" width="100%" alt="Pinout DevKitC-1"> | <img src="docs/board_scheme/LIGHTGUN-esp32-s3-pico.svg" width="100%" alt="Pinout S3-PICO"> | <img src="docs/board_scheme/LIGHTGUN-esp32-s3-zero.svg" width="100%" alt="Pinout S3-ZERO"> |
 
 ---
 
@@ -279,9 +279,9 @@ Allego inoltre alcune guide grafiche per l'autocostruzione e la connessione dei 
 Fai riferimento alle seguenti immagini per i pinout predefiniti delle due schede consigliate. 
 > **Attenzione:** Ogni scheda supporta layout completamente personalizzati. Se decidi di saldare i componenti su pin differenti per comodità di cablaggio, potrai riassegnarli liberamente tramite la **OpenFIRE Desktop App**.
 
-| ESP32-S3-DevKitC-1 | Waveshare ESP32-S3-PICO |
-| :---: | :---: |
-| <img src="docs/board_scheme/LIGHTGUN-ESP32S3-Devkit-C.svg" width="100%" alt="Pinout DevKitC-1"> | <img src="docs/board_scheme/LIGHTGUN-esp32-s3-pico.svg" width="100%" alt="Pinout S3-PICO"> |
+| ESP32-S3-DevKitC-1 | Waveshare ESP32-S3-PICO | Waveshare ESP32-S3-ZERO |
+| :---: | :---: | :---: |
+| <img src="docs/board_scheme/LIGHTGUN-ESP32S3-Devkit-C.svg" width="100%" alt="Pinout DevKitC-1"> | <img src="docs/board_scheme/LIGHTGUN-esp32-s3-pico.svg" width="100%" alt="Pinout S3-PICO"> | <img src="docs/board_scheme/LIGHTGUN-esp32-s3-zero.svg" width="100%" alt="Pinout S3-ZERO"> |
 
 ---
 
