@@ -32,6 +32,12 @@ This section contains specific documentation for building and programming the ma
 
 OpenFIRE's flexibility allows you to build a lightgun ranging from the most basic configuration to a complete arcade system with full feedback.
 
+Below is the reference hardware architecture (based on the PICON-AS ecosystem) illustrating the required core components and the optional add-ons supported by the firmware.
+
+<p align="center">
+  <img src="docs/img/picon_AS_opzioni_refactory.jpg" alt="Lightgun Hardware Architecture Reference" width="100%">
+</p>
+
 ### Mandatory Components (Essentials)
 For the basic operation of the aiming and shooting system, the following are indispensable:
 
@@ -224,6 +230,12 @@ Questa sezione contiene la documentazione specifica per la costruzione e la prog
 ## 🛠️ Requisiti Hardware
 
 La flessibilità di OpenFIRE ti permette di costruire una lightgun che va dalla configurazione più basilare a un sistema arcade completo di ogni feedback.
+
+Di seguito lo schema di architettura hardware di riferimento (basato sull'ecosistema PICON-AS) che illustra i componenti base necessari e i moduli opzionali supportati dal firmware.
+
+<p align="center">
+  <img src="docs/img/picon_AS_opzioni_refactory.jpg" alt="Schema Architettura Hardware Lightgun" width="100%">
+</p>
 
 ### Componenti Obbligatori (Essenziali)
 Per il funzionamento di base del sistema di puntamento e sparo, sono indispensabili:
