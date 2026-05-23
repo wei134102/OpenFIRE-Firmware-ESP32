@@ -35,7 +35,7 @@ OpenFIRE's flexibility allows you to build a lightgun ranging from the most basi
 Below is the reference hardware architecture (based on the PICON-AS ecosystem) illustrating the required core components and the optional add-ons supported by the firmware.
 
 <p align="center">
-  <img src="docs/img/picon_AS_opzioni_refactory.jpg" alt="Lightgun Hardware Architecture Reference" width="100%">
+  <img src="docs/img/picon_AS_opzioni_refactory.png" alt="Lightgun Hardware Architecture Reference" width="100%">
 </p>
 
 ### Mandatory Components (Essentials)
@@ -234,7 +234,7 @@ La flessibilità di OpenFIRE ti permette di costruire una lightgun che va dalla 
 Di seguito lo schema di architettura hardware di riferimento (basato sull'ecosistema PICON-AS) che illustra i componenti base necessari e i moduli opzionali supportati dal firmware.
 
 <p align="center">
-  <img src="docs/img/picon_AS_opzioni_refactory.jpg" alt="Schema Architettura Hardware Lightgun" width="100%">
+  <img src="docs/img/picon_AS_opzioni_refactory.png" alt="Schema Architettura Hardware Lightgun" width="100%">
 </p>
 
 ### Componenti Obbligatori (Essenziali)
