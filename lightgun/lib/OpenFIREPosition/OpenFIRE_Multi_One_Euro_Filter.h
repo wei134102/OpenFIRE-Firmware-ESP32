@@ -42,11 +42,19 @@ private:
     // --- PARAMETRI DI TUNING ---
     // min_cutoff: La "lentezza" del mirino quando l'utente si muove pochissimo (jitter/tremore). 
     // Valori bassi (1.0f) aumentano la stabilità ma inducono latenza "viscosa".
-    const float min_cutoff = 1.0f; 
+    ///////////////////////const float min_cutoff = 1.0f; 
+    // La "lentezza" del mirino quando l'utente si muove pochissimo.
+    // Abbassalo per distruggere il jitter da fermo.
+    const float min_cutoff = 0.01f; //0.05f; // 0.1f; // Parti da 0.1f (originale era 1.0f)
     
     // d_cutoff: Reattività del derivato (velocità). 
     // Filtra il "rumore" dal calcolo della velocità stessa prima di usarla per la correzione.
-    const float d_cutoff = 10.0f;   
+    ///////////////////////////const float d_cutoff = 10.0f;   
+    ////// Alzare questo valore rende la percezione dello scatto più immediata.
+    ///////const float d_cutoff = 15.0f; // Originale era 10.0f
+    // Reattività del derivato (velocità).
+    // Abbassalo se il tremore della mano "inganna" il filtro facendogli credere che ti stai muovendo.
+    const float d_cutoff = 3.0f; // Parti da 5.0f (originale era 10.0f)
     
     // max_cutoff: Il limite di banda passante superiore. 
     // Previene reazioni esagerate quando l'arma si sposta violentemente.
@@ -55,7 +63,11 @@ private:
     // beta_base: Il coefficiente dinamico. Regola quanto aggressivamente l'algoritmo 
     // disattiva il filtro "lento" (min_cutoff) quando percepisce movimenti veloci.
     // L'equazione relaziona la risoluzione della telecamera a quella del mouse.
-    const float beta_base = (0.011f * (float)CamResX) / (float)MouseResX;
+    /////////////////////////const float beta_base = (0.011f * (float)CamResX) / (float)MouseResX;
+    // Aggiungiamo un moltiplicatore di reattività (Tuning Parameter).
+    // Valori consigliati: da 2.0f a 5.0f. Più è alto, meno lag c'è nei movimenti veloci.
+    const float beta_multiplier = 2.0f; //3.0f; // alzare a 4 o 5 se necessario
+    const float beta_base = ((0.011f * (float)CamResX) / (float)MouseResX) * beta_multiplier;
 
     const float OEF_TWO_PI = 6.28318530718f;
 

@@ -448,7 +448,9 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
             }
 
             int spostamento = abs(avg_move_x) + abs(avg_move_y);
-            float consumo = (float)spostamento * COSTANTE_MOLLA; 
+            // FORZIAMO UN DEBITO MINIMO DI 1.0f per evitare il congelamento dell'offset
+            //float consumo = (float)spostamento * COSTANTE_MOLLA; 
+            float consumo = fmaxf(1.0f, (float)spostamento * COSTANTE_MOLLA);
             
             // OTTIMIZZAZIONE 3: Branchless Math per la Molla. 
             // Usa le istruzioni hardware min/max per non far spezzare la pipeline della CPU 
