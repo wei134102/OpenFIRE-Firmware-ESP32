@@ -9,6 +9,10 @@
  * @author [Alessandro Satanassi](alessandro@cittini.it)
  * @version V1.0
  * @date 2026
+ * 
+ * This code is partially derived from the SerialTransfer library by PowerBroker2
+ * (https://github.com/PowerBroker2/SerialTransfer), and I would like to express my gratitude to him.
+ * 
  */
 #ifdef OPENFIRE_WIRELESS_ENABLE
 
