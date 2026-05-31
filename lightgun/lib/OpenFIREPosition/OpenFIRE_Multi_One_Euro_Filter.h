@@ -45,7 +45,7 @@ private:
     ///////////////////////const float min_cutoff = 1.0f; 
     // La "lentezza" del mirino quando l'utente si muove pochissimo.
     // Abbassalo per distruggere il jitter da fermo.
-    const float min_cutoff = 0.01f; //0.05f; // 0.1f; // Parti da 0.1f (originale era 1.0f)
+    const float min_cutoff = 0.03f; //0.05f; //0.01f; //0.05f; // 0.1f; // Parti da 0.1f (originale era 1.0f)
     
     // d_cutoff: Reattività del derivato (velocità). 
     // Filtra il "rumore" dal calcolo della velocità stessa prima di usarla per la correzione.
@@ -54,7 +54,7 @@ private:
     ///////const float d_cutoff = 15.0f; // Originale era 10.0f
     // Reattività del derivato (velocità).
     // Abbassalo se il tremore della mano "inganna" il filtro facendogli credere che ti stai muovendo.
-    const float d_cutoff = 3.0f; // Parti da 5.0f (originale era 10.0f)
+    const float d_cutoff = 8.0f; //5.0f; //3.0f; // Parti da 5.0f (originale era 10.0f)
     
     // max_cutoff: Il limite di banda passante superiore. 
     // Previene reazioni esagerate quando l'arma si sposta violentemente.
@@ -66,7 +66,7 @@ private:
     /////////////////////////const float beta_base = (0.011f * (float)CamResX) / (float)MouseResX;
     // Aggiungiamo un moltiplicatore di reattività (Tuning Parameter).
     // Valori consigliati: da 2.0f a 5.0f. Più è alto, meno lag c'è nei movimenti veloci.
-    const float beta_multiplier = 2.0f; //3.0f; // alzare a 4 o 5 se necessario
+    const float beta_multiplier = 3.5f; //4.0f; //2.0f; //3.0f; // alzare a 4 o 5 se necessario
     const float beta_base = ((0.011f * (float)CamResX) / (float)MouseResX) * beta_multiplier;
 
     const float OEF_TWO_PI = 6.28318530718f;
