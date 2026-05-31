@@ -233,6 +233,23 @@ public:
     /// @return An error code from Errors_e
     static int SaveUSBID();
 
+    /// @brief Keep settings[gunId] in sync with usb.devicePID (P1-P4 => PID 1-4)
+    static inline void SyncGunIdFromUsbPid()
+    {
+        if(usb.devicePID >= 1 && usb.devicePID <= 4)
+            settings[OF_Const::gunId] = (uint32_t)(usb.devicePID - 1);
+    }
+
+    /// @brief Keep usb.devicePID/name in sync with settings[gunId]
+    static inline void SyncUsbPidFromGunId()
+    {
+        if(settings[OF_Const::gunId] < 4) {
+            usb.devicePID = (uint16_t)(settings[OF_Const::gunId] + 1);
+            if(usb.deviceName[0] != '\0')
+                usb.deviceName[9] = (char)('1' + settings[OF_Const::gunId]);
+        }
+    }
+
     /// @brief Formats preferences filesystem, clearing any saved user data
     static void ResetPreferences();
 

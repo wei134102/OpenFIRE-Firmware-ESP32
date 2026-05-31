@@ -1147,7 +1147,10 @@ void OF_Serial::SerialProcessingDocked()
                     case OF_Const::sCommitID:
                         Serial_available(18);
                         rxLen = Serial.readBytes(RXbuf, Serial.available());
-                        if(rxLen == 18) memcpy(&OF_Prefs::usb, RXbuf, rxLen);
+                        if(rxLen == 18) {
+                            memcpy(&OF_Prefs::usb, RXbuf, rxLen);
+                            OF_Prefs::SyncGunIdFromUsbPid();
+                        }
                         break;
                     default:
                         rxLen = Serial.readBytesUntil('\0', RXbuf, 32);
@@ -1269,7 +1272,13 @@ void OF_Serial::SerialBatchRecv(const char *bufPtr, void *dataPtr, const std::un
     if(mapPtr.count(bufPtr)) {
         if(&mapPtr == &OF_Prefs::OFPresets.profSettingTypes_Strings && mapPtr.at(bufPtr) == OF_Const::profCurrent) {
             memcpy(&OF_Prefs::currentProfile, &bufPtr[rxBufSize-rxDatSize], rxDatSize);
-        } else memcpy((uint8_t*)dataPtr + (dataSize * mapPtr.at(bufPtr)), &bufPtr[rxBufSize-rxDatSize], rxDatSize);
+        } else {
+            memcpy((uint8_t*)dataPtr + (dataSize * mapPtr.at(bufPtr)), &bufPtr[rxBufSize-rxDatSize], rxDatSize);
+            if(&mapPtr == &OF_Prefs::OFPresets.settingsTypes_Strings &&
+               mapPtr.at(bufPtr) == OF_Const::gunId) {
+                OF_Prefs::SyncUsbPidFromGunId();
+            }
+        }
     }
 }
 

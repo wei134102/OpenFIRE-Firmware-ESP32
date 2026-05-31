@@ -246,7 +246,8 @@ public:
         {"TempWarning",         tempWarning         },
         {"TempDanger",          tempShutdown        },
         {"AnalogMode",          analogMode          },
-        {"GunID",               gunId               },
+        {"GunId",               gunId               },
+        {"GunID",               gunId               },  // legacy alias (settings.conf / older builds)
         {"AnalogDeadzone",      analogDeadzone      },
         {"AxisUnsigned",        axisUnsigned        },
         {"AnalogCenterOffsetX", analogCenterOffsetX },

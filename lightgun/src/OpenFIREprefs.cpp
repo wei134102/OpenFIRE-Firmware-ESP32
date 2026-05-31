@@ -38,6 +38,7 @@ void OF_Prefs::Load()
     if(toggles[OF_Const::customPins]) LoadPins();
     LoadSettings();
     LoadUSBID();
+    SyncGunIdFromUsbPid();
     LoadButtons();
     for(int i = 0; i < ButtonCount; ++i)
         memcpy(&LightgunButtons::ButtonDesc[i].reportType, OF_Prefs::backupButtonDesc[i], sizeof(OF_Prefs::backupButtonDesc[i]));
