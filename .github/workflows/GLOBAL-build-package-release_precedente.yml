@@ -452,120 +452,11 @@ jobs:
           name: OpenFIRE-PEDAL-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip
           path: ${{ github.workspace }}/OpenFIRE-PEDAL-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip
 
-# ==========================================
-  # 3. SYNC FIRMWARE TO WEB FLASHER REPOSITORY
   # ==========================================
-  sync_web_firmware:
-    needs: [build_lightgun, build_dongle, build_pedal]
-    runs-on: ubuntu-latest
-    
-    concurrency:
-      group: sync-flasher-${{ github.ref }}
-      cancel-in-progress: false
-      
-    if: ${{ github.event.inputs.release == 'yes' && github.event.inputs.tag_name != '' }}
-    
-    env:
-      TAG_NAME: ${{ github.event.inputs.tag_name }}
-      # URL FISSO DEL TUO SECONDO REPOSITORY
-      TARGET_REPO: "alessandro-satanassi/OpenFIRE-ESP32-WebFlasher"
-      
-    steps:
-      - name: 🛡️ Verify Execution Branch
-        run: |
-          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
-            echo "❌ ERRORE FATALE: Stai eseguendo la Action da un Tag Storico."
-            exit 1
-          fi
-
-      # 1. SCARICA IL REPOSITORY WEB (Usando il Token Segreto)
-      - name: Checkout Web Flasher Repository
-        uses: actions/checkout@v6
-        with:
-          repository: ${{ env.TARGET_REPO }}
-          token: ${{ secrets.WEBFLASHER_TOKEN }}
-          path: web_repo # Salva il repo web in una cartella temporanea
-
-      # 2. SCARICA I BINARI APPENA COMPILATI DAL REPO 1
-      - name: Download ALL compiled binaries
-        uses: actions/download-artifact@v8
-        with:
-          path: ./all_binaries
-
-      # 3. COPIA I FILE NEL REPO 2
-      - name: Copy ONLY .bin files to Web Repo
-        run: |
-          # Il percorso finale sarà: OpenFIRE-ESP32-WebFlasher / firmware / v6.2-Beta1 /
-          TARGET_DIR="web_repo/firmware/${TAG_NAME}"
-          
-          mkdir -p -- "$TARGET_DIR"
-          
-          find ./all_binaries -name "*.bin" -type f -exec cp -- "{}" "$TARGET_DIR/" \;
-          
-          echo "File binari pronti per il trasferimento:"
-          ls -lh -- "$TARGET_DIR"
-
-      # 4. TRASFERIMENTO SUL SERVER (SISTEMA BLINDATO)
-      - name: Commit and Push to Web Flasher Repo
-        run: |
-          # Entriamo fisicamente nella cartella del Repo 2
-          cd web_repo
-          
-          export GIT_TERMINAL_PROMPT=0
-          
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          
-          git config core.autocrlf false
-          git config http.lowSpeedLimit 1000
-          git config http.lowSpeedTime 20
-          git config http.postBuffer 524288000
-          
-          git add -f -- "firmware/${TAG_NAME}"
-          
-          if ! git diff --staged --quiet; then
-            echo "Modifiche rilevate nel Repo Web. Preparazione del commit..."
-            
-            printf "Auto-sync firmware binaries for Web Flasher (%s)\n" "$TAG_NAME" | git commit -F -
-            
-            echo "Avvio Sincronizzazione Cross-Repo (Sistema Anti-Glitch con Recovery)..."
-            
-            SYNC_SUCCESS="false"
-            for i in 1 2 3; do
-              echo "--- Tentativo $i di 3 ---"
-              
-              if ! git pull origin main --rebase -X theirs; then
-                echo "⚠️ Rete instabile o conflitto durante il pull."
-                git rebase --abort >/dev/null 2>&1 || true
-                [ $i -lt 3 ] && sleep 5
-                continue
-              fi
-              
-              if git push origin main; then
-                echo "✅ Sincronizzazione completata! I file sono online su OpenFIRE-ESP32-WebFlasher."
-                SYNC_SUCCESS="true"
-                break
-              fi
-              
-              echo "⚠️ Rete instabile durante il push."
-              [ $i -lt 3 ] && sleep 5
-            done
-            
-            if [ "$SYNC_SUCCESS" = "false" ]; then
-              echo "❌ ERRORE FATALE: Impossibile trasferire i file nel Web Flasher dopo 3 tentativi."
-              exit 1
-            fi
-            
-          else
-            echo "Nessuna modifica rilevata nei file binari. Push ignorato per mantenere pulita la history."
-          fi
-          
-  # ==========================================
-  # 4. CREAZIONE DELLA RELEASE GLOBALE (Eseguita DOPO il Web Flasher)
+  # 3. CREAZIONE DELLA RELEASE GLOBALE
   # ==========================================
   create_global_release:
-    # BLOCCO DI SICUREZZA: Questa release si avvia SOLO se sync_web_firmware ha finito con successo (spunta verde)
-    needs: [package_lightgun, package_dongle, package_pedal, sync_web_firmware]
+    needs: [package_lightgun, package_dongle, package_pedal]
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.release == 'yes' && github.event.inputs.sistemi_operativi == 'yes' }}
     steps:
@@ -608,4 +499,4 @@ jobs:
             gh release upload ${{ github.event.inputs.tag_name }} "$file" --clobber --repo ${{ github.repository }}
           done
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
