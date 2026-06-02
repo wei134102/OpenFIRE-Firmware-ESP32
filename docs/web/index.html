@@ -449,7 +449,8 @@
         
         allReleases.forEach(r => {
             const opt = document.createElement('option');
-            opt.value = r.tag_name;
+            //opt.value = r.tag_name;
+            opt.setAttribute('value', r.tag_name);
             opt.innerText = r.tag_name + (r.prerelease ? t('prerelease') : t('stable'));
             if (r.tag_name === targetTag) opt.selected = true;
             vSelect.appendChild(opt);
@@ -490,7 +491,14 @@
         const boardImage = document.getElementById('boardImage');
 
         vSelect.addEventListener('change', (e) => {
-            targetTag = e.target.value;
+            //targetTag = e.target.value;
+            targetTag = vSelect.options[vSelect.selectedIndex].value;
+
+            // 🔒 FIX: Sincronizzazione in tempo reale dell'URL
+            const url = new URL(window.location);
+            url.searchParams.set('tag', targetTag);
+            window.history.replaceState({}, '', url);
+
             checkObsoleteWarning();
             updateActiveReleaseData();
             if (devSelect.value !== "") devSelect.dispatchEvent(new Event('change'));
@@ -649,7 +657,7 @@
                 progressText.innerText = t('loadingDrivers');
                 logMsg(t('loadingDrivers'));
                 try {
-                    const esptoolModule = await import("https://unpkg.com/esptool-js@0.4.4/bundle.js");
+                    const esptoolModule = await import("https://unpkg.com/esptool-js@0.6.0/bundle.js");
                     window.ESPLoader = esptoolModule.ESPLoader;
                     window.Transport = esptoolModule.Transport;
                 } catch (importErr) {
