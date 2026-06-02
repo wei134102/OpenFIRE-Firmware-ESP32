@@ -20,9 +20,13 @@
       "name": "SHARED LIB",
       "path": "shared_lib"
     },
-	{
+	  {
       "name": "WIKI",
       "path": "../OpenFIRE-Firmware-ESP32.wiki" 
+    },
+	  {
+      "name": "WEB FLASHER",
+      "path": "../OpenFIRE-ESP32-WebFlasher" 
     },
     {
       "name": "HOME",
