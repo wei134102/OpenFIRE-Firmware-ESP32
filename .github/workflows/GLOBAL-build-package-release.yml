@@ -456,7 +456,8 @@ jobs:
   # 3. SYNC FIRMWARE TO WEB FLASHER REPOSITORY
   # ==========================================
   sync_web_firmware:
-    needs: [build_lightgun, build_dongle, build_pedal]
+    #needs: [build_lightgun, build_dongle, build_pedal]
+    needs: [package_lightgun, package_dongle, package_pedal]
     runs-on: ubuntu-latest
     
     concurrency:
