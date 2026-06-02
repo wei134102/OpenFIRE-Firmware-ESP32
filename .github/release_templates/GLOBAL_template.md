@@ -53,7 +53,7 @@ This release is updated to commit **8b651a2** (April 19, 2026) of the original f
 The easiest, fastest, and safest way to install or update the firmware. It does not require installing any drivers or external software: it runs entirely within your browser.
 * **Requirements:** PC/Mac with Google Chrome, Microsoft Edge, or Opera.
 
-👉 **[LAUNCH OPENFIRE ESP32 WEB FLASHER](https://alessandro-satanassi.github.io/OpenFIRE-Firmware-ESP32/web/?tag=<TAG>&lang=en)**
+👉 **[LAUNCH OPENFIRE ESP32 WEB FLASHER](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?tag=<TAG>&lang=en)**
 
 ---
 
@@ -243,7 +243,7 @@ Questa release è aggiornata al commit **8b651a2** (19 aprile 2026) del firmware
 Il modo più semplice, veloce e sicuro per installare o aggiornare il firmware. Non richiede l'installazione di driver o software esterni: viene eseguito interamente dal tuo browser.
 * **Requisiti:** PC/Mac con Google Chrome, Microsoft Edge o Opera.
 
-👉 **[AVVIA OPENFIRE ESP32 WEB FLASHER](https://alessandro-satanassi.github.io/OpenFIRE-Firmware-ESP32/web/?tag=<TAG>&lang=it)**
+👉 **[AVVIA OPENFIRE ESP32 WEB FLASHER](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?tag=<TAG>&lang=it)**
 
 ---
 
