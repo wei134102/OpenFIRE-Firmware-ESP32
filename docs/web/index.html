@@ -609,15 +609,36 @@
         logArea.scrollTop = logArea.scrollHeight;
     }
 
+async function downloadFirmware(apiUrl, displayUrl) {
+        // Stampiamo nel log la URL classica/umana, mantenendo la vecchia logica visiva
+        logMsg(`${t('dlStart')} (${displayUrl})`); 
+        
+        // Eseguiamo il fetch usando l'API di GitHub e la parola d'ordine per i binari
+        const response = await fetch(apiUrl, {
+            headers: {
+                "Accept": "application/octet-stream"
+            }
+        });
+        
+        if (!response.ok) {
+            if (response.status === 404) throw new Error("404_FILE_NOT_FOUND");
+            else if (response.status === 403 || response.status === 429) throw new Error("API_RATE_LIMIT");
+            else throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const buffer = await response.arrayBuffer();
+        logMsg(`${t('dlComplete')} ${(buffer.byteLength / 1024).toFixed(1)} KB`);
+        return buffer;
+    }    
+    
+    /*
     async function downloadFirmware(url) {
-        // Avvolgiamo l'URL originale nel proxy CORS
-        const proxyUrl = "https://corsproxy.io/?" + encodeURIComponent(url);
         
         //logMsg(t('dlStart'));
         logMsg(`${t('dlStart')} (${url})`);
 
-        //const response = await fetch(url);
-        const response = await fetch(proxyUrl);
+        const response = await fetch(url);
+
         if (!response.ok) {
             if (response.status === 404) throw new Error("404_FILE_NOT_FOUND");
             else throw new Error(`HTTP ${response.status}`);
@@ -626,6 +647,7 @@
         logMsg(`${t('dlComplete')} ${(buffer.byteLength / 1024).toFixed(1)} KB`);
         return buffer;
     }
+    */
 
     async function startFlashing() {
         const allSelects = document.querySelectorAll('select');
@@ -636,8 +658,25 @@
         });
 
         const fileName = buildFileName();
+
+
+        // VECCHIA LOGICA: Mantenuta come da tua richiesta per riferimento e log
         const fileUrl = `https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${targetTag}/${fileName}`;
         
+        // NUOVA LOGICA API: Troviamo l'ID univoco del file dentro la release selezionata
+        const releaseObj = allReleases.find(r => r.tag_name === targetTag);
+        const assetObj = releaseObj.assets.find(a => a.name === fileName);
+        
+        if (!assetObj) {
+            alert(t('err404UI'));
+            window.location.reload();
+            return;
+        }
+        
+        // Costruiamo l'URL per scaricare tramite la porta di servizio API (che bypassa il CORS)
+        const apiUrl = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/assets/${assetObj.id}`;
+
+
         document.getElementById('flashBtn').disabled = true;
         const logArea = document.getElementById('log-area');
         logArea.value = ""; 
@@ -673,7 +712,8 @@
             
             progressText.setAttribute('data-i18n', 'dlStart'); 
             progressText.innerText = t('dlStart');
-            const firmwareBuffer = await downloadFirmware(fileUrl);
+            //const firmwareBuffer = await downloadFirmware(fileUrl);
+            const firmwareBuffer = await downloadFirmware(apiUrl, fileUrl);
             const firmwareString = new Uint8Array(firmwareBuffer);
 
             progressText.setAttribute('data-i18n', 'connChip'); 
@@ -743,6 +783,11 @@
                 progressText.innerText = t('err404UI');
                 progressFill.style.backgroundColor = "var(--danger)";
             }
+            else if (msg.includes("API_RATE_LIMIT")) {
+                logMsg(t('errRateLimit').replace(/<[^>]*>?/gm, '')); // Logghiamo senza i tag HTML
+                progressText.innerHTML = t('errRateLimit'); // Mostriamo il banner a video
+                progressFill.style.backgroundColor = "var(--danger)";
+            }            
             else if (msg.includes("LIB_NOT_LOADED")) {
                 logMsg(t('errLibLog'));
                 progressText.setAttribute('data-i18n', 'errLibUI'); 
