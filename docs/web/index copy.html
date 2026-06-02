@@ -193,7 +193,7 @@
             noReleaseFound: "No release found",
             apiError: "GitHub API Error",
             loadingDrivers: "Loading system drivers...",
-            dlStart: "Downloading firmware...",
+            dlStart: "Downloading firmware from GitHub...",
             dlComplete: "Download complete:",
             waitPort: "Waiting for COM port selection from browser...",
             connChip: "Connecting to chip...",
@@ -211,8 +211,8 @@
             errTimeoutLog2: "💡 FIX: Try again and make sure to hold down the BOOT button on the ESP32 until you see the percentage advancing.",
             errTimeoutUI: "Connection error (Use BOOT button).",
             errReset: "⚠️ Could not reboot automatically. Please press the RESET/EN button or re-plug the USB cable.",
-            err404Log: "❌ ERROR: File not found (404).",
-            err404UI: "Error: Firmware file missing.",
+            err404Log: "❌ ERROR: File not found on GitHub (404).",
+            err404UI: "Error: Firmware file missing from release.",
             errLibLog: "❌ ERROR: Failed to load esptool-js library.",
             errLibUI: "System Error. Check your internet or disable AdBlockers.",
             errNetFetchLog: "❌ ERROR: Connection lost during download.",
@@ -247,7 +247,7 @@
             noReleaseFound: "Nessuna release trovata",
             apiError: "Errore API GitHub",
             loadingDrivers: "Caricamento driver di sistema...",
-            dlStart: "Scaricamento firmware...",
+            dlStart: "Scaricamento firmware da GitHub...",
             dlComplete: "Download completato:",
             waitPort: "In attesa della selezione porta COM dal browser...",
             connChip: "Connessione al chip...",
@@ -265,8 +265,8 @@
             errTimeoutLog2: "💡 SOLUZIONE: Riprova e assicurati di tenere premuto il tasto BOOT sull'ESP32 finché non vedi avanzare la percentuale.",
             errTimeoutUI: "Errore di connessione (Usa tasto BOOT).",
             errReset: "⚠️ Impossibile riavviare in automatico. Premi il tasto RESET/EN o scollega e ricollega il cavo.",
-            err404Log: "❌ ERRORE: File non trovato (404).",
-            err404UI: "Errore: File firmware mancante.",
+            err404Log: "❌ ERRORE: File non trovato su GitHub (404).",
+            err404UI: "Errore: File firmware mancante nella release.",
             errLibLog: "❌ ERRORE: Impossibile caricare i driver di sistema (esptool-js).",
             errLibUI: "Errore di sistema. Controlla internet o disattiva AdBlock.",
             errNetFetchLog: "❌ ERRORE: Connessione interrotta durante il download.",
@@ -449,6 +449,7 @@
         
         allReleases.forEach(r => {
             const opt = document.createElement('option');
+            //opt.value = r.tag_name;
             opt.setAttribute('value', r.tag_name);
             opt.innerText = r.tag_name + (r.prerelease ? t('prerelease') : t('stable'));
             if (r.tag_name === targetTag) opt.selected = true;
@@ -490,8 +491,10 @@
         const boardImage = document.getElementById('boardImage');
 
         vSelect.addEventListener('change', (e) => {
+            //targetTag = e.target.value;
             targetTag = vSelect.options[vSelect.selectedIndex].value;
 
+            // 🔒 FIX: Sincronizzazione in tempo reale dell'URL
             const url = new URL(window.location);
             url.searchParams.set('tag', targetTag);
             window.history.replaceState({}, '', url);
@@ -606,14 +609,36 @@
         logArea.scrollTop = logArea.scrollHeight;
     }
 
-    // MAGIA CORS SCOMPARSA: Scarica il file usando l'URL relativo locale
-    async function downloadFirmware(fileUrl) {
-        logMsg(`${t('dlStart')} (${fileUrl})`);
+async function downloadFirmware(apiUrl, displayUrl) {
+        // Stampiamo nel log la URL classica/umana, mantenendo la vecchia logica visiva
+        logMsg(`${t('dlStart')} (${displayUrl})`); 
         
-        // BLINDATURA CACHE: Costringe il browser a scaricare SEMPRE il file reale dal server, 
-        // fondamentale se sovrascrivi una release esistente.
-        const response = await fetch(fileUrl, { cache: 'no-store' });
+        // Eseguiamo il fetch usando l'API di GitHub e la parola d'ordine per i binari
+        const response = await fetch(apiUrl, {
+            headers: {
+                "Accept": "application/octet-stream"
+            }
+        });
         
+        if (!response.ok) {
+            if (response.status === 404) throw new Error("404_FILE_NOT_FOUND");
+            else if (response.status === 403 || response.status === 429) throw new Error("API_RATE_LIMIT");
+            else throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const buffer = await response.arrayBuffer();
+        logMsg(`${t('dlComplete')} ${(buffer.byteLength / 1024).toFixed(1)} KB`);
+        return buffer;
+    }    
+    
+    /*
+    async function downloadFirmware(url) {
+        
+        //logMsg(t('dlStart'));
+        logMsg(`${t('dlStart')} (${url})`);
+
+        const response = await fetch(url);
+
         if (!response.ok) {
             if (response.status === 404) throw new Error("404_FILE_NOT_FOUND");
             else throw new Error(`HTTP ${response.status}`);
@@ -621,7 +646,8 @@
         const buffer = await response.arrayBuffer();
         logMsg(`${t('dlComplete')} ${(buffer.byteLength / 1024).toFixed(1)} KB`);
         return buffer;
-    }    
+    }
+    */
 
     async function startFlashing() {
         const allSelects = document.querySelectorAll('select');
@@ -633,16 +659,23 @@
 
         const fileName = buildFileName();
 
-        // Controllo validità: controlla nell'elenco API se il file esiste
+
+        // VECCHIA LOGICA: Mantenuta come da tua richiesta per riferimento e log
+        const fileUrl = `https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${targetTag}/${fileName}`;
+        
+        // NUOVA LOGICA API: Troviamo l'ID univoco del file dentro la release selezionata
         const releaseObj = allReleases.find(r => r.tag_name === targetTag);
-        if (!releaseObj || !currentAssets.includes(fileName)) {
+        const assetObj = releaseObj.assets.find(a => a.name === fileName);
+        
+        if (!assetObj) {
             alert(t('err404UI'));
             window.location.reload();
             return;
         }
         
-        // LA VERA POTENZA DELL'ARCHITETTURA: Percorso locale!
-        const fileUrl = `firmware/${targetTag}/${fileName}`;
+        // Costruiamo l'URL per scaricare tramite la porta di servizio API (che bypassa il CORS)
+        const apiUrl = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/assets/${assetObj.id}`;
+
 
         document.getElementById('flashBtn').disabled = true;
         const logArea = document.getElementById('log-area');
@@ -657,11 +690,13 @@
         progressText.removeAttribute('data-i18n'); 
         
         try {
+            // SCUDO W3C: Chiediamo la porta come primissima cosa per non far scadere il Token Utente!
             progressText.setAttribute('data-i18n', 'waitPort');
             progressText.innerText = t('waitPort');
             logMsg(t('waitPort'));
             const port = await navigator.serial.requestPort(); 
 
+            // Adesso possiamo gestire operazioni di rete lente
             if (!window.ESPLoader || !window.Transport) {
                 progressText.setAttribute('data-i18n', 'loadingDrivers');
                 progressText.innerText = t('loadingDrivers');
@@ -677,9 +712,8 @@
             
             progressText.setAttribute('data-i18n', 'dlStart'); 
             progressText.innerText = t('dlStart');
-            
-            // Scarica direttamente senza limiti API
-            const firmwareBuffer = await downloadFirmware(fileUrl);
+            //const firmwareBuffer = await downloadFirmware(fileUrl);
+            const firmwareBuffer = await downloadFirmware(apiUrl, fileUrl);
             const firmwareString = new Uint8Array(firmwareBuffer);
 
             progressText.setAttribute('data-i18n', 'connChip'); 
@@ -750,8 +784,8 @@
                 progressFill.style.backgroundColor = "var(--danger)";
             }
             else if (msg.includes("API_RATE_LIMIT")) {
-                logMsg(t('errRateLimit').replace(/<[^>]*>?/gm, '')); 
-                progressText.innerHTML = t('errRateLimit'); 
+                logMsg(t('errRateLimit').replace(/<[^>]*>?/gm, '')); // Logghiamo senza i tag HTML
+                progressText.innerHTML = t('errRateLimit'); // Mostriamo il banner a video
                 progressFill.style.backgroundColor = "var(--danger)";
             }            
             else if (msg.includes("LIB_NOT_LOADED")) {
