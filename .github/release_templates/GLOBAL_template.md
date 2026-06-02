@@ -49,6 +49,17 @@ This release is updated to commit **8b651a2** (April 19, 2026) of the original f
 
 ### INSTALLATION
 
+#### WEB FLASHER (Recommended for all users)
+The easiest, fastest, and safest way to install or update the firmware. It does not require installing any drivers or external software: it runs entirely within your browser.
+* **Requirements:** PC/Mac with Google Chrome, Microsoft Edge, or Opera.
+
+👉 **[LAUNCH OPENFIRE ESP32 WEB FLASHER](https://alessandro-satanassi.github.io/OpenFIRE-Firmware-ESP32/web/?tag=<TAG>&lang=en)**
+
+---
+
+#### *FOR ADVANCED USERS:*
+If your browser does not support the Web Flasher, or if you prefer to proceed via command line or external tools, you can download the specific files:
+
 #### *OPTION 1: Manual Installation (.bin Files)*
 This option is for those who wish to flash the firmware manually using the official [esptool](https://github.com/espressif/esptool) utility or the [NodeMCU PyFlasher](https://github.com/marcelstoer/nodemcu-pyflasher) graphical interface.
 
@@ -227,6 +238,17 @@ Questa release è aggiornata al commit **8b651a2** (19 aprile 2026) del firmware
 ---
 
 ### INSTALLAZIONE
+
+####  WEB FLASHER (Consigliato per qualsiasi utente)
+Il modo più semplice, veloce e sicuro per installare o aggiornare il firmware. Non richiede l'installazione di driver o software esterni: viene eseguito interamente dal tuo browser.
+* **Requisiti:** PC/Mac con Google Chrome, Microsoft Edge o Opera.
+
+👉 **[AVVIA OPENFIRE ESP32 WEB FLASHER](https://alessandro-satanassi.github.io/OpenFIRE-Firmware-ESP32/web/?tag=<TAG>&lang=it)**
+
+---
+
+#### *PER UTENTI ESPERTI:*
+Se il tuo browser non supporta il Web Flasher, o se preferisci procedere tramite riga di comando o tool esterni, puoi scaricare i file specifici:
 
 #### *OPZIONE 1: Installazione Manuale (File .bin)*
 Questa opzione è dedicata a chi vuole caricare il firmware manualmente utilizzando l'utility ufficiale [esptool](https://github.com/espressif/esptool) o l'interfaccia grafica [NodeMCU PyFlasher](https://github.com/marcelstoer/nodemcu-pyflasher).
