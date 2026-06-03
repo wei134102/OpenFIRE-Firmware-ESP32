@@ -493,58 +493,18 @@ jobs:
         with:
           path: ./all_binaries
 
-# 3. COPIA I FILE E GENERA IL MANIFEST.JSON
-      - name: Copy .bin files and Generate manifest.json
+      # 3. COPIA I FILE NEL REPO 2
+      - name: Copy ONLY .bin files to Web Repo
         run: |
-          export TARGET_DIR="web_repo/firmware/${TAG_NAME}"
-          export TAG_NAME
+          # Il percorso finale sarà: OpenFIRE-ESP32-WebFlasher / firmware / v6.2-Beta1 /
+          TARGET_DIR="web_repo/firmware/${TAG_NAME}"
           
           mkdir -p -- "$TARGET_DIR"
+          
           find ./all_binaries -name "*.bin" -type f -exec cp -- "{}" "$TARGET_DIR/" \;
           
-          # Script Python integrato per generare il manifest.json analizzando i nomi dei file
-          python3 -c "
-          import os, json
-          
-          target_dir = os.environ.get('TARGET_DIR')
-          tag_name = os.environ.get('TAG_NAME')
-          
-          files = sorted([f for f in os.listdir(target_dir) if f.endswith('.bin')])
-          
-          manifest = {
-              'version': tag_name,
-              'files': files,
-              'supported_boards': {
-                  'LIGHTGUN': [],
-                  'DONGLE': [],
-                  'PEDAL': []
-              }
-          }
-          
-          for f in files:
-              name = f.replace('.bin', '')
-              parts = name.split('-')
-              
-              if len(parts) >= 3:
-                  device = parts[1] # Estrae LIGHTGUN, DONGLE o PEDAL
-                  
-                  # Gestisce l'eccezione del file NoFS per le Lightgun
-                  if device == 'LIGHTGUN' and parts[2] == 'NoFS':
-                      board = '-'.join(parts[3:])
-                  else:
-                      board = '-'.join(parts[2:])
-                  
-                  # Aggiunge la board alla lista se non è già presente
-                  if device in manifest['supported_boards'] and board not in manifest['supported_boards'][device]:
-                      manifest['supported_boards'][device].append(board)
-                      
-          with open(os.path.join(target_dir, 'manifest.json'), 'w') as out:
-              json.dump(manifest, out, indent=2)
-          "
-          
-          echo "File binari e manifest.json pronti per il trasferimento:"
+          echo "File binari pronti per il trasferimento:"
           ls -lh -- "$TARGET_DIR"
-          cat "$TARGET_DIR/manifest.json"
 
       # 4. TRASFERIMENTO SUL SERVER (SISTEMA BLINDATO)
       - name: Commit and Push to Web Flasher Repo
