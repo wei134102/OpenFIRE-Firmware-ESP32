@@ -78,9 +78,20 @@ Here are the pinouts of the various boards for use as a Dongle receiver:
 
 ## 💻 Firmware Installation and Flashing
 
+#### WEB FLASHER (Recommended for all users)
+The easiest, fastest, and safest way to install or update the firmware. It does not require installing any drivers or external software: it runs entirely within your browser.
+* **Requirements:** PC/Mac with Google Chrome, Microsoft Edge, or Opera.
+
+👉 **[LAUNCH OPENFIRE ESP32 WEB FLASHER](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?lang=en)**
+
+---
+
+#### *FOR ADVANCED USERS:*
+If your browser does not support the Web Flasher, or if you prefer to proceed via command line or external tools, you can download and install the specific files.
+
 The firmware loading process (flashing) is identical to the one for the Lightgun. 
 
-### Simplified Procedure with Script (Recommended)
+### Simplified Procedure with Script
 This is the fastest method and does not require the installation of additional software on the computer.
 
 1. Go to the **[Releases](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases)** page.
@@ -204,9 +215,20 @@ Ecco i pinout delle varie schede per l'utilizzo come ricevitore Dongle:
 
 ## 💻 Installazione e Flashing del Firmware
 
+####  WEB FLASHER (Consigliato per qualsiasi utente)
+Il modo più semplice, veloce e sicuro per installare o aggiornare il firmware. Non richiede l'installazione di driver o software esterni: viene eseguito interamente dal tuo browser.
+* **Requisiti:** PC/Mac con Google Chrome, Microsoft Edge o Opera.
+
+👉 **[AVVIA OPENFIRE ESP32 WEB FLASHER](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?lang=it)**
+
+---
+
+#### *PER UTENTI ESPERTI:*
+Se il tuo browser non supporta il Web Flasher, o se preferisci procedere tramite riga di comando o tool esterni, puoi scaricare ed installare i file specifici.
+
 Il processo di caricamento del firmware (flashing) è identico a quello previsto per la Lightgun. 
 
-### Procedura Semplificata con Script (Consigliata)
+### Procedura Semplificata con Script
 Questo è il metodo più veloce e non richiede l'installazione di software aggiuntivi sul computer.
 
 1. Vai alla pagina delle **[Releases](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases)**.
