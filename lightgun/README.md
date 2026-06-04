@@ -102,11 +102,22 @@ Refer to the following images for the default pinouts of the two recommended boa
 
 ## 💻 Firmware Installation and Flashing
 
+#### WEB FLASHER (Recommended for all users)
+The easiest, fastest, and safest way to install or update the firmware. It does not require installing any drivers or external software: it runs entirely within your browser.
+* **Requirements:** PC/Mac with Google Chrome, Microsoft Edge, or Opera.
+
+👉 **[LAUNCH OPENFIRE ESP32 WEB FLASHER](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?lang=en)**
+
+---
+
+#### *FOR ADVANCED USERS:*
+If your browser does not support the Web Flasher, or if you prefer to proceed via command line or external tools, you can download and install the specific files.
+
 Unlike RP2040 microcontrollers (which use `.UF2` file drag-and-drop), the ESP32-S3 requires flashing binary (`.bin`) files via serial communication. 
 
 To make this process as easy as possible, you will find ready-made packages for each supported board on the **[Releases](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases)** page.
 
-### Method 1: Simplified Script Procedure (Recommended)
+### Method 1: Simplified Script Procedure
 This is the fastest method and does not require installing additional software. Packages are available for **Windows, Linux, and MacOS**.
 
 1. Go to the **[Releases](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases)** page and download the "Simplified Procedure" ZIP for your board (e.g., `DevKitC-1` or `PICO`).
@@ -301,11 +312,22 @@ Fai riferimento alle seguenti immagini per i pinout predefiniti delle due schede
 
 ## 💻 Installazione e Flashing del Firmware
 
+####  WEB FLASHER (Consigliato per qualsiasi utente)
+Il modo più semplice, veloce e sicuro per installare o aggiornare il firmware. Non richiede l'installazione di driver o software esterni: viene eseguito interamente dal tuo browser.
+* **Requisiti:** PC/Mac con Google Chrome, Microsoft Edge o Opera.
+
+👉 **[AVVIA OPENFIRE ESP32 WEB FLASHER](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?lang=it)**
+
+---
+
+#### *PER UTENTI ESPERTI:*
+Se il tuo browser non supporta il Web Flasher, o se preferisci procedere tramite riga di comando o tool esterni, puoi scaricare ed installare i file specifici.
+
 A differenza dei microcontrollori RP2040 (che utilizzano il drag-and-drop di file `.UF2`), l'ESP32-S3 richiede il caricamento di file binari (`.bin`) tramite comunicazione seriale. 
 
 Per rendere questa operazione il più semplice possibile, nella pagina delle **[Releases](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases)** troverai pacchetti già pronti per ogni scheda supportata.
 
-### Metodo 1: Procedura Semplificata con Script (Consigliato)
+### Metodo 1: Procedura Semplificata con Script
 Questo è il metodo più veloce e non richiede l'installazione di software aggiuntivi. I pacchetti sono disponibili per **Windows, Linux e MacOS**.
 
 1. Vai alla pagina delle **[Releases](https://github.com/alessandro-satanassi/OpenFIRE-Firmware-ESP32/releases)** e scarica lo ZIP "Procedura Semplificata" relativo alla tua board (es. `DevKitC-1` o `PICO`).

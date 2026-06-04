@@ -19,6 +19,12 @@
   <a href="lightgun/README.md#english-version">🔫 Lightgun Module</a> &nbsp; | &nbsp; <a href="dongle/README.md#english-version">📶 Dongle Receiver</a> &nbsp; | &nbsp; <a href="pedal/README.md#english-version">🦶 Wireless Pedal</a>
 </p>
 
+<p align="center">
+  <a href="https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?lang=en">
+    <img src="https://img.shields.io/badge/🚀_LAUNCH_WEB_FLASHER-Easiest_way_to_install_firmware_from_browser-2ea44f?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Launch Web Flasher">
+  </a>
+</p>
+
 ---
 > 🛠️ **Hardware sponsored by [PCBWay](https://www.pcbway.com)**
 ---
@@ -94,6 +100,16 @@ The project is divided into three modular components, each with specific technic
 3. ***Wireless Pedal***
    An optional but essential accessory for certain cover shooter titles (e.g., Time Crisis). It communicates directly with the lightgun to send ultra-low latency input signals, eliminating the need for bulky wiring on the floor.
    Technical documentation: **[Pedal Folder](pedal/README.md#english-version)**
+
+## 💻 Quick Installation (Web Flasher)
+
+The easiest, fastest, and safest way to install or update the firmware for any module (Lightgun, Dongle, or Pedal) is using our unified Web Flasher. It requires no external drivers or software: everything runs directly within your browser.
+
+* **Requirements:** PC/Mac with Google Chrome, Microsoft Edge, or Opera.
+
+👉 **[LAUNCH OPENFIRE ESP32 WEB FLASHER](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?lang=en)**
+
+> **Note for advanced users:** If your browser does not support the Web Flasher, or if you prefer to proceed via command line or external tools, you can find the manual `.bin` flashing instructions in the technical documentation of each specific module (Lightgun, Dongle, or Pedal).
 
 ## Connectivity Management
 The firmware intelligently manages connection priorities:
@@ -204,6 +220,12 @@ In full compliance with the original license and the vision of the OpenFIRE crea
   <a href="lightgun/README.md#versione-italiana">🔫 Modulo Lightgun</a> &nbsp; | &nbsp; <a href="dongle/README.md#versione-italiana">📶 Ricevitore Dongle</a> &nbsp; | &nbsp; <a href="pedal/README.md#versione-italiana">🦶 Pedale Wireless</a>
 </p>
 
+<p align="center">
+  <a href="https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?lang=it">
+    <img src="https://img.shields.io/badge/🚀_AVVIA_WEB_FLASHER-Installazione_semplice_del_firmware_dal_browser-2ea44f?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Avvia Web Flasher">
+  </a>
+</p>
+
 ---
 > 🛠️ **Hardware sponsored by [PCBWay](https://www.pcbway.com)**
 ---
@@ -280,6 +302,16 @@ Il progetto si articola in tre componenti modulari, ognuno dei quali dispone di 
 3. ***Pedale Wireless***
    Un accessorio opzionale ma fondamentale per alcuni titoli cover shooter (es. Time Crisis). Comunica direttamente con la lightgun per inviare segnali di input a bassissima latenza, eliminando la necessità di cablaggi ingombranti sul pavimento.
    Documentazione tecnica: **[Cartella Pedal](pedal/README.md#versione-italiana)**
+
+## 💻 Installazione Rapida (Web Flasher)
+
+Il modo più semplice, veloce e sicuro per installare o aggiornare il firmware di qualsiasi modulo (Lightgun, Dongle o Pedale) è utilizzare il nostro Web Flasher unificato. Non richiede l'installazione di driver o software esterni: viene eseguito interamente dal tuo browser.
+
+* **Requisiti:** PC/Mac con Google Chrome, Microsoft Edge o Opera.
+
+👉 **[AVVIA OPENFIRE ESP32 WEB FLASHER](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?lang=it)**
+
+> **Nota per utenti esperti:** Se il tuo browser non supporta il Web Flasher, o se preferisci procedere tramite riga di comando o tool esterni, puoi trovare le istruzioni per il flashing manuale dei file `.bin` all'interno della documentazione tecnica di ogni specifico modulo (Lightgun, Dongle o Pedale).
 
 ## Gestione della Connettività
 Il firmware gestisce in modo intelligente la priorità delle connessioni:
