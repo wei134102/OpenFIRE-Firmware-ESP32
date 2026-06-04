@@ -171,6 +171,7 @@ We chose PCBWay for their:
 
 ## 🙏 Credits & Acknowledgments
 
+### Original OpenFIRE Core Team & Contributors
 A special thanks to the original authors and the OpenFIRE community, without whom this port and the ecosystem expansions (Dongle and Pedal) would never have existed:
 * **That One Seong** (`SeongsSeongs@gmail.com`): The lead developer and coordinator of the OpenFIRE project.
 * **Samuel Ballantyne (Samco)** (`samuelballantyne@hotmail.com`): For his original SAMCO project, the gorgeous OpenFIRE branding, and perspective-based tracking system.
@@ -178,6 +179,10 @@ A special thanks to the original authors and the OpenFIRE community, without who
 * **Odwalla-J, mrkylegp, RG2020 & lemmingDev**: For prerelease consultation, bug testing, and feedback.
 * **The IR-GUN4ALL testers**: For their early feedback and feature requests. This wouldn't have happened without you lot!
 * **Chris Young**: For his TinyUSB compatible library (now part of `TinyUSB_Devices`).
+
+### ESP32 Port Contributors
+A massive thank you to those who personally supported the development and testing of this specific ESP32 port:
+* **Reverse Cosmos**: For his invaluable help and time spent testing the OpenFIRE ESP32 firmware.
 
 ## ⚖️ License, Commercial Use, and Forks
 
@@ -373,14 +378,18 @@ Abbiamo scelto PCBWay per:
 
 ## 🙏 Crediti e Ringraziamenti
 
+### Team Originale e Contributori di OpenFIRE
 Un ringraziamento speciale agli autori originali e alla community del progetto OpenFIRE, senza i quali questo porting e le espansioni dell'ecosistema (Dongle e Pedale) non sarebbero mai esistiti:
-
 * **That One Seong** (`SeongsSeongs@gmail.com`): Lo sviluppatore principale e coordinatore del progetto OpenFIRE.
 * **Samuel Ballantyne (Samco)** (`samuelballantyne@hotmail.com`): Per il suo progetto originale SAMCO, il magnifico branding OpenFIRE e il sistema di tracciamento basato sulla prospettiva.
 * **Mike Lynch (Prow7)**: Per il suo fork migliorato di SAMCO, che ha fornito le basi per la modalità pausa e per i sottosistemi di salvataggio.
 * **Odwalla-J, mrkylegp, RG2020 & lemmingDev**: Per la consulenza tecnica in fase di pre-release, la ricerca dei bug e i preziosi feedback.
 * **Tutti i tester di IR-GUN4ALL**: Per i feedback iniziali e le richieste di nuove funzionalità. Tutto questo non sarebbe successo senza di voi!
 * **Chris Young**: Per la sua libreria compatibile TinyUSB (ora parte di `TinyUSB_Devices`).
+
+### Contributori al Porting per ESP32
+Un enorme grazie a chi ha supportato personalmente lo sviluppo e i test di questo specifico porting per ESP32:
+* **Reverse Cosmos**: Per il prezioso aiuto e il tempo dedicato ai test del firmware OpenFIRE ESP32.
 
 ## ⚖️ Licenza, Uso Commerciale e Fork
 
