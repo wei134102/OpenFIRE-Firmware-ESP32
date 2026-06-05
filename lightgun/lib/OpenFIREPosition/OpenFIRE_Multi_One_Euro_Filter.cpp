@@ -34,6 +34,131 @@ OpenFIRE_One_Euro_Multi::OpenFIRE_One_Euro_Multi() {
 }
 
 void OpenFIRE_One_Euro_Multi::process(int* x, int* y) {
+    // Calcolo del Delta-Time (dt) tramite il micro-clock dell'ESP32.
+    // L'aritmetica unsigned assorbe nativamente l'overflow dopo i 71 minuti.
+    unsigned long currentMicros = micros();
+    float dt = ((float)(currentMicros - lastMicros)) * 0.000001f; 
+    lastMicros = currentMicros;
+
+    // Protezione base per divisioni per zero o blocchi anomali
+    if (dt <= 0.0f) dt = 0.005f; 
+
+    // Cold start dinamico: se passa troppo tempo (es. perdita temporanea del tracking),
+    // forziamo il reset per evitare di calcolare velocità inerziali spaziali.
+    if (dt > 0.1f) {
+        initialized = false;
+    }
+
+    // Inizializzazione al primissimo frame valido
+    if (!initialized) {
+        for (int i = 0; i < 4; i++) {
+            states[i].x_prev = states[i].x_hat = (float)x[i];
+            states[i].y_prev = states[i].y_hat = (float)y[i];
+            states[i].vel_x_hat = states[i].vel_y_hat = 0.0f;
+            x[i] = (int)roundf(states[i].x_hat);
+            y[i] = (int)roundf(states[i].y_hat);
+        }
+        initialized = true;
+        return;
+    }
+
+    const float dt_two_pi = dt * OEF_TWO_PI;
+    
+    // --- GESTIONE ASIMMETRICA DELLA DERIVATA ---
+    // Calcoliamo i due estremi di reazione usando i parametri definiti nell'header.
+    // a_d_base: Fluido. Assorbe i microscatti hardware durante il panning lento.
+    // a_d_snap: Brutale. Allinea la velocità calcolata in pochi millisecondi.
+    const float a_d_base = fast_alpha(d_cutoff_base, dt_two_pi);  
+    const float a_d_snap = fast_alpha(d_cutoff_snap, dt_two_pi); 
+    
+    const float inv_dt = 1.0f / dt; 
+
+    // Core Loop: processiamo i 4 LED in parallelo mantenendo separate le inerzie
+    for (int i = 0; i < 4; i++) {
+        
+        // --- 1. LOGICA SPAZIALE (CURVA QUADRATICA E-SPORTS) ---
+        // Utilizziamo i reciproci del centro schermo pre-calcolati al boot per 
+        // trasformare pesanti divisioni in moltiplicazioni ultra-veloci.
+        float distH = fabsf((float)x[i] - ((float)MouseMaxX * 0.5f)) * inv_center_x;
+        float distV = fabsf((float)y[i] - ((float)MouseMaxY * 0.5f)) * inv_center_y;
+        
+        // Calcolo distanza basato sul quadrato (evita costosi cicli di sqrtf())
+        float maxDistSq = (distH * distH) + (distV * distV);
+        float edge_attenuation = 1.0f - (maxDistSq * 1.5f);
+        
+        // Sicurezza in caso di coordinate negative o fortemente fuori schermo
+        if (edge_attenuation < 0.20f) edge_attenuation = 0.20f; 
+        float adaptiveBeta = beta_base * edge_attenuation;
+
+        // --- 2. FILTRAGGIO ASSE X ---
+        float dx = ((float)x[i] - states[i].x_prev) * inv_dt;
+        
+        // Switch dinamico della derivata (Asse X)
+        // Innesca la reattività fulminea se la variazione istantanea supera il Punto di Rottura
+        float a_d_current_x = a_d_base;
+        if (fabsf(dx - states[i].vel_x_hat) > snap_threshold) {
+            a_d_current_x = a_d_snap; 
+        }
+        
+        states[i].vel_x_hat += a_d_current_x * (dx - states[i].vel_x_hat);
+        
+        float cutoff_x = min_cutoff + adaptiveBeta * fabsf(states[i].vel_x_hat);
+        if (cutoff_x > max_cutoff) cutoff_x = max_cutoff; 
+        
+        float a_x = fast_alpha(cutoff_x, dt_two_pi);
+        
+        states[i].x_hat += a_x * ((float)x[i] - states[i].x_hat);
+        states[i].x_prev = (float)x[i];
+
+        // --- 3. FILTRAGGIO ASSE Y ---
+        float dy = ((float)y[i] - states[i].y_prev) * inv_dt;
+        
+        // Switch dinamico della derivata (Asse Y)
+        // L'indipendenza dall'asse X garantisce stabilità verticale nei flick orizzontali
+        float a_d_current_y = a_d_base;
+        if (fabsf(dy - states[i].vel_y_hat) > snap_threshold) {
+            a_d_current_y = a_d_snap; 
+        }
+        
+        states[i].vel_y_hat += a_d_current_y * (dy - states[i].vel_y_hat);
+        
+        float cutoff_y = min_cutoff + adaptiveBeta * fabsf(states[i].vel_y_hat);
+        if (cutoff_y > max_cutoff) cutoff_y = max_cutoff;
+        
+        float a_y = fast_alpha(cutoff_y, dt_two_pi);
+        
+        states[i].y_hat += a_y * ((float)y[i] - states[i].y_hat);
+        states[i].y_prev = (float)y[i];
+
+        // --- 4. MICRO-SNAP (TAGLIO DELLA CODA ASINTOTICA BLINDATO) ---
+        // Interviene esclusivamente al Dead Stop assoluto: la telecamera non rileva 
+        // alcuno spostamento fisico dal frame precedente (dx/dy == 0) e il target 
+        // è ormai a meno di mezzo pixel di distanza.
+        if (dx == 0.0f && fabsf((float)x[i] - states[i].x_hat) < 0.5f) {
+            states[i].x_hat = (float)x[i];
+        }
+        if (dy == 0.0f && fabsf((float)y[i] - states[i].y_hat) < 0.5f) {
+            states[i].y_hat = (float)y[i];
+        }
+
+        // --- 5. SAFETY NET HARDWARE ---
+        // Protezione contro Not-a-Number (NaN) derivanti da divisioni corrotte.
+        // Forza le coordinate attuali per prevenire il blocco completo del tracciamento.
+        if (isnan(states[i].x_hat) || isnan(states[i].y_hat)) {
+            states[i].x_hat = (float)x[i];
+            states[i].y_hat = (float)y[i];
+            states[i].vel_x_hat = 0.0f;
+            states[i].vel_y_hat = 0.0f;
+        }
+
+        // Conversione finale nel dominio intero in-place per il protocollo HID del mouse
+        x[i] = (int)roundf(states[i].x_hat);
+        y[i] = (int)roundf(states[i].y_hat);
+    }
+}
+
+#ifdef COMMENTO
+void OpenFIRE_One_Euro_Multi::process(int* x, int* y) {
     unsigned long currentMicros = micros();
     float dt = ((float)(currentMicros - lastMicros)) * 0.000001f; 
     lastMicros = currentMicros;
@@ -96,6 +221,7 @@ void OpenFIRE_One_Euro_Multi::process(int* x, int* y) {
         states[i].y_hat += a_y * ((float)y[i] - states[i].y_hat);
         states[i].y_prev = (float)y[i];
 
+        #ifdef COMMENTO
         // --- 4. MICRO-SNAP (TAGLIO DELLA CODA ASINTOTICA) ---
         // Elimina l'asintoto infinito causato dal min_cutoff estremo (0.02f).
         // Se la distanza residua è < 0.5 pixel e la velocità è quasi nulla,
@@ -105,6 +231,18 @@ void OpenFIRE_One_Euro_Multi::process(int* x, int* y) {
             states[i].x_hat = (float)x[i];
         }
         if (fabsf((float)y[i] - states[i].y_hat) < 0.5f && fabsf(states[i].vel_y_hat) < 5.0f) {
+            states[i].y_hat = (float)y[i];
+        }
+        #endif // COMMENTO
+
+        // --- 4. MICRO-SNAP (TAGLIO DELLA CODA ASINTOTICA) ---
+        // Condizione blindata: interveniamo SOLO se la telecamera ha smesso fisicamente
+        // di registrare variazioni (dx e dy grezzi sono zero) e siamo a meno di 0.5 pixel dal target.
+        // Questo impedisce categoricamente al Micro-Snap di "scattare" durante i movimenti lenti.
+        if (dx == 0.0f && fabsf((float)x[i] - states[i].x_hat) < 0.5f) {
+            states[i].x_hat = (float)x[i];
+        }
+        if (dy == 0.0f && fabsf((float)y[i] - states[i].y_hat) < 0.5f) {
             states[i].y_hat = (float)y[i];
         }
 
@@ -120,6 +258,7 @@ void OpenFIRE_One_Euro_Multi::process(int* x, int* y) {
         y[i] = (int)roundf(states[i].y_hat);
     }
 }
+#endif // COMMENTO
 
 #ifdef COMMENTO
 void OpenFIRE_One_Euro_Multi::process(int* x, int* y) {
