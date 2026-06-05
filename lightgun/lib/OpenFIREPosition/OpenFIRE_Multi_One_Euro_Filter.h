@@ -39,13 +39,15 @@ private:
     float inv_center_x;
     float inv_center_y;
 
+
+    #ifdef COMMENTO
     // --- PARAMETRI DI TUNING ---
     // min_cutoff: La "lentezza" del mirino quando l'utente si muove pochissimo (jitter/tremore). 
     // Valori bassi (1.0f) aumentano la stabilità ma inducono latenza "viscosa".
     ///////////////////////const float min_cutoff = 1.0f; 
     // La "lentezza" del mirino quando l'utente si muove pochissimo.
     // Abbassalo per distruggere il jitter da fermo.
-    const float min_cutoff = 0.02f; //0.03f; //0.05f; //0.01f; //0.05f; // 0.1f; // Parti da 0.1f (originale era 1.0f)
+    const float min_cutoff = 0.2f; // 0.02f; //0.03f; //0.05f; //0.01f; //0.05f; // 0.1f; // Parti da 0.1f (originale era 1.0f)
     
     // d_cutoff: Reattività del derivato (velocità). 
     // Filtra il "rumore" dal calcolo della velocità stessa prima di usarla per la correzione.
@@ -54,7 +56,7 @@ private:
     ///////const float d_cutoff = 15.0f; // Originale era 10.0f
     // Reattività del derivato (velocità).
     // Abbassalo se il tremore della mano "inganna" il filtro facendogli credere che ti stai muovendo.
-    const float d_cutoff = 10.0f; //8.0f; //5.0f; //3.0f; // Parti da 5.0f (originale era 10.0f)
+    const float d_cutoff = 2.5f; // 10.0f; //8.0f; //5.0f; //3.0f; // Parti da 5.0f (originale era 10.0f)
     
     // max_cutoff: Il limite di banda passante superiore. 
     // Previene reazioni esagerate quando l'arma si sposta violentemente.
@@ -66,8 +68,43 @@ private:
     /////////////////////////const float beta_base = (0.011f * (float)CamResX) / (float)MouseResX;
     // Aggiungiamo un moltiplicatore di reattività (Tuning Parameter).
     // Valori consigliati: da 2.0f a 5.0f. Più è alto, meno lag c'è nei movimenti veloci.
-    const float beta_multiplier = 4.0f; //3.5f; //4.0f; //2.0f; //3.0f; // alzare a 4 o 5 se necessario
+    const float beta_multiplier = 2.5f; //3.5f; //4.0f; //2.0f; //3.0f; // alzare a 4 o 5 se necessario
     const float beta_base = ((0.011f * (float)CamResX) / (float)MouseResX) * beta_multiplier;
+    #endif // COMMENTO
+    
+    // ==========================================
+    // --- PARAMETRI DI TUNING E-SPORTS ---
+
+    // min_cutoff: La "lentezza" del mirino quando ti muovi pochissimo.
+    // 0.2f elimina l'effetto "fango" e garantisce tracciamento 1:1 nei panning lenti.
+    const float min_cutoff = 0.2f; 
+    
+    // --- GESTIONE ASIMMETRICA DELLA VELOCITÀ ---
+    // d_cutoff_base: Reattività per i movimenti di precisione.
+    // Basso (1.0f) per spalmare gli scalini della telecamera in un'onda fluida.
+    const float d_cutoff_base = 1.0f; 
+    
+    // d_cutoff_snap: Reattività per scatti violenti e frenate.
+    // Altissimo (25.0f) per abbattere l'inerzia e allineare le derivate in pochi millisecondi.
+    const float d_cutoff_snap = 25.0f; 
+    
+    // snap_threshold: Il "Punto di Rottura" (in pixel/sec). 
+    // Superata questa variazione (es. un flick shot), il filtro passa alla modalità brutale.
+    const float snap_threshold = 1000.0f;
+
+    // max_cutoff: Il limite di banda passante superiore. 
+    // Previene reazioni esagerate o divisioni per zero.
+    const float max_cutoff = 30.0f; 
+    
+    // beta_multiplier: Moltiplicatore di reattività spaziale.
+    // 2.5f apre il filtro a sufficienza per azzerare il lag, ma senza causare 
+    // pattinamenti elastici a fine corsa.
+    const float beta_multiplier = 2.5f; 
+    const float beta_base = ((0.011f * (float)CamResX) / (float)MouseResX) * beta_multiplier;
+
+
+    // ==========================================
+
 
     const float OEF_TWO_PI = 6.28318530718f;
 
