@@ -3,7 +3,7 @@
  * @brief Pause menu text for OLED display (English / Chinese).
  *
  * Enable Chinese with build flag: -D OLED_MENU_ZH
- * Requires USE_LOVYAN_GFX + fonts/efontCN_12 (Adafruit_GFX path falls back to English).
+ * Uses compact 12x12 glyphs in OpenFIREdisplay_zh_glyphs.h (~12KB, 4MB-safe).
  */
 #ifndef _OPENFIREDISPLAY_I18N_H_
 #define _OPENFIREDISPLAY_I18N_H_
@@ -39,6 +39,8 @@
 #define PM_CURRENT_MOUSEKB  "当前:键鼠"
 #define PM_CURRENT_GAMEPAD  "当前:手柄"
 #define PM_CURRENT_MISTER   "当前:MiSTer"
+#define PM_LOW_BUTTON_ON    "低键:开"
+#define PM_LOW_BUTTON_OFF   "低键:关"
 
 #else
 
@@ -71,6 +73,8 @@
 #define PM_CURRENT_MOUSEKB  " Current: Mouse/KB "
 #define PM_CURRENT_GAMEPAD  " Current: Gamepad "
 #define PM_CURRENT_MISTER   " Current: MiSTer "
+#define PM_LOW_BUTTON_ON    " Low Button: ON "
+#define PM_LOW_BUTTON_OFF   " Low Button: OFF "
 
 #endif // OLED_MENU_ZH
 

@@ -38,20 +38,84 @@
 #include "OpenFIREPlayTimer.h"
 
 #if defined(OLED_MENU_ZH) && defined(USE_LOVYAN_GFX)
-  #include <lgfx/v1/lgfx_fonts.hpp>
+  #include "OpenFIREdisplay_zh_glyphs.h"
 #endif
 
 namespace {
 
 #if defined(OLED_MENU_ZH) && defined(USE_LOVYAN_GFX)
-static inline void pauseMenuBeginZh(LGFX_SSD1306 *d)
+static const uint8_t *lookupZhGlyph(const char *utf8, size_t &consumed)
 {
-    d->setFont(&fonts::efontCN_12);
+    if(utf8 == nullptr || *utf8 == '\0') {
+        consumed = 0;
+        return nullptr;
+    }
+
+    for(unsigned i = 0; i < ZH_GLYPH_COUNT; ++i) {
+        const ZhGlyphEntry &entry = kZhGlyphs[i];
+        if(entry.key_len == 0) {
+            continue;
+        }
+        bool match = true;
+        for(uint8_t j = 0; j < entry.key_len; ++j) {
+            if((uint8_t)utf8[j] != entry.key[j]) {
+                match = false;
+                break;
+            }
+        }
+        if(match) {
+            consumed = entry.key_len;
+            return entry.data;
+        }
+    }
+
+    consumed = 1;
+    return nullptr;
 }
 
-static inline void pauseMenuEndZh(LGFX_SSD1306 *d)
+static int pauseMenuTextWidth(const char *text)
 {
-    d->setFont(nullptr);
+    int width = 0;
+    const char *p = text;
+    while(p != nullptr && *p != '\0') {
+        size_t consumed = 0;
+        if(lookupZhGlyph(p, consumed) != nullptr) {
+            width += ZH_GLYPH_W;
+        } else {
+            width += 6;
+            consumed = 1;
+        }
+        p += consumed;
+    }
+    return width;
+}
+
+static void pauseMenuPrintZh(LGFX_SSD1306 *disp, int x, int y, const char *text, uint16_t fg, uint16_t bg)
+{
+    const int textWidth = pauseMenuTextWidth(text);
+    if(bg != BLACK) {
+        disp->fillRect(x, y, textWidth, ZH_GLYPH_H, bg);
+    }
+
+    int cx = x;
+    const char *p = text;
+    while(p != nullptr && *p != '\0') {
+        size_t consumed = 0;
+        const uint8_t *glyph = lookupZhGlyph(p, consumed);
+        if(glyph != nullptr) {
+            disp->drawBitmap(cx, y, glyph, ZH_GLYPH_W, ZH_GLYPH_H, fg);
+            cx += ZH_GLYPH_W;
+        } else {
+            disp->setFont(nullptr);
+            disp->setTextSize(1);
+            disp->setTextColor(fg, bg);
+            disp->setCursor(cx, y + 2);
+            disp->write((uint8_t)*p);
+            cx += 6;
+            consumed = 1;
+        }
+        p += consumed;
+    }
 }
 #endif
 
@@ -66,15 +130,13 @@ static void pauseMenuPrint(
     if(!disp || !text) {
         return;
     }
+#if defined(OLED_MENU_ZH) && defined(USE_LOVYAN_GFX)
+    pauseMenuPrintZh(disp, x, y, text, fg, bg);
+#else
     disp->setTextSize(1);
     disp->setTextColor(fg, bg);
     disp->setCursor(x, y);
-#if defined(OLED_MENU_ZH) && defined(USE_LOVYAN_GFX)
-    pauseMenuBeginZh((LGFX_SSD1306 *)disp);
-#endif
     disp->print(text);
-#if defined(OLED_MENU_ZH) && defined(USE_LOVYAN_GFX)
-    pauseMenuEndZh((LGFX_SSD1306 *)disp);
 #endif
 }
 
@@ -1074,17 +1136,9 @@ void ExtDisplay::PauseListUpdate(const int &selection)
             } else if(OF_Prefs::pins[OF_Const::rumblePin] >= 0 && OF_Prefs::pins[OF_Const::rumbleSwitch] == -1) {
               pauseMenuPrint(display, 0, 25, PM_RUMBLE_TOGGLE, WHITE, BLACK);
             } else if(OF_Prefs::toggles[OF_Const::lowButtonsMode]) {
-              #ifdef OLED_MENU_ZH
-              pauseMenuPrint(display, 0, 25, "低键:开", WHITE, BLACK);
-              #else
-              pauseMenuPrint(display, 0, 25, " Low Button: ON ", WHITE, BLACK);
-              #endif
+              pauseMenuPrint(display, 0, 25, PM_LOW_BUTTON_ON, WHITE, BLACK);
             } else {
-              #ifdef OLED_MENU_ZH
-              pauseMenuPrint(display, 0, 25, "低键:关", WHITE, BLACK);
-              #else
-              pauseMenuPrint(display, 0, 25, " Low Button: OFF ", WHITE, BLACK);
-              #endif
+              pauseMenuPrint(display, 0, 25, PM_LOW_BUTTON_OFF, WHITE, BLACK);
             }
             pauseMenuPrint(display, 0, 36, PM_MODE_CHANGE, BLACK, WHITE);
             if(FW_Common::OLED.mister) {
