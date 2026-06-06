@@ -88,9 +88,19 @@ private:
     // Altissimo (25.0f) per abbattere l'inerzia e allineare le derivate in pochi millisecondi.
     const float d_cutoff_snap = 25.0f; 
     
+    /*
     // snap_threshold: Il "Punto di Rottura" (in pixel/sec). 
     // Superata questa variazione (es. un flick shot), il filtro passa alla modalità brutale.
     const float snap_threshold = 1000.0f;
+    */
+
+    // snap_base: La soglia di scatto al CENTRO dello schermo (sensibilità massima).
+    const float snap_base = 1000.0f;
+
+    // snap_edge_multiplier: Quanta "resistenza" aggiungere quando si mira ai BORDI.
+    // Con 2000.0f, la soglia agli angoli arriverà a 2600.0f. Richiederà uno strappo 
+    // intenzionale per innescare lo scatto, ignorando i tremori ottici del sensore.
+    const float snap_edge_multiplier = 2000.0f;
 
     // max_cutoff: Il limite di banda passante superiore. 
     // Previene reazioni esagerate o divisioni per zero.
