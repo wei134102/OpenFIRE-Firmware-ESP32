@@ -19,6 +19,7 @@
 #define SSD1306_NO_SPLASH
 
 #include <Arduino.h>
+#include <cstdarg>
 
 #ifdef USE_LOVYAN_GFX
   // nulla ???
@@ -138,6 +139,74 @@ static void pauseMenuPrint(
     disp->setCursor(x, y);
     disp->print(text);
 #endif
+}
+
+static void pauseMenuPrintf(
+    #ifdef USE_LOVYAN_GFX
+    LGFX_SSD1306 *disp,
+    #else
+    Adafruit_SSD1306 *disp,
+    #endif
+    int x, int y, uint16_t fg, uint16_t bg, const char *fmt, ...)
+{
+    if(!disp || !fmt) {
+        return;
+    }
+    char buf[56];
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, args);
+    va_end(args);
+    pauseMenuPrint(disp, x, y, buf, fg, bg);
+}
+
+static const char *pmOnOff(bool on)
+{
+    return on ? PM_ON : PM_OFF;
+}
+
+static const char *pmLayoutStr(uint8_t layout)
+{
+    return (layout == OF_Const::layoutDiamond) ? PM_LAYOUT_DIAMOND : PM_LAYOUT_SQUARE;
+}
+
+static const char *pmAnalogModeStr(uint8_t mode)
+{
+    switch(mode) {
+        case OF_Const::analogModeDpad:
+            return PM_MODE_DPAD;
+        case OF_Const::analogModeKeys:
+            return PM_MODE_KEYS;
+        default:
+            return PM_MODE_STICK;
+    }
+}
+
+static const char *pmAnalogModeStrAlt(uint8_t mode)
+{
+    switch(mode) {
+        case OF_Const::analogModeDpad:
+            return PM_MODE_DPAD;
+        case OF_Const::analogModeKeys:
+            return PM_MODE_KEYS_ALT;
+        default:
+            return PM_MODE_STICK;
+    }
+}
+
+static const char *pmAxisSignStr(bool unsignedMode)
+{
+    return unsignedMode ? PM_AXIS_UNSIGNED : PM_AXIS_SIGNED;
+}
+
+static const char *pmInvertStr(bool inv)
+{
+    return inv ? PM_INVERTED : PM_NORMAL;
+}
+
+static const char *pmInvertShortStr(bool inv)
+{
+    return inv ? PM_INV_SHORT : PM_NORM_SHORT;
 }
 
 } // namespace
@@ -724,297 +793,174 @@ void ExtDisplay::PauseListUpdate(const int &selection)
             break;
           case ScreenPause_Rumble:
             #ifdef OLED_091_INCH
-            // 0.91寸屏幕：只显示当前选中的项目
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 20);
             if(OF_Prefs::pins[OF_Const::rumblePin] >= 0 && OF_Prefs::pins[OF_Const::rumbleSwitch] == -1) {
-              display->println(" Rumble Toggle ");
+              pauseMenuPrint(display, 0, 20, PM_RUMBLE_TOGGLE, BLACK, WHITE);
             } else if(OF_Prefs::pins[OF_Const::solenoidPin] >= 0 && OF_Prefs::pins[OF_Const::solenoidSwitch] == -1) {
-              display->println(" Solenoid Toggle ");
+              pauseMenuPrint(display, 0, 20, PM_SOLENOID_TOGGLE, BLACK, WHITE);
             } else {
-              display->println(" Send Escape Keypress");
+              pauseMenuPrint(display, 0, 20, PM_ESCAPE_KEY, BLACK, WHITE);
             }
             #else
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 25);
-            display->println(" Save Gun Settings ");
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 36);
+            pauseMenuPrint(display, 0, 25, PM_SAVE_SETTINGS, WHITE, BLACK);
             if(OF_Prefs::pins[OF_Const::rumblePin] >= 0 && OF_Prefs::pins[OF_Const::rumbleSwitch] == -1) {
-              display->println(" Rumble Toggle ");
-              display->setTextColor(WHITE, BLACK);
-              display->setCursor(0, 47);
+              pauseMenuPrint(display, 0, 36, PM_RUMBLE_TOGGLE, BLACK, WHITE);
               if(OF_Prefs::pins[OF_Const::solenoidPin] >= 0 && OF_Prefs::pins[OF_Const::solenoidSwitch] == -1) {
-                display->println(" Solenoid Toggle ");
+                pauseMenuPrint(display, 0, 47, PM_SOLENOID_TOGGLE, WHITE, BLACK);
               } else {
-                display->println(" Send Escape Keypress");
+                pauseMenuPrint(display, 0, 47, PM_ESCAPE_KEY, WHITE, BLACK);
               }
             } else if(OF_Prefs::pins[OF_Const::solenoidPin] >= 0 && OF_Prefs::pins[OF_Const::solenoidSwitch] == -1) {
-              display->println(" Solenoid Toggle ");
-              display->setTextColor(WHITE, BLACK);
-              display->setCursor(0, 47);
-              display->println(" Send Escape Keypress");
+              pauseMenuPrint(display, 0, 36, PM_SOLENOID_TOGGLE, BLACK, WHITE);
+              pauseMenuPrint(display, 0, 47, PM_ESCAPE_KEY, WHITE, BLACK);
             } else {
-              display->println(" Send Escape Keypress");
-              display->setTextColor(WHITE, BLACK);
-              display->setCursor(0, 47);
-              display->println(" Calibrate ");
+              pauseMenuPrint(display, 0, 36, PM_ESCAPE_KEY, BLACK, WHITE);
+              pauseMenuPrint(display, 0, 47, PM_CALIBRATE, WHITE, BLACK);
             }
             #endif
             break;
           case ScreenPause_Solenoid:
             #ifdef OLED_091_INCH
-            // 0.91寸屏幕：只显示当前选中的项目
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 20);
             if(OF_Prefs::pins[OF_Const::rumblePin] >= 0 && OF_Prefs::pins[OF_Const::rumbleSwitch] == -1) {
-              display->println(" Solenoid Toggle ");
+              pauseMenuPrint(display, 0, 20, PM_SOLENOID_TOGGLE, BLACK, WHITE);
             } else if(OF_Prefs::pins[OF_Const::solenoidPin] >= 0 && OF_Prefs::pins[OF_Const::solenoidSwitch] == -1) {
-              display->println(" Solenoid Toggle ");
+              pauseMenuPrint(display, 0, 20, PM_SOLENOID_TOGGLE, BLACK, WHITE);
             } else {
-              display->println(" Mode Change");
+              pauseMenuPrint(display, 0, 20, PM_MODE_CHANGE, BLACK, WHITE);
             }
             #else
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 25);
             if(OF_Prefs::pins[OF_Const::rumblePin] >= 0 && OF_Prefs::pins[OF_Const::rumbleSwitch] == -1) {
-              display->println(" Rumble Toggle ");
-              display->setTextColor(BLACK, WHITE);
-              display->setCursor(0, 36);
+              pauseMenuPrint(display, 0, 25, PM_RUMBLE_TOGGLE, WHITE, BLACK);
               if(OF_Prefs::pins[OF_Const::solenoidPin] >= 0 && OF_Prefs::pins[OF_Const::solenoidSwitch] == -1) {
-                display->println(" Solenoid Toggle ");
-                display->setTextColor(WHITE, BLACK);
-                display->setCursor(0, 47);
-                display->println(" Mode Change"); //wei134102 changed from "Send Escape Keypress"
+                pauseMenuPrint(display, 0, 36, PM_SOLENOID_TOGGLE, BLACK, WHITE);
+                pauseMenuPrint(display, 0, 47, PM_MODE_CHANGE, WHITE, BLACK);
               } else {
-                display->println(" Mode Change"); //wei134102 changed from "Send Escape Keypress "
-                display->setTextColor(WHITE, BLACK);
-                display->setCursor(0, 47);
-                display->println("Calibrate");
+                pauseMenuPrint(display, 0, 36, PM_MODE_CHANGE, BLACK, WHITE);
+                pauseMenuPrint(display, 0, 47, PM_CALIBRATE, WHITE, BLACK);
               }
             } else if(OF_Prefs::pins[OF_Const::solenoidPin] >= 0 && OF_Prefs::pins[OF_Const::solenoidSwitch] == -1) {
-              display->println(" Save Gun Settings");
-              display->setTextColor(BLACK, WHITE);
-              display->setCursor(0, 36);
-              display->println(" Solenoid Toggle ");
-              display->setTextColor(WHITE, BLACK);
-              display->setCursor(0, 47);
-              display->println(" Mode Change");//wei134102 changed from " Send Escape Keypress "
+              pauseMenuPrint(display, 0, 25, PM_SAVE_SETTINGS, WHITE, BLACK);
+              pauseMenuPrint(display, 0, 36, PM_SOLENOID_TOGGLE, BLACK, WHITE);
+              pauseMenuPrint(display, 0, 47, PM_MODE_CHANGE, WHITE, BLACK);
             } else {
-              display->println(" Mode Change");//wei134102 changed from " Send Escape Keypress "
-              display->setTextColor(BLACK, WHITE);
-              display->setCursor(0, 36);
-              display->println(" Calibrate ");
-              display->setTextColor(WHITE, BLACK);
-              display->setCursor(0, 47);
-              display->println(" Profile Select ");
+              pauseMenuPrint(display, 0, 25, PM_MODE_CHANGE, WHITE, BLACK);
+              pauseMenuPrint(display, 0, 36, PM_CALIBRATE, BLACK, WHITE);
+              pauseMenuPrint(display, 0, 47, PM_PROFILE_SELECT, WHITE, BLACK);
             }
             #endif
             break;
           case ScreenPause_AutofireToggle:
             #ifdef OLED_091_INCH
-            // 0.91寸屏幕：只显示当前选中的项目
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 20);
-            display->println(" Autofire Toggle ");
+            pauseMenuPrint(display, 0, 20, PM_AUTOFIRE_TOGGLE, BLACK, WHITE);
             #else
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 25);
-            display->println(" Autofire Toggle ");
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 36);
-            display->printf(" Autofire: %s ", OF_Prefs::toggles[OF_Const::autofire] ? "ON" : "OFF");
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 47);
-            display->println(" Send Escape Keypress ");
+            pauseMenuPrint(display, 0, 25, PM_AUTOFIRE_TOGGLE, WHITE, BLACK);
+            pauseMenuPrintf(display, 0, 36, BLACK, WHITE, PM_AUTOFIRE_FMT,
+                            pmOnOff(OF_Prefs::toggles[OF_Const::autofire]));
+            pauseMenuPrint(display, 0, 47, PM_ESCAPE_KEY, WHITE, BLACK);
             #endif
-            break;            
+            break;
 //wei13402 add start
           case ScreenPause_LowButtonToggle:
             #ifdef OLED_091_INCH
-            // 0.91寸屏幕：只显示当前选中的项目
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 20);
-            display->println(" Low Button Toggle ");
+            pauseMenuPrint(display, 0, 20, PM_LOW_BUTTON, BLACK, WHITE);
             #else
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 25);
-            display->println(" Low Button Toggle ");
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 36);
-            if(OF_Prefs::toggles[OF_Const::lowButtonsMode]) {
-              display->println(" Low Button: ON ");
-            } else {
-              display->println(" Low Button: OFF ");
-            }
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 47);
-            display->println(" Layout Toggle ");
+            pauseMenuPrint(display, 0, 25, PM_LOW_BUTTON, WHITE, BLACK);
+            pauseMenuPrintf(display, 0, 36, BLACK, WHITE, PM_LOW_BUTTON_FMT,
+                            pmOnOff(OF_Prefs::toggles[OF_Const::lowButtonsMode]));
+            pauseMenuPrint(display, 0, 47, PM_LAYOUT_TOGGLE, WHITE, BLACK);
             #endif
             break;
           case ScreenPause_LayoutToggle:
             #ifdef OLED_091_INCH
-            // 0.91寸屏幕：只显示当前选中的项目
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 20);
-            display->printf(" Layout: %s ", OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout == OF_Const::layoutDiamond ? "Diamond" : "Square");
+            pauseMenuPrintf(display, 0, 20, BLACK, WHITE, PM_LAYOUT_FMT,
+                            pmLayoutStr(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout));
             #else
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 25);
-            display->println(" Low Button: " + String(OF_Prefs::toggles[OF_Const::lowButtonsMode] ? "ON" : "OFF"));
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 36);
-            display->printf(" Layout: %s ", OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout == OF_Const::layoutDiamond ? "Diamond" : "Square");
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 47);
-            display->println(" Gun ID (P1-P4) ");
+            pauseMenuPrintf(display, 0, 25, WHITE, BLACK, PM_LOW_BUTTON_FMT,
+                            pmOnOff(OF_Prefs::toggles[OF_Const::lowButtonsMode]));
+            pauseMenuPrintf(display, 0, 36, BLACK, WHITE, PM_LAYOUT_FMT,
+                            pmLayoutStr(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout));
+            pauseMenuPrint(display, 0, 47, PM_GUN_ID_P1P4, WHITE, BLACK);
             #endif
             break;
           case ScreenPause_GunId:
             #ifdef OLED_091_INCH
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 20);
-            display->println(" Layout Toggle ");
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 31);
-            display->printf(" Gun ID: P%d ", (int)(OF_Prefs::settings[OF_Const::gunId] % 4) + 1);
+            pauseMenuPrint(display, 0, 20, PM_LAYOUT_TOGGLE, WHITE, BLACK);
+            pauseMenuPrintf(display, 0, 31, BLACK, WHITE, PM_GUN_ID_P_FMT,
+                            (int)(OF_Prefs::settings[OF_Const::gunId] % 4) + 1);
             #else
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 25);
-            display->println(" Layout Toggle ");
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 36);
-            display->printf(" Gun ID: P%d ", (int)(OF_Prefs::settings[OF_Const::gunId] % 4) + 1);
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 47);
-            display->println(" Stick Output Mode ");
+            pauseMenuPrint(display, 0, 25, PM_LAYOUT_TOGGLE, WHITE, BLACK);
+            pauseMenuPrintf(display, 0, 36, BLACK, WHITE, PM_GUN_ID_P_FMT,
+                            (int)(OF_Prefs::settings[OF_Const::gunId] % 4) + 1);
+            pauseMenuPrint(display, 0, 47, PM_STICK_MODE, WHITE, BLACK);
             #endif
             break;
           case ScreenPause_AnalogMode:
           {
-            // 当前模拟输出模式字符串
-            const char* modeStr;
-            switch (OF_Prefs::settings[OF_Const::analogMode]) {
-              default:
-              case OF_Const::analogModeStick: modeStr = "Gamepad Stick"; break;
-              case OF_Const::analogModeDpad: modeStr = "Gamepad D-Pad"; break;
-              case OF_Const::analogModeKeys: modeStr = "Keyboard Arrows"; break;
-            }
+            const char *modeStr = pmAnalogModeStr((uint8_t)OF_Prefs::settings[OF_Const::analogMode]);
+            const unsigned deadzone = (unsigned)(OF_Prefs::settings[OF_Const::analogDeadzone] > 30 ? 30 : OF_Prefs::settings[OF_Const::analogDeadzone]);
             #ifdef OLED_091_INCH
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 20);
-            display->printf(" Stick: %s ", modeStr);
+            pauseMenuPrintf(display, 0, 20, BLACK, WHITE, PM_STICK_FMT, modeStr);
             #else
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 25);
-            display->printf(" Gun ID: P%d ", (int)(OF_Prefs::settings[OF_Const::gunId] % 4) + 1);
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 36);
-            display->printf(" Stick: %s ", modeStr);
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 47);
-            display->printf(" Deadzone: %u%% ",
-                            (unsigned)(OF_Prefs::settings[OF_Const::analogDeadzone] > 30 ? 30 : OF_Prefs::settings[OF_Const::analogDeadzone]));
+            pauseMenuPrintf(display, 0, 25, WHITE, BLACK, PM_GUN_ID_P_FMT,
+                            (int)(OF_Prefs::settings[OF_Const::gunId] % 4) + 1);
+            pauseMenuPrintf(display, 0, 36, BLACK, WHITE, PM_STICK_FMT, modeStr);
+            pauseMenuPrintf(display, 0, 47, WHITE, BLACK, PM_DEADZONE_FMT, deadzone);
             #endif
             break;
           }
           case ScreenPause_AnalogKeysLayout:
           {
-            const char* layoutStr = (OF_Prefs::settings[OF_Const::analogKeysLayout] == OF_Const::analogKeysLayoutWASD) ? "WASD" : "Arrows";
+            const char *layoutStr = (OF_Prefs::settings[OF_Const::analogKeysLayout] == OF_Const::analogKeysLayoutWASD) ? "WASD" : "Arrows";
+            const char *modeStr = pmAnalogModeStrAlt((uint8_t)OF_Prefs::settings[OF_Const::analogMode]);
+            const unsigned deadzone = (unsigned)(OF_Prefs::settings[OF_Const::analogDeadzone] > 30 ? 30 : OF_Prefs::settings[OF_Const::analogDeadzone]);
             #ifdef OLED_091_INCH
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 20);
-            display->printf(" Stick Keys: %s ", layoutStr);
+            pauseMenuPrintf(display, 0, 20, BLACK, WHITE, PM_KEYS_FMT, layoutStr);
             #else
-            {
-              const char* modeStr;
-              switch (OF_Prefs::settings[OF_Const::analogMode]) {
-                default:
-                case OF_Const::analogModeStick: modeStr = "Gamepad Stick"; break;
-                case OF_Const::analogModeDpad:  modeStr = "Gamepad D-Pad"; break;
-                case OF_Const::analogModeKeys:  modeStr = "Keyboard Keys"; break;
-              }
-              display->setTextColor(WHITE, BLACK);
-              display->setCursor(0, 25);
-              display->printf(" Stick: %s ", modeStr);
-              display->setTextColor(BLACK, WHITE);
-              display->setCursor(0, 36);
-              display->printf(" Keys: %s ", layoutStr);
-              display->setTextColor(WHITE, BLACK);
-              display->setCursor(0, 47);
-              display->printf(" Deadzone: %u%% ",
-                              (unsigned)(OF_Prefs::settings[OF_Const::analogDeadzone] > 30 ? 30 : OF_Prefs::settings[OF_Const::analogDeadzone]));
-            }
+            pauseMenuPrintf(display, 0, 25, WHITE, BLACK, PM_STICK_FMT, modeStr);
+            pauseMenuPrintf(display, 0, 36, BLACK, WHITE, PM_KEYS_FMT, layoutStr);
+            pauseMenuPrintf(display, 0, 47, WHITE, BLACK, PM_DEADZONE_FMT, deadzone);
             #endif
             break;
           }
           case ScreenPause_AnalogDeadzone:
+          {
+            const char *modeStr = pmAnalogModeStr((uint8_t)OF_Prefs::settings[OF_Const::analogMode]);
+            const unsigned deadzone = (unsigned)(OF_Prefs::settings[OF_Const::analogDeadzone] > 30 ? 30 : OF_Prefs::settings[OF_Const::analogDeadzone]);
             #ifdef OLED_091_INCH
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 20);
-            display->printf(" Deadzone: %u%% ", (unsigned)(OF_Prefs::settings[OF_Const::analogDeadzone] > 30 ? 30 : OF_Prefs::settings[OF_Const::analogDeadzone]));
+            pauseMenuPrintf(display, 0, 20, BLACK, WHITE, PM_DEADZONE_FMT, deadzone);
             #else
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 25);
-            // 上一项为 Stick 输出模式
-            {
-              const char* modeStr;
-              switch (OF_Prefs::settings[OF_Const::analogMode]) {
-                default:
-                case OF_Const::analogModeStick: modeStr = "Gamepad Stick"; break;
-                case OF_Const::analogModeDpad: modeStr = "Gamepad D-Pad"; break;
-                case OF_Const::analogModeKeys: modeStr = "Keyboard Arrows"; break;
-              }
-              display->printf(" Stick: %s ", modeStr);
-            }
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 36);
-            display->printf(" Deadzone: %u%% ",
-                            (unsigned)(OF_Prefs::settings[OF_Const::analogDeadzone] > 30 ? 30 : OF_Prefs::settings[OF_Const::analogDeadzone]));
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 47);
-            display->println(" Axis Mode ");
+            pauseMenuPrintf(display, 0, 25, WHITE, BLACK, PM_STICK_FMT, modeStr);
+            pauseMenuPrintf(display, 0, 36, BLACK, WHITE, PM_DEADZONE_FMT, deadzone);
+            pauseMenuPrint(display, 0, 47, PM_AXIS_MODE, WHITE, BLACK);
             #endif
             break;
+          }
           case ScreenPause_AxisUnsignedToggle:
             #ifdef OLED_091_INCH
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 20);
-            display->printf(" Axis: %s ", OF_Prefs::settings[OF_Const::axisUnsigned] ? "Unsigned" : "Signed");
+            pauseMenuPrintf(display, 0, 20, BLACK, WHITE, PM_AXIS_FMT,
+                            pmAxisSignStr(OF_Prefs::settings[OF_Const::axisUnsigned]));
             #else
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 25);
-            display->printf(" Center Calibrate ");
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 36);
-            display->printf(" Axis: %s ", OF_Prefs::settings[OF_Const::axisUnsigned] ? "Unsigned" : "Signed");
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 47);
-            display->println(" Swap Sticks ");
+            pauseMenuPrint(display, 0, 25, PM_CENTER_CAL, WHITE, BLACK);
+            pauseMenuPrintf(display, 0, 36, BLACK, WHITE, PM_AXIS_FMT,
+                            pmAxisSignStr(OF_Prefs::settings[OF_Const::axisUnsigned]));
+            pauseMenuPrint(display, 0, 47, PM_SWAP_STICKS, WHITE, BLACK);
             #endif
             break;
           case ScreenPause_AnalogSwapSticks:
             #ifdef OLED_091_INCH
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 20);
-            display->printf(" Swap: %s ", OF_Prefs::settings[OF_Const::analogSwapSticks] ? "ON" : "OFF");
+            pauseMenuPrintf(display, 0, 20, BLACK, WHITE, PM_SWAP_FMT,
+                            pmOnOff(OF_Prefs::settings[OF_Const::analogSwapSticks]));
             #else
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 25);
-            display->printf(" Axis Mode ");
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 36);
-            display->printf(" Swap Sticks: %s ", OF_Prefs::settings[OF_Const::analogSwapSticks] ? "ON" : "OFF");
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 47);
+            pauseMenuPrint(display, 0, 25, PM_AXIS_MODE, WHITE, BLACK);
+            pauseMenuPrintf(display, 0, 36, BLACK, WHITE, PM_SWAP_LONG_FMT,
+                            pmOnOff(OF_Prefs::settings[OF_Const::analogSwapSticks]));
             #ifdef USES_RUMBLE
             if(OF_Prefs::pins[OF_Const::rumblePin] >= 0) {
-              display->println(" Rumble FFB Toggle ");
+              pauseMenuPrint(display, 0, 47, PM_RUMBLE_FFB, WHITE, BLACK);
             } else {
-              display->println(" Send Escape Keypress ");
+              pauseMenuPrint(display, 0, 47, PM_ESCAPE_KEY, WHITE, BLACK);
             }
             #else
-            display->println(" Send Escape Keypress ");
+            pauseMenuPrint(display, 0, 47, PM_ESCAPE_KEY, WHITE, BLACK);
             #endif
             #endif
             break;
@@ -1030,99 +976,69 @@ void ExtDisplay::PauseListUpdate(const int &selection)
           #ifdef USES_RUMBLE
           case ScreenPause_RumbleFFToggle:
             #ifdef OLED_091_INCH
-            // 0.91寸屏幕：只显示当前选中的项目
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 20);
             if(OF_Prefs::pins[OF_Const::rumblePin] >= 0) {
-              display->printf(" Rumble FFB: %s ", OF_Prefs::toggles[OF_Const::rumbleFF] ? "ON" : "OFF");
+              pauseMenuPrintf(display, 0, 20, BLACK, WHITE, PM_RUMBLE_FFB_FMT,
+                              pmOnOff(OF_Prefs::toggles[OF_Const::rumbleFF]));
             } else {
-              display->println(" Rumble FFB: N/A ");
+              pauseMenuPrint(display, 0, 20, PM_RUMBLE_FFB_NA, BLACK, WHITE);
             }
             #else
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 25);
-            display->printf(" Gun ID: P%d ", (int)(OF_Prefs::settings[OF_Const::gunId] % 4) + 1);
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 36);
+            pauseMenuPrintf(display, 0, 25, WHITE, BLACK, PM_GUN_ID_P_FMT,
+                            (int)(OF_Prefs::settings[OF_Const::gunId] % 4) + 1);
             if(OF_Prefs::pins[OF_Const::rumblePin] >= 0) {
-              display->printf(" Rumble FFB: %s ", OF_Prefs::toggles[OF_Const::rumbleFF] ? "ON" : "OFF");
+              pauseMenuPrintf(display, 0, 36, BLACK, WHITE, PM_RUMBLE_FFB_FMT,
+                              pmOnOff(OF_Prefs::toggles[OF_Const::rumbleFF]));
             } else {
-              display->println(" Rumble FFB: N/A ");
+              pauseMenuPrint(display, 0, 36, PM_RUMBLE_FFB_NA, BLACK, WHITE);
             }
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 47);                       
-            display->println(" Send Escape Keypress ");
+            pauseMenuPrint(display, 0, 47, PM_ESCAPE_KEY, WHITE, BLACK);
             #endif
             break;
-          #endif            
+          #endif
           case ScreenPause_PlayTimer:
           {
-            // 显示当前计时器设置：0=OFF，其它显示分钟数
             #ifdef OLED_091_INCH
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 20);
-            if (PlayTimer::minutes == 0) {
-              display->println(" Play Timer: OFF ");
+            if(PlayTimer::minutes == 0) {
+              pauseMenuPrint(display, 0, 20, PM_TIMER_OFF, BLACK, WHITE);
             } else {
-              char buf[20];
-              snprintf(buf, sizeof(buf), " Timer: %2u min ", (unsigned)PlayTimer::minutes);
-              display->println(buf);
+              pauseMenuPrintf(display, 0, 20, BLACK, WHITE, PM_TIMER_MIN_FMT,
+                              (unsigned)PlayTimer::minutes);
             }
             #else
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 25);
-            display->println(" Rumble FFB Toggle ");
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 36);
-            if (PlayTimer::minutes == 0) {
-              display->println(" Play Timer: OFF ");
+            pauseMenuPrint(display, 0, 25, PM_RUMBLE_FFB, WHITE, BLACK);
+            if(PlayTimer::minutes == 0) {
+              pauseMenuPrint(display, 0, 36, PM_TIMER_OFF, BLACK, WHITE);
             } else {
-              char buf[22];
-              snprintf(buf, sizeof(buf), " Play Timer: %2u min ", (unsigned)PlayTimer::minutes);
-              display->println(buf);
+              pauseMenuPrintf(display, 0, 36, BLACK, WHITE, PM_TIMER_MIN2_FMT,
+                              (unsigned)PlayTimer::minutes);
             }
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 47);
-            display->println(" Send Escape Keypress ");
+            pauseMenuPrint(display, 0, 47, PM_ESCAPE_KEY, WHITE, BLACK);
             #endif
             break;
           }
           case ScreenPause_AnalogInvertX:
             #ifdef OLED_091_INCH
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 20);
-            display->println(" Analog Invert X ");
-            display->setCursor(0, 31);
-            display->printf(" X: %s ", OF_Prefs::settings[OF_Const::analogInvertX] ? "INV" : "NORM");
+            pauseMenuPrint(display, 0, 20, PM_INVERT_X, BLACK, WHITE);
+            pauseMenuPrintf(display, 0, 31, BLACK, WHITE, PM_X_SHORT_FMT,
+                            pmInvertShortStr(OF_Prefs::settings[OF_Const::analogInvertX]));
             #else
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 25);
-            display->println(" Play Timer ");
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 36);
-            display->printf(" X Axis: %s ", OF_Prefs::settings[OF_Const::analogInvertX] ? "Inverted" : "Normal");
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 47);
-            display->println(" Invert Y Axis ");
+            pauseMenuPrint(display, 0, 25, PM_PLAY_TIMER, WHITE, BLACK);
+            pauseMenuPrintf(display, 0, 36, BLACK, WHITE, PM_X_AXIS_FMT,
+                            pmInvertStr(OF_Prefs::settings[OF_Const::analogInvertX]));
+            pauseMenuPrint(display, 0, 47, PM_INVERT_Y_AXIS, WHITE, BLACK);
             #endif
             break;
           case ScreenPause_AnalogInvertY:
             #ifdef OLED_091_INCH
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 20);
-            display->println(" Analog Invert Y ");
-            display->setCursor(0, 31);
-            display->printf(" Y: %s ", OF_Prefs::settings[OF_Const::analogInvertY] ? "INV" : "NORM");
+            pauseMenuPrint(display, 0, 20, PM_INVERT_Y, BLACK, WHITE);
+            pauseMenuPrintf(display, 0, 31, BLACK, WHITE, PM_Y_SHORT_FMT,
+                            pmInvertShortStr(OF_Prefs::settings[OF_Const::analogInvertY]));
             #else
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 25);
-            display->printf(" X Axis: %s ", OF_Prefs::settings[OF_Const::analogInvertX] ? "Inverted" : "Normal");
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 36);
-            display->printf(" Y Axis: %s ", OF_Prefs::settings[OF_Const::analogInvertY] ? "Inverted" : "Normal");
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 47);
-            display->println(" Send Escape Keypress ");
+            pauseMenuPrintf(display, 0, 25, WHITE, BLACK, PM_X_AXIS_FMT,
+                            pmInvertStr(OF_Prefs::settings[OF_Const::analogInvertX]));
+            pauseMenuPrintf(display, 0, 36, BLACK, WHITE, PM_Y_AXIS_FMT,
+                            pmInvertStr(OF_Prefs::settings[OF_Const::analogInvertY]));
+            pauseMenuPrint(display, 0, 47, PM_ESCAPE_KEY, WHITE, BLACK);
             #endif
             break;
 //wei13402 add end                
@@ -1153,37 +1069,20 @@ void ExtDisplay::PauseListUpdate(const int &selection)
 //wei134102 add end                        
           case ScreenPause_EscapeKey:
             #ifdef OLED_091_INCH
-            // 0.91寸屏幕：只显示当前选中的项目
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 20);
-            display->println(" Send Escape Keypress");
+            pauseMenuPrint(display, 0, 20, PM_ESCAPE_KEY, BLACK, WHITE);
             #else
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 25);
             if(OF_Prefs::pins[OF_Const::solenoidPin] >= 0 && OF_Prefs::pins[OF_Const::solenoidSwitch] == -1) {
-              display->println(" Solenoid Toggle ");
-              display->setTextColor(BLACK, WHITE);
-              display->setCursor(0, 36);
-              display->println(" Send Escape Keypress");
-              display->setTextColor(WHITE, BLACK);
-              display->setCursor(0, 47);
-              display->println(" Calibrate ");
+              pauseMenuPrint(display, 0, 25, PM_SOLENOID_TOGGLE, WHITE, BLACK);
+              pauseMenuPrint(display, 0, 36, PM_ESCAPE_KEY, BLACK, WHITE);
+              pauseMenuPrint(display, 0, 47, PM_CALIBRATE, WHITE, BLACK);
             } else if(OF_Prefs::pins[OF_Const::rumblePin] >= 0 && OF_Prefs::pins[OF_Const::rumbleSwitch] == -1) {
-              display->println(" Rumble Toggle ");
-              display->setTextColor(BLACK, WHITE);
-              display->setCursor(0, 36);
-              display->println(" Send Escape Keypress");
-              display->setTextColor(WHITE, BLACK);
-              display->setCursor(0, 47);
-              display->println(" Calibrate ");
+              pauseMenuPrint(display, 0, 25, PM_RUMBLE_TOGGLE, WHITE, BLACK);
+              pauseMenuPrint(display, 0, 36, PM_ESCAPE_KEY, BLACK, WHITE);
+              pauseMenuPrint(display, 0, 47, PM_CALIBRATE, WHITE, BLACK);
             } else {
-              display->println(" Save Gun Settings ");
-              display->setTextColor(BLACK, WHITE);
-              display->setCursor(0, 36);
-              display->println(" Send Escape Keypress");
-              display->setTextColor(WHITE, BLACK);
-              display->setCursor(0, 47);
-              display->println(" Calibrate ");
+              pauseMenuPrint(display, 0, 25, PM_SAVE_SETTINGS, WHITE, BLACK);
+              pauseMenuPrint(display, 0, 36, PM_ESCAPE_KEY, BLACK, WHITE);
+              pauseMenuPrint(display, 0, 47, PM_CALIBRATE, WHITE, BLACK);
             }
             #endif
             break;

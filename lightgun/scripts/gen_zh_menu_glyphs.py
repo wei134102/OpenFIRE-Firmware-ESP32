@@ -11,13 +11,24 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "src" / "OpenFIREdisplay_zh_glyphs.h"
 
 STRINGS = [
+    # Static menu labels
     "中心校准", "保存设置", "画圈校准", "屏幕校准", "配置选择",
     "震动开关", "电磁开关", "发送Esc", "连发开关", "低键模式",
-    "布局切换", "枪号", "摇杆模式", "模式切换", "游戏计时",
-    "轴模式", "互换摇杆", "震动反馈", "反转X轴", "反转Y轴",
-    "死区", "开", "关", "键鼠", "手柄", "MiSTer",
+    "布局切换", "枪号", "枪号P1-P4", "摇杆模式", "模式切换",
+    "游戏计时", "轴模式", "互换摇杆", "震动反馈", "反转X轴",
+    "反转Y轴", "死区", "开", "关", "键鼠", "手柄", "MiSTer",
     "当前:键鼠", "当前:手柄", "当前:MiSTer", "低键:开", "低键:关",
-    ":",
+    # Dynamic value labels
+    "摇杆", "十字", "方向键", "键盘键", "菱形", "方形",
+    "无符号", "有符号", "反转", "正常", "反", "正", "无",
+    # Formatted snippets (for glyph coverage)
+    "枪号P1", "布局:菱形", "连发:开", "低键:关", "摇杆:十字",
+    "按键:WASD", "死区30%", "轴:无符号", "互换:开", "震动:关",
+    "震动:无", "计时:关", "计时5分", "X轴:反转", "Y轴:正常",
+    "X:反", "Y:正",
+    # ASCII punctuation used in mixed strings
+    ":", "%", "P", "W", "A", "S", "D", "E", "s", "c", "M", "i", "T", "e", "r",
+    "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
 ]
 
 FONT_CANDIDATES = [
@@ -30,7 +41,7 @@ FONT_CANDIDATES = [
 
 CELL_W = 12
 CELL_H = 12
-BYTES_PER_GLYPH = CELL_H * 2  # 12px wide -> 2 bytes/row
+BYTES_PER_GLYPH = CELL_H * 2
 
 
 def load_font(size: int = 11) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
@@ -62,10 +73,6 @@ def render_glyph(ch: str, font) -> list[int]:
                 b1 |= bit << (15 - col)
         out.extend([b0, b1])
     return out
-
-
-def utf8_index(ch: str) -> str:
-    return "-".join(f"{b:02x}" for b in ch.encode("utf-8"))
 
 
 def main() -> None:
