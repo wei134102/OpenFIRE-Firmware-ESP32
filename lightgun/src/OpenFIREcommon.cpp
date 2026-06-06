@@ -28,6 +28,9 @@
 #include "OpenFIREFeedback.h"
 #include "OpenFIRElights.h"
 #include "OpenFIREserial.h"
+#ifdef USES_DISPLAY
+#include "OpenFIREdisplay_i18n.h"
+#endif
 
 // ============ 696969 ========== redifinizione di Serial per gestire le connessione wireless seriali ========
 #ifdef OPENFIRE_WIRELESS_ENABLE
@@ -312,14 +315,14 @@ void FW_Common::SetMode(const FW_Const::GunMode_e &newMode)
                 OLED.ScreenModeChange(ExtDisplay::Screen_Mamehook_Single, buttons.analogOutput);
             else OLED.ScreenModeChange(ExtDisplay::Screen_Normal, buttons.analogOutput);
 
-            OLED.TopPanelUpdate("Prof: ", OF_Prefs::profiles[OF_Prefs::currentProfile].name);
+            OLED.TopPanelUpdate(TXT_PROF_PREFIX, OF_Prefs::profiles[OF_Prefs::currentProfile].name);
         #endif // USES_DISPLAY
 
         break;
     case FW_Const::GunMode_Calibration:
         #ifdef USES_DISPLAY
             OLED.ScreenModeChange(ExtDisplay::Screen_Calibrating);
-            OLED.TopPanelUpdate("Cali: ", OF_Prefs::profiles[OF_Prefs::currentProfile].name);
+            OLED.TopPanelUpdate(TXT_CALI_PREFIX, OF_Prefs::profiles[OF_Prefs::currentProfile].name);
         #endif // USES_DISPLAY
         break;
     case FW_Const::GunMode_Pause:
@@ -328,7 +331,7 @@ void FW_Common::SetMode(const FW_Const::GunMode_e &newMode)
 
         #ifdef USES_DISPLAY
           OLED.ScreenModeChange(ExtDisplay::Screen_Pause);
-          OLED.TopPanelUpdate("Using ", OF_Prefs::profiles[OF_Prefs::currentProfile].name);
+          OLED.TopPanelUpdate(TXT_USING_PREFIX, OF_Prefs::profiles[OF_Prefs::currentProfile].name);
 
           if(OF_Prefs::toggles[OF_Const::simplePause]) 
               OLED.PauseListUpdate(pauseModeSelection);
@@ -1006,7 +1009,7 @@ bool FW_Common::SelectCalProfile(const int &profile)
 
     #ifdef USES_DISPLAY
         if(gunMode != FW_Const::GunMode_Docked)
-            OLED.TopPanelUpdate("Using ", OF_Prefs::profiles[profile].name);
+            OLED.TopPanelUpdate(TXT_USING_PREFIX, OF_Prefs::profiles[profile].name);
     #endif // USES_DISPLAY
  
     #ifdef LED_ENABLE

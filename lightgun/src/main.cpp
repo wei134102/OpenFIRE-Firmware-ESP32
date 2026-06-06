@@ -36,6 +36,9 @@
 #include "OpenFIREFeedback.h"
 #include "OpenFIREprefs.h"
 #include "OpenFIREconstant.h"
+#ifdef USES_DISPLAY
+#include "OpenFIREdisplay_i18n.h"
+#endif
 
 // ===================================================================================
 // OS ABSTRACTION: RIDEFINIZIONE DEL DELAY (FREERTOS)
@@ -393,7 +396,7 @@ void setup() {
         #endif // USES_DISPLAY
     }
     #ifdef USES_DISPLAY
-        FW_Common::OLED.TopPanelUpdate(" CALIBRATION READY "); 
+        FW_Common::OLED.TopPanelUpdate(TXT_TOP_CALIB_READY);
     #endif //USES_DISPLAY
 
     // ===================================================================================
@@ -462,9 +465,9 @@ void setup() {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     // === 696969 === NUOVA GESTIONE INIZIALIZZAIZONE USB O CONNESSIONE WIRELESS =============================
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    FW_Common::OLED.TopPanelUpdate(" go in usb mode "); // 696969 inserito da me
+    FW_Common::OLED.TopPanelUpdate(TXT_TOP_USB_MODE);
     TinyUSBDevices.begin(POLL_RATE);
-    FW_Common::OLED.TopPanelUpdate(" wait for usb mount ");
+    FW_Common::OLED.TopPanelUpdate(TXT_TOP_USB_WAIT);
 
     #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)// SE WIRELESS
         #define MILLIS_TIMEOUT  3000 //1 secondi  检测USB是否连接的时间！！！1秒
@@ -514,10 +517,10 @@ void setup() {
     #ifdef ARDUINO_ARCH_ESP32
         #ifdef USES_DISPLAY
             if (TinyUSBDevice.mounted() || TinyUSBDevices.onBattery) {
-                FW_Common::OLED.TopPanelUpdate("  !! LINK READY !! ");
+                FW_Common::OLED.TopPanelUpdate(TXT_TOP_LINK_READY);
                 vTaskDelay(pdMS_TO_TICKS(1000));
             } else if (BoyMode::IsEnabled()) {
-                FW_Common::OLED.TopPanelUpdate("  BOY MODE READY  ");
+                FW_Common::OLED.TopPanelUpdate(TXT_TOP_BOY_READY);
                 vTaskDelay(pdMS_TO_TICKS(600));
             }
         #endif //USES_DISPLAY
@@ -528,7 +531,7 @@ void setup() {
         TinyUSBDevices.onBattery = false;
         Serial.begin(9600);
         Serial.setTimeout(0);
-        FW_Common::OLED.TopPanelUpdate(" USB mounted "); 
+        FW_Common::OLED.TopPanelUpdate(TXT_TOP_USB_MOUNT);
         #if defined(ARDUINO_ARCH_ESP32)
             //// tolto perchè con nuova versione arduino-esp32 o tinyUSB non funziona più bene ///// Serial.setTxTimeoutMs(0);
             //////////////////////Serial.setTxTimeoutMs(0); // default è 250ms // serve per fare come in arduino pico rp2040
@@ -874,9 +877,9 @@ void loop1()
             // Update display to show new mode
             #ifdef USES_DISPLAY
                 if(FW_Common::buttons.analogOutput) {
-                    FW_Common::OLED.TopPanelUpdate("Mode Changed: Gamepad");
+                    FW_Common::OLED.TopPanelUpdate(TXT_TOP_MODE_GAMEPAD);
                 } else {
-                    FW_Common::OLED.TopPanelUpdate("Mode Changed: Mouse/KB");
+                    FW_Common::OLED.TopPanelUpdate(TXT_TOP_MODE_MOUSEKB);
                 }
                 // Briefly show status then update menu
                 delay(1000); // Show status for 1 second
@@ -1068,7 +1071,7 @@ void loop()
                         #ifdef USES_DISPLAY
                             {
                                 char gunIdBuf[16];
-                                snprintf(gunIdBuf, sizeof(gunIdBuf), "Gun ID: P%d", (int)gunIdModeSelection + 1);
+                                snprintf(gunIdBuf, sizeof(gunIdBuf), TXT_GUN_ID_TOP_FMT, (int)gunIdModeSelection + 1);
                                 FW_Common::OLED.TopPanelUpdate(gunIdBuf);
                             }
                             delay(800);
@@ -1111,9 +1114,9 @@ void loop()
                               for(int i = 0; i < PROFILE_COUNT; i++) {
                                   // 根据irLayout值添加布局类型
                                   if(OF_Prefs::profiles[i].irLayout) {
-                                      snprintf(profileNames[i], sizeof(profileNames[i]), "%s (Diamond)", OF_Prefs::profiles[i].name);
+                                      snprintf(profileNames[i], sizeof(profileNames[i]), TXT_PROFILE_DIAM_FMT, OF_Prefs::profiles[i].name);
                                   } else {
-                                      snprintf(profileNames[i], sizeof(profileNames[i]), "%s (Square)", OF_Prefs::profiles[i].name);
+                                      snprintf(profileNames[i], sizeof(profileNames[i]), TXT_PROFILE_SQUA_FMT, OF_Prefs::profiles[i].name);
                                   }
                               }
                               FW_Common::OLED.PauseProfileUpdate(profileModeSelection, profileNames[0], profileNames[1], profileNames[2], profileNames[3]);
@@ -1141,7 +1144,7 @@ void loop()
                                 Serial.println("RangeCal: rotate stick full circle for ~4s...");
 
                             #ifdef USES_DISPLAY
-                                FW_Common::OLED.TopPanelUpdate("RangeCal: rotate");
+                                FW_Common::OLED.TopPanelUpdate(TXT_TOP_RANGECAL_ROTATE);
                             #endif
 
                             uint16_t minX = 4095, maxX = 0, minY = 4095, maxY = 0;
@@ -1158,7 +1161,7 @@ void loop()
                             }
 
                             #ifdef USES_DISPLAY
-                                FW_Common::OLED.TopPanelUpdate("Release to center");
+                                FW_Common::OLED.TopPanelUpdate(TXT_TOP_RANGECAL_RELEASE);
                             #endif
 
                             delay(250); // 让摇杆回中后稍微稳定一下
@@ -1226,7 +1229,7 @@ void loop()
                             }
 
                             #ifdef USES_DISPLAY
-                                FW_Common::OLED.TopPanelUpdate(ok ? "RangeCal: OK" : "RangeCal: weak");
+                                FW_Common::OLED.TopPanelUpdate(ok ? TXT_TOP_RANGECAL_OK : TXT_TOP_RANGECAL_WEAK);
                                 delay(900);
                                 FW_Common::OLED.PauseListUpdate((int)FW_Common::pauseModeSelection);
                             #endif
@@ -1243,7 +1246,12 @@ void loop()
                           }
                           #ifdef USES_DISPLAY
                               // 显示状态栏提示
-                              FW_Common::OLED.TopPanelUpdate(OF_Prefs::toggles[OF_Const::autofire] ? "Autofire: ON" : "Autofire: OFF");
+                              {
+                                  char buf[24];
+                                  snprintf(buf, sizeof(buf), TXT_TOP_AUTOFIRE_FMT,
+                                      OF_Prefs::toggles[OF_Const::autofire] ? PM_ON : PM_OFF);
+                                  FW_Common::OLED.TopPanelUpdate(buf);
+                              }
                               delay(1000); // 显示1秒状态提示
                               FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_AutofireToggle);
                           #endif // USES_DISPLAY
@@ -1293,11 +1301,11 @@ void loop()
                           #ifdef USES_DISPLAY
                               // 显示状态栏提示
                               if(FW_Common::OLED.mister) {
-                                  FW_Common::OLED.TopPanelUpdate("Mode Changed: MiSTer");
+                                  FW_Common::OLED.TopPanelUpdate(TXT_TOP_MODE_MISTER);
                               } else if(FW_Common::buttons.analogOutput) {
-                                  FW_Common::OLED.TopPanelUpdate("Mode Changed: Gamepad");
+                                  FW_Common::OLED.TopPanelUpdate(TXT_TOP_MODE_GAMEPAD);
                               } else {
-                                  FW_Common::OLED.TopPanelUpdate("Mode Changed: Mouse/KB");
+                                  FW_Common::OLED.TopPanelUpdate(TXT_TOP_MODE_MOUSEKB);
                               }
                               // 短暂显示状态后再更新菜单
                               delay(1000); // 显示1秒状态提示
@@ -1328,7 +1336,12 @@ void loop()
                           // Update display to show new state
                           #ifdef USES_DISPLAY
                               // 显示状态栏提示
-                              FW_Common::OLED.TopPanelUpdate(OF_Prefs::toggles[OF_Const::lowButtonsMode] ? "Low Button: ON" : "Low Button: OFF");
+                              {
+                                  char buf[24];
+                                  snprintf(buf, sizeof(buf), TXT_TOP_LOW_BTN_FMT,
+                                      OF_Prefs::toggles[OF_Const::lowButtonsMode] ? PM_ON : PM_OFF);
+                                  FW_Common::OLED.TopPanelUpdate(buf);
+                              }
                               delay(1000); // 显示1秒状态提示
                               FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_LowButtonToggle);
                           #endif // USES_DISPLAY
@@ -1364,7 +1377,13 @@ void loop()
                           // Update display to show new layout
                           #ifdef USES_DISPLAY
                               // 显示状态栏提示
-                              FW_Common::OLED.TopPanelUpdate(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout == OF_Const::layoutDiamond ? "Layout: Diamond" : "Layout: Square");
+                              {
+                                  char buf[24];
+                                  snprintf(buf, sizeof(buf), TXT_TOP_LAYOUT_FMT,
+                                      OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout == OF_Const::layoutDiamond
+                                          ? PM_LAYOUT_DIAMOND : PM_LAYOUT_SQUARE);
+                                  FW_Common::OLED.TopPanelUpdate(buf);
+                              }
                               delay(1000); // 显示1秒状态提示
                               FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_LayoutToggle);
                           #endif // USES_DISPLAY
@@ -1411,15 +1430,15 @@ void loop()
                                 default:
                                 case OF_Const::analogModeStick:
                                     modeStrSerial = "Gamepad Analog Stick";
-                                    modeStrShort  = "Stick: Gamepad";
+                                    modeStrShort  = TXT_TOP_STICK_GAMEPAD;
                                     break;
                                 case OF_Const::analogModeDpad:
                                     modeStrSerial = "Gamepad D-Pad";
-                                    modeStrShort  = "Stick: D-Pad";
+                                    modeStrShort  = TXT_TOP_STICK_DPAD;
                                     break;
                                 case OF_Const::analogModeKeys:
                                     modeStrSerial = "Keyboard Arrows";
-                                    modeStrShort  = "Stick: Keys";
+                                    modeStrShort  = TXT_TOP_STICK_KEYS;
                                     break;
                             }
 
@@ -1428,9 +1447,7 @@ void loop()
                                 Serial.println(modeStrSerial);
                             }
                             #ifdef USES_DISPLAY
-                                char buf[24];
-                                snprintf(buf, sizeof(buf), "%s", modeStrShort);
-                                FW_Common::OLED.TopPanelUpdate(buf);
+                                FW_Common::OLED.TopPanelUpdate(modeStrShort);
                                 FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_AnalogMode);
                             #endif
                         }
@@ -1448,7 +1465,7 @@ void loop()
                             }
                             #ifdef USES_DISPLAY
                                 char buf[24];
-                                snprintf(buf, sizeof(buf), "Stick Keys: %s", layoutStr);
+                                snprintf(buf, sizeof(buf), TXT_TOP_STICK_KEYS_FMT, layoutStr);
                                 FW_Common::OLED.TopPanelUpdate(buf);
                                 FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_AnalogKeysLayout);
                             #endif
@@ -1465,7 +1482,7 @@ void loop()
                             #ifdef USES_DISPLAY
                                 {
                                     char buf[24];
-                                    snprintf(buf, sizeof(buf), "Deadzone: %u%%", (unsigned)dz);
+                                    snprintf(buf, sizeof(buf), TXT_TOP_DEADZONE_FMT, (unsigned)dz);
                                     FW_Common::OLED.TopPanelUpdate(buf);
                                     FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_AnalogDeadzone);
                                 }
@@ -1490,7 +1507,7 @@ void loop()
                             }
                             #ifdef USES_DISPLAY
                                 char buf[24];
-                                snprintf(buf, sizeof(buf), "Deadzone: %u%%", (unsigned)dz);
+                                snprintf(buf, sizeof(buf), TXT_TOP_DEADZONE_FMT, (unsigned)dz);
                                 FW_Common::OLED.TopPanelUpdate(buf);
                                 FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_AnalogDeadzone);
                             #endif
@@ -1545,7 +1562,7 @@ void loop()
                                 Serial.println(saveErr == 0 ? "OK" : "FAIL");
                             }
                             #ifdef USES_DISPLAY
-                                FW_Common::OLED.TopPanelUpdate("Center calibrated");
+                                FW_Common::OLED.TopPanelUpdate(TXT_TOP_CENTER_DONE);
                                 FW_Common::OLED.PauseListUpdate((int)FW_Common::pauseModeSelection);
                             #endif
                         }
@@ -1569,7 +1586,12 @@ void loop()
                                 Serial.println(mode ? "Unsigned (Joypad-OS)" : "Signed");
                             }
                             #ifdef USES_DISPLAY
-                                FW_Common::OLED.TopPanelUpdate(mode ? "Axis: Unsigned" : "Axis: Signed");
+                                {
+                                    char buf[24];
+                                    snprintf(buf, sizeof(buf), TXT_TOP_AXIS_FMT,
+                                        mode ? PM_AXIS_UNSIGNED : PM_AXIS_SIGNED);
+                                    FW_Common::OLED.TopPanelUpdate(buf);
+                                }
                                 FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_AxisUnsignedToggle);
                             #endif
                         }
@@ -1592,7 +1614,11 @@ void loop()
                                 Serial.println(v ? "ON" : "OFF");
                             }
                             #ifdef USES_DISPLAY
-                                FW_Common::OLED.TopPanelUpdate(v ? "Swap Sticks: ON" : "Swap Sticks: OFF");
+                                {
+                                    char buf[24];
+                                    snprintf(buf, sizeof(buf), TXT_TOP_SWAP_FMT, v ? PM_ON : PM_OFF);
+                                    FW_Common::OLED.TopPanelUpdate(buf);
+                                }
                                 delay(800);
                                 FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_AnalogSwapSticks);
                             #endif
@@ -1612,7 +1638,12 @@ void loop()
                           // Update display
                           #ifdef USES_DISPLAY
                               // 显示状态栏提示
-                              FW_Common::OLED.TopPanelUpdate(OF_Prefs::toggles[OF_Const::rumbleFF] ? "Rumble FFB: ON" : "Rumble FFB: OFF");
+                              {
+                                  char buf[24];
+                                  snprintf(buf, sizeof(buf), TXT_TOP_RUMBLE_FFB_FMT,
+                                      OF_Prefs::toggles[OF_Const::rumbleFF] ? PM_ON : PM_OFF);
+                                  FW_Common::OLED.TopPanelUpdate(buf);
+                              }
                               delay(1000); // 显示1秒状态提示
                               FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_RumbleFFToggle);
                           #endif // USES_DISPLAY
@@ -1672,10 +1703,10 @@ void loop()
 
                           #ifdef USES_DISPLAY
                               if (m == 0) {
-                                  FW_Common::OLED.TopPanelUpdate("Play Timer: OFF");
+                                  FW_Common::OLED.TopPanelUpdate(TXT_TOP_TIMER_OFF);
                               } else {
                                   char buf[24];
-                                  snprintf(buf, sizeof(buf), "Play Timer: %2u min", (unsigned)m);
+                                  snprintf(buf, sizeof(buf), TXT_TOP_TIMER_FMT, (unsigned)m);
                                   FW_Common::OLED.TopPanelUpdate(buf);
                               }
                               delay(800);
@@ -1696,7 +1727,11 @@ void loop()
                               Serial.println(v ? "ON" : "OFF");
                           }
                           #ifdef USES_DISPLAY
-                              FW_Common::OLED.TopPanelUpdate(v ? "X Axis: Inverted" : "X Axis: Normal");
+                              {
+                                  char buf[24];
+                                  snprintf(buf, sizeof(buf), TXT_TOP_X_AXIS_FMT, v ? PM_INVERTED : PM_NORMAL);
+                                  FW_Common::OLED.TopPanelUpdate(buf);
+                              }
                               delay(800);
                               FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_AnalogInvertX);
                           #endif
@@ -1715,7 +1750,11 @@ void loop()
                               Serial.println(v ? "ON" : "OFF");
                           }
                           #ifdef USES_DISPLAY
-                              FW_Common::OLED.TopPanelUpdate(v ? "Y Axis: Inverted" : "Y Axis: Normal");
+                              {
+                                  char buf[24];
+                                  snprintf(buf, sizeof(buf), TXT_TOP_Y_AXIS_FMT, v ? PM_INVERTED : PM_NORMAL);
+                                  FW_Common::OLED.TopPanelUpdate(buf);
+                              }
                               delay(800);
                               FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_AnalogInvertY);
                           #endif
@@ -1725,7 +1764,7 @@ void loop()
                           SendEscapeKey();
 
                           #ifdef USES_DISPLAY
-                              FW_Common::OLED.TopPanelUpdate("Sent Escape Key!");
+                              FW_Common::OLED.TopPanelUpdate(TXT_TOP_ESCAPE_SENT);
                           #endif // USES_DISPLAY
 
                           #ifdef LED_ENABLE
@@ -1738,7 +1777,7 @@ void loop()
                           #endif // LED_ENABLE
 
                           #ifdef USES_DISPLAY
-                              FW_Common::OLED.TopPanelUpdate("Using ", OF_Prefs::profiles[OF_Prefs::currentProfile].name);
+                              FW_Common::OLED.TopPanelUpdate(TXT_USING_PREFIX, OF_Prefs::profiles[OF_Prefs::currentProfile].name);
                           #endif // USES_DISPLAY
                           break;
                         /*case FW_Const::PauseMode_Exit:
@@ -1883,9 +1922,9 @@ void loop()
                 // Update display to show new mode
                 #ifdef USES_DISPLAY
                     if(FW_Common::buttons.analogOutput) {
-                        FW_Common::OLED.TopPanelUpdate("Mode Changed: Gamepad");
+                        FW_Common::OLED.TopPanelUpdate(TXT_TOP_MODE_GAMEPAD);
                     } else {
-                        FW_Common::OLED.TopPanelUpdate("Mode Changed: Mouse/KB");
+                        FW_Common::OLED.TopPanelUpdate(TXT_TOP_MODE_MOUSEKB);
                     }
                     // Briefly show status then update menu
                     delay(1000); // Show status for 1 second
@@ -2964,7 +3003,7 @@ void RumbleToggle()
             Serial.println("Rumble enabled!");
 
         #ifdef USES_DISPLAY
-            FW_Common::OLED.TopPanelUpdate("Toggling Rumble ON");
+            FW_Common::OLED.TopPanelUpdate(TXT_TOP_RUMBLE_ON);
         #endif // USES_DISPLAY
 
         #ifdef LED_ENABLE
@@ -2990,7 +3029,7 @@ void RumbleToggle()
             Serial.println("Rumble disabled!");
 
         #ifdef USES_DISPLAY
-            FW_Common::OLED.TopPanelUpdate("Toggling Rumble OFF");
+            FW_Common::OLED.TopPanelUpdate(TXT_TOP_RUMBLE_OFF);
         #endif // USES_DISPLAY
 
         #ifdef LED_ENABLE
@@ -3007,7 +3046,7 @@ void RumbleToggle()
     }
 
     #ifdef USES_DISPLAY
-        FW_Common::OLED.TopPanelUpdate("Using ", OF_Prefs::profiles[OF_Prefs::currentProfile].name);
+        FW_Common::OLED.TopPanelUpdate(TXT_USING_PREFIX, OF_Prefs::profiles[OF_Prefs::currentProfile].name);
     #endif // USES_DISPLAY
 }
 #endif // USES_RUMBLE
@@ -3023,7 +3062,7 @@ void SolenoidToggle()
             Serial.println("Solenoid enabled!");
 
         #ifdef USES_DISPLAY
-            FW_Common::OLED.TopPanelUpdate("Toggling Solenoid ON");
+            FW_Common::OLED.TopPanelUpdate(TXT_TOP_SOLENOID_ON);
         #endif // USES_DISPLAY
 
         #ifdef LED_ENABLE
@@ -3043,7 +3082,7 @@ void SolenoidToggle()
             Serial.println("Solenoid disabled!");
 
         #ifdef USES_DISPLAY
-            FW_Common::OLED.TopPanelUpdate("Toggling Solenoid OFF");
+            FW_Common::OLED.TopPanelUpdate(TXT_TOP_SOLENOID_OFF);
         #endif // USES_DISPLAY
 
         #ifdef LED_ENABLE
@@ -3060,7 +3099,7 @@ void SolenoidToggle()
     }
 
     #ifdef USES_DISPLAY
-        FW_Common::OLED.TopPanelUpdate("Using ", OF_Prefs::profiles[OF_Prefs::currentProfile].name);
+        FW_Common::OLED.TopPanelUpdate(TXT_USING_PREFIX, OF_Prefs::profiles[OF_Prefs::currentProfile].name);
     #endif // USES_DISPLAY
 }
 #endif // USES_SOLENOID

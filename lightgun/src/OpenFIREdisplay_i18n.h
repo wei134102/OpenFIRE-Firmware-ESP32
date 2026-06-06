@@ -1,6 +1,6 @@
 /*!
  * @file OpenFIREdisplay_i18n.h
- * @brief Pause menu text for OLED display (English / Chinese).
+ * @brief OLED display text (English / Chinese).
  *
  * Enable Chinese with build flag: -D OLED_MENU_ZH
  * Uses compact 12x12 glyphs in OpenFIREdisplay_zh_glyphs.h (~12KB, 4MB-safe).
@@ -10,6 +10,7 @@
 
 #ifdef OLED_MENU_ZH
 
+/* Pause menu */
 #define PM_CENTER_CAL       "中心校准"
 #define PM_SAVE_SETTINGS    "保存设置"
 #define PM_RANGE_CAL        "画圈校准"
@@ -76,8 +77,86 @@
 #define PM_X_SHORT_FMT      "X:%s"
 #define PM_Y_SHORT_FMT      "Y:%s"
 
+/* Top panel prefixes */
+#define TXT_PROF_PREFIX     "配置:"
+#define TXT_USING_PREFIX    "使用"
+#define TXT_CALI_PREFIX     "校准:"
+
+/* Boot / connection status */
+#define TXT_TOP_CALIB_READY "校准就绪"
+#define TXT_TOP_USB_MODE    "USB模式"
+#define TXT_TOP_USB_WAIT    "等待USB"
+#define TXT_TOP_LINK_READY  "连接就绪"
+#define TXT_TOP_BOY_READY   "童锁就绪"
+#define TXT_TOP_USB_MOUNT   "USB已连接"
+
+/* Mode / setting feedback (top bar) */
+#define TXT_TOP_MODE_GAMEPAD    "模式:手柄"
+#define TXT_TOP_MODE_MOUSEKB    "模式:键鼠"
+#define TXT_TOP_MODE_MISTER     "模式:MiSTer"
+#define TXT_TOP_RANGECAL_ROTATE "画圈:旋转"
+#define TXT_TOP_RANGECAL_RELEASE "松开回中"
+#define TXT_TOP_RANGECAL_OK     "画圈:完成"
+#define TXT_TOP_RANGECAL_WEAK   "画圈:偏弱"
+#define TXT_TOP_CENTER_DONE     "中心已校"
+#define TXT_TOP_AUTOFIRE_FMT    "连发:%s"
+#define TXT_TOP_LOW_BTN_FMT     "低键:%s"
+#define TXT_TOP_LAYOUT_FMT      "布局:%s"
+#define TXT_TOP_AXIS_FMT        "轴:%s"
+#define TXT_TOP_SWAP_FMT        "互换:%s"
+#define TXT_TOP_RUMBLE_FFB_FMT  "震动:%s"
+#define TXT_TOP_TIMER_OFF       "计时:关"
+#define TXT_TOP_TIMER_FMT       "计时%2u分"
+#define TXT_TOP_X_AXIS_FMT      "X轴:%s"
+#define TXT_TOP_Y_AXIS_FMT      "Y轴:%s"
+#define TXT_TOP_ESCAPE_SENT     "已发Esc"
+#define TXT_GUN_ID_TOP_FMT      "枪号P%d"
+#define TXT_TOP_STICK_GAMEPAD   "摇杆:手柄"
+#define TXT_TOP_STICK_DPAD      "摇杆:十字"
+#define TXT_TOP_STICK_KEYS      "摇杆:按键"
+#define TXT_TOP_STICK_KEYS_FMT  "按键:%s"
+#define TXT_TOP_DEADZONE_FMT    "死区%u%%"
+#define TXT_TOP_RUMBLE_ON       "震动:开"
+#define TXT_TOP_RUMBLE_OFF      "震动:关"
+#define TXT_TOP_SOLENOID_ON     "电磁:开"
+#define TXT_TOP_SOLENOID_OFF    "电磁:关"
+
+/* Full screens */
+#define TXT_WELCOME             "欢迎!"
+#define TXT_PULL_TRIGGER        "扣扳机"
+#define TXT_PULL_TRIGGER_LONG   "扣扳机开始校准"
+#define TXT_IR_TEST             "红外测试"
+#define TXT_SAVING_PROFILES     "保存配置"
+#define TXT_SAVING              "保存中..."
+#define TXT_SAVE_OK_LINE1       "保存"
+#define TXT_SAVE_OK_LINE2       "成功"
+#define TXT_SAVE_FAIL_LINE1     "保存"
+#define TXT_SAVE_FAIL_LINE2     "失败"
+
+/* Temperature */
+#define TXT_TEMP_SENSOR         "温度:"
+#define TXT_TEMP_FAULT          "故障"
+#define TXT_CURRENT_TEMP        "温度:"
+
+/* Pause profile picker labels */
+#define TXT_BTN_A               "A>"
+#define TXT_BTN_B               "B>"
+#define TXT_BTN_START           "始>"
+#define TXT_BTN_SELECT          "选>"
+
+/* Status bar / timer */
+#define TXT_STATUS_OFF          "关"
+#define TXT_LAYOUT_DIAM_SHORT   "菱"
+#define TXT_LAYOUT_SQUA_SHORT   "方"
+#define TXT_TEMP_ERR            "错"
+#define TXT_PLAY_TIME_OVER      "游戏时间到"
+#define TXT_PROFILE_DIAM_FMT    "%s(菱)"
+#define TXT_PROFILE_SQUA_FMT    "%s(方)"
+#define TXT_BOY_MODE_FMT        "童锁?%lus"
+
 #else
 
+/* Pause menu */
 #define PM_CENTER_CAL       " Center Calibrate "
 #define PM_SAVE_SETTINGS    " Save Gun Settings "
 #define PM_RANGE_CAL        " Range Calibrate "
@@ -143,6 +222,70 @@
 #define PM_Y_AXIS_FMT       " Y Axis: %s "
 #define PM_X_SHORT_FMT      " X: %s "
 #define PM_Y_SHORT_FMT      " Y: %s "
+
+#define TXT_PROF_PREFIX     "Prof: "
+#define TXT_USING_PREFIX    "Using "
+#define TXT_CALI_PREFIX     "Cali: "
+#define TXT_TOP_CALIB_READY " CALIBRATION READY "
+#define TXT_TOP_USB_MODE    " go in usb mode "
+#define TXT_TOP_USB_WAIT    " wait for usb mount "
+#define TXT_TOP_LINK_READY  "  !! LINK READY !! "
+#define TXT_TOP_BOY_READY   "  BOY MODE READY  "
+#define TXT_TOP_USB_MOUNT   " USB mounted "
+#define TXT_TOP_MODE_GAMEPAD    "Mode Changed: Gamepad"
+#define TXT_TOP_MODE_MOUSEKB    "Mode Changed: Mouse/KB"
+#define TXT_TOP_MODE_MISTER     "Mode Changed: MiSTer"
+#define TXT_TOP_RANGECAL_ROTATE "RangeCal: rotate"
+#define TXT_TOP_RANGECAL_RELEASE "Release to center"
+#define TXT_TOP_RANGECAL_OK     "RangeCal: OK"
+#define TXT_TOP_RANGECAL_WEAK   "RangeCal: weak"
+#define TXT_TOP_CENTER_DONE     "Center calibrated"
+#define TXT_TOP_AUTOFIRE_FMT    "Autofire: %s"
+#define TXT_TOP_LOW_BTN_FMT     "Low Button: %s"
+#define TXT_TOP_LAYOUT_FMT      "Layout: %s"
+#define TXT_TOP_AXIS_FMT        "Axis: %s"
+#define TXT_TOP_SWAP_FMT        "Swap Sticks: %s"
+#define TXT_TOP_RUMBLE_FFB_FMT  "Rumble FFB: %s"
+#define TXT_TOP_TIMER_OFF       "Play Timer: OFF"
+#define TXT_TOP_TIMER_FMT       "Play Timer: %2u min"
+#define TXT_TOP_X_AXIS_FMT      "X Axis: %s"
+#define TXT_TOP_Y_AXIS_FMT      "Y Axis: %s"
+#define TXT_TOP_ESCAPE_SENT     "Sent Escape Key!"
+#define TXT_GUN_ID_TOP_FMT      "Gun ID: P%d"
+#define TXT_TOP_STICK_GAMEPAD   "Stick: Gamepad"
+#define TXT_TOP_STICK_DPAD      "Stick: D-Pad"
+#define TXT_TOP_STICK_KEYS      "Stick: Keys"
+#define TXT_TOP_STICK_KEYS_FMT  "Stick Keys: %s"
+#define TXT_TOP_DEADZONE_FMT    "Deadzone: %u%%"
+#define TXT_TOP_RUMBLE_ON       "Toggling Rumble ON"
+#define TXT_TOP_RUMBLE_OFF      "Toggling Rumble OFF"
+#define TXT_TOP_SOLENOID_ON     "Toggling Solenoid ON"
+#define TXT_TOP_SOLENOID_OFF    "Toggling Solenoid OFF"
+#define TXT_WELCOME             "Welcome!"
+#define TXT_PULL_TRIGGER        "Pull trigger"
+#define TXT_PULL_TRIGGER_LONG   "start calibration!"
+#define TXT_IR_TEST             "IR Test"
+#define TXT_SAVING_PROFILES     "Saving Profiles"
+#define TXT_SAVING              "Saving..."
+#define TXT_SAVE_OK_LINE1       "Save"
+#define TXT_SAVE_OK_LINE2       "successful"
+#define TXT_SAVE_FAIL_LINE1     "Save"
+#define TXT_SAVE_FAIL_LINE2     "failed"
+#define TXT_TEMP_SENSOR         "Temp sensor: "
+#define TXT_TEMP_FAULT          "Fault!"
+#define TXT_CURRENT_TEMP        "Current Temp: "
+#define TXT_BTN_A               " A > "
+#define TXT_BTN_B               " B > "
+#define TXT_BTN_START           "Str> "
+#define TXT_BTN_SELECT          "Sel> "
+#define TXT_STATUS_OFF          "OFF"
+#define TXT_LAYOUT_DIAM_SHORT   "Diam"
+#define TXT_LAYOUT_SQUA_SHORT   "Squa"
+#define TXT_TEMP_ERR            "Err"
+#define TXT_PLAY_TIME_OVER      "Play time over"
+#define TXT_PROFILE_DIAM_FMT    "%s (Diamond)"
+#define TXT_PROFILE_SQUA_FMT    "%s (Square)"
+#define TXT_BOY_MODE_FMT        "Boy? BOOT/TRIG %lus"
 
 #endif // OLED_MENU_ZH
 

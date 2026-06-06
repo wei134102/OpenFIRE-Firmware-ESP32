@@ -307,42 +307,49 @@ void ExtDisplay::TopPanelUpdate(const char *textPrefix, const char *profText)
     if(display != nullptr) {
         display->fillRect(0, 0, 128, 16, BLACK);
         display->drawFastHLine(0, 15, 128, WHITE);
-        display->setCursor(2, 2);
-        display->setTextSize(1);
-        display->setTextColor(WHITE, BLACK);
 
-        // 简化 Profile 前缀为 "Pro" 并在末尾附加当前枪ID P1-P4
-        bool isProfileBar = (textPrefix != nullptr && strcmp(textPrefix, "Prof: ") == 0);
+        const bool isProfileBar = (textPrefix != nullptr &&
+            (strcmp(textPrefix, "Prof: ") == 0 || strcmp(textPrefix, TXT_PROF_PREFIX) == 0));
+        const bool isUsingBar = (textPrefix != nullptr &&
+            (strcmp(textPrefix, "Using ") == 0 || strcmp(textPrefix, TXT_USING_PREFIX) == 0));
+        const bool isCaliBar = (textPrefix != nullptr &&
+            (strcmp(textPrefix, "Cali: ") == 0 || strcmp(textPrefix, TXT_CALI_PREFIX) == 0));
 
+        int x = 2;
         if(isProfileBar) {
-            // 固定使用简写前缀
-            display->print("Pro: ");
-        } else if(textPrefix != nullptr) {
-            display->print(textPrefix);
+            pauseMenuPrint(display, x, 2, TXT_PROF_PREFIX, WHITE, BLACK);
+            x += pauseMenuTextWidth(TXT_PROF_PREFIX);
+        } else if(isUsingBar) {
+            pauseMenuPrint(display, x, 2, TXT_USING_PREFIX, WHITE, BLACK);
+            x += pauseMenuTextWidth(TXT_USING_PREFIX);
+        } else if(isCaliBar) {
+            pauseMenuPrint(display, x, 2, TXT_CALI_PREFIX, WHITE, BLACK);
+            x += pauseMenuTextWidth(TXT_CALI_PREFIX);
+        } else if(textPrefix != nullptr && textPrefix[0] != '\0') {
+            if(profText == nullptr) {
+                pauseMenuPrint(display, 2, 2, textPrefix, WHITE, BLACK);
+            } else {
+                pauseMenuPrint(display, x, 2, textPrefix, WHITE, BLACK);
+                x += pauseMenuTextWidth(textPrefix);
+            }
         }
 
         if(profText != nullptr) {
-            const char* namePtr = profText;
-            // 对 Pro 状态栏，去掉前缀 "Profile "，避免太长
+            const char *namePtr = profText;
             if(isProfileBar && strncmp(profText, "Profile ", 8) == 0) {
                 namePtr = profText + 8;
             }
-            display->print(namePtr);
+            pauseMenuPrint(display, x, 2, namePtr, WHITE, BLACK);
+            x += pauseMenuTextWidth(namePtr);
 
             if(isProfileBar) {
-                // 从全局设置中读取当前 GunId（0=P1,1=P2,2=P3,3=P4）
-                uint8_t gunIndex = (uint8_t)(OF_Prefs::settings[OF_Const::gunId] % 4);
-                display->print("  P");
-                display->println((int)(gunIndex + 1));
-            } else {
-                display->println();
+                char gunBuf[8];
+                snprintf(gunBuf, sizeof(gunBuf), " P%d", (int)((OF_Prefs::settings[OF_Const::gunId] % 4) + 1));
+                pauseMenuPrint(display, x, 2, gunBuf, WHITE, BLACK);
             }
         }
 
         display->display();
-
-        // 顶部栏其它内容可能会频繁刷新（例如红外检测/温度提示），
-        // 这里强制在最后重绘右侧倒计时/占位符，避免被覆盖。
         UpdateTimerCountdown((uint16_t)PlayTimer::GetRemainingSecondsLive());
     }
 }
@@ -361,10 +368,6 @@ void ExtDisplay::UpdateTimerCountdown(uint16_t seconds)
     display->fillRect(x, y, width, 15, BLACK);
     display->drawFastHLine(x, 15, width, WHITE);
 
-    display->setCursor(x + 1, 2);
-    display->setTextSize(1);
-    display->setTextColor(WHITE, BLACK);
-
     char buf[5];
     // 根据 PlayTimer 状态区分 "OFF"（未配置计时）和 "0"（计时结束）
     bool timerExpired = PlayTimer::IsExpired();
@@ -374,14 +377,13 @@ void ExtDisplay::UpdateTimerCountdown(uint16_t seconds)
         if (seconds > 999) seconds = 999;
         snprintf(buf, sizeof(buf), "%3u", (unsigned)seconds);
     } else if (timerOff) {
-        snprintf(buf, sizeof(buf), "OFF");
+        snprintf(buf, sizeof(buf), "%s", TXT_STATUS_OFF);
     } else if (timerExpired) {
         snprintf(buf, sizeof(buf), "  0");
     } else {
-        // 理论上不会到这里，兜底显示 OFF
-        snprintf(buf, sizeof(buf), "OFF");
+        snprintf(buf, sizeof(buf), "%s", TXT_STATUS_OFF);
     }
-    display->print(buf);
+    pauseMenuPrint(display, x + 1, 2, buf, WHITE, BLACK);
 
     display->display();
 }
@@ -482,46 +484,28 @@ void ExtDisplay::ScreenModeChange(const int &screenMode, const bool &isAnalog)
             break;
           case Screen_Init:
             #ifdef OLED_091_INCH
-            // 0.91寸屏幕：简化显示
-            display->setTextSize(1);
-            display->setCursor(20, 18);
-            display->println("Welcome!");
-            display->setCursor(12, 24);
-            display->println("Pull trigger");
+            pauseMenuPrint(display, 28, 18, TXT_WELCOME, WHITE, BLACK);
+            pauseMenuPrint(display, 16, 28, TXT_PULL_TRIGGER, WHITE, BLACK);
             #else
-            display->setTextSize(2);
-            display->setCursor(20, 18);
-            display->println("Welcome!");
-            display->setTextSize(1);
-            display->setCursor(12, 40);
-            display->println(" Pull trigger to");
-            display->setCursor(12, 52);
-            display->println("start calibration!");
+            pauseMenuPrint(display, 36, 22, TXT_WELCOME, WHITE, BLACK);
+            pauseMenuPrint(display, 8, 40, TXT_PULL_TRIGGER, WHITE, BLACK);
+            pauseMenuPrint(display, 8, 52, TXT_PULL_TRIGGER_LONG, WHITE, BLACK);
             #endif
             break;
           case Screen_IRTest:
-            TopPanelUpdate("", "IR Test");
+            TopPanelUpdate("", TXT_IR_TEST);
             break;
           case Screen_Saving:
-            TopPanelUpdate("", "Saving Profiles");
-            display->setTextSize(2);
-            display->setCursor(16, 18);
-            display->println("Saving...");
+            TopPanelUpdate("", TXT_SAVING_PROFILES);
+            pauseMenuPrint(display, 28, 22, TXT_SAVING, WHITE, BLACK);
             break;
           case Screen_SaveSuccess:
-            display->setTextSize(2);
-            display->setCursor(30, 18);
-            display->println("Save");
-            display->setCursor(4, 40);
-            display->println("successful");
+            pauseMenuPrint(display, 40, 22, TXT_SAVE_OK_LINE1, WHITE, BLACK);
+            pauseMenuPrint(display, 40, 40, TXT_SAVE_OK_LINE2, WHITE, BLACK);
             break;
           case Screen_SaveError:
-            display->setTextSize(2);
-            display->setCursor(30, 18);
-            display->setTextColor(BLACK, WHITE);
-            display->println("Save");
-            display->setCursor(22, 40);
-            display->println("failed");
+            pauseMenuPrint(display, 40, 22, TXT_SAVE_FAIL_LINE1, BLACK, WHITE);
+            pauseMenuPrint(display, 40, 40, TXT_SAVE_FAIL_LINE2, BLACK, WHITE);
             break;
           case Screen_Mamehook_Single:
             #ifdef OLED_091_INCH  // 0.91寸屏幕显示底部图标在下半部分
@@ -646,13 +630,13 @@ void ExtDisplay::IdleOps()
               const uint8_t profIdx = (uint8_t)(OF_Prefs::currentProfile % PROFILE_COUNT);
               char profShort[5] = { 'P', '_', 'A', '\0', '\0' };
               profShort[2] = (char)('A' + (profIdx % 4));
-              const char* layoutStr = (OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout == OF_Const::layoutDiamond) ? "Diam" : "Squa";
+              const char* layoutStr = (OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout == OF_Const::layoutDiamond) ? TXT_LAYOUT_DIAM_SHORT : TXT_LAYOUT_SQUA_SHORT;
 
               #ifdef USES_TEMP
               char tempBuf[6];
               int temp = OF_FFB::temperatureCurrent;
               if (temp == (int)OF_Const::TEMPERATURE_SENSOR_ERROR_VALUE) {
-                  snprintf(tempBuf, sizeof(tempBuf), "Err");
+                  snprintf(tempBuf, sizeof(tempBuf), "%s", TXT_TEMP_ERR);
               } else {
                   if (temp < 0) temp = 0;
                   if (temp > 99) temp = 99;
@@ -680,7 +664,7 @@ void ExtDisplay::IdleOps()
 void ExtDisplay::ShowTemp()
 {
     if (OF_FFB::temperatureCurrent == (int)OF_Const::TEMPERATURE_SENSOR_ERROR_VALUE) {
-        TopPanelUpdate("Temp sensor: ", "Fault!");
+        TopPanelUpdate(TXT_TEMP_SENSOR, TXT_TEMP_FAULT);
         return;
     }
     if(OF_FFB::temperatureCurrent < 10) {
@@ -698,7 +682,7 @@ void ExtDisplay::ShowTemp()
         tempString[4] = '\0';
     }
 
-    TopPanelUpdate("Current Temp: ", tempString);
+    TopPanelUpdate(TXT_CURRENT_TEMP, tempString);
     currentTemp = OF_FFB::temperatureCurrent;
 }
 #endif // USES_TEMP
@@ -723,21 +707,16 @@ void ExtDisplay::PauseScreenShow(const int &currentProf, const char* name1, cons
 {
     if(display != nullptr) {
         const char* namesList[] = { name1, name2, name3, name4 };
-        TopPanelUpdate("Using ", namesList[currentProf]); // names are placeholder
+        TopPanelUpdate(TXT_USING_PREFIX, namesList[currentProf]);
         display->fillRect(0, 16, 128, SCREEN_CONTENT_HEIGHT, BLACK);
-        display->setTextSize(1);
-        display->setCursor(0, 17);
-        display->print(" A > ");
-        display->println(name1);
-        display->setCursor(0, 17+11);
-        display->print(" B > ");
-        display->println(name2);
-        display->setCursor(0, 17+(11*2));
-        display->print("Str> ");
-        display->println(name3);
-        display->setCursor(0, 17+(11*3));
-        display->print("Sel> ");
-        display->println(name4);
+        pauseMenuPrint(display, 0, 17, TXT_BTN_A, WHITE, BLACK);
+        pauseMenuPrint(display, 24, 17, name1, WHITE, BLACK);
+        pauseMenuPrint(display, 0, 28, TXT_BTN_B, WHITE, BLACK);
+        pauseMenuPrint(display, 24, 28, name2, WHITE, BLACK);
+        pauseMenuPrint(display, 0, 39, TXT_BTN_START, WHITE, BLACK);
+        pauseMenuPrint(display, 24, 39, name3, WHITE, BLACK);
+        pauseMenuPrint(display, 0, 50, TXT_BTN_SELECT, WHITE, BLACK);
+        pauseMenuPrint(display, 24, 50, name4, WHITE, BLACK);
         display->display();
     }
 }
@@ -1099,70 +1078,42 @@ void ExtDisplay::PauseProfileUpdate(const int &selection, const char* name1, con
         #ifndef OLED_091_INCH  // 0.91寸屏幕不显示底部箭头
         display->drawBitmap(60, 59, downArrowGlyph, ARROW_WIDTH, ARROW_HEIGHT, WHITE);
         #endif
-        display->setTextSize(1);
-        #ifdef OLED_091_INCH  // 0.91寸屏幕优化
-        // 为0.91寸屏幕简化显示，只显示当前选中的配置文件
-        display->setTextColor(BLACK, WHITE);
-        display->setCursor(4, 20);
+        #ifdef OLED_091_INCH
         switch(selection) {
           case 0:
-            display->println(name1);
+            pauseMenuPrint(display, 4, 20, name1, BLACK, WHITE);
             break;
           case 1:
-            display->println(name2);
+            pauseMenuPrint(display, 4, 20, name2, BLACK, WHITE);
             break;
           case 2:
-            display->println(name3);
+            pauseMenuPrint(display, 4, 20, name3, BLACK, WHITE);
             break;
           case 3:
-            display->println(name4);
+            pauseMenuPrint(display, 4, 20, name4, BLACK, WHITE);
             break;
         }
         #else
         switch(selection) {
-          case 0: // Profile #0, etc.
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(4, 25);
-            display->println(name4);
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(4, 36);
-            display->println(name1);
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(4, 47);
-            display->println(name2);
+          case 0:
+            pauseMenuPrint(display, 4, 25, name4, WHITE, BLACK);
+            pauseMenuPrint(display, 4, 36, name1, BLACK, WHITE);
+            pauseMenuPrint(display, 4, 47, name2, WHITE, BLACK);
             break;
           case 1:
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(4, 25);
-            display->println(name1);
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(4, 36);
-            display->println(name2);
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(4, 47);
-            display->println(name3);
+            pauseMenuPrint(display, 4, 25, name1, WHITE, BLACK);
+            pauseMenuPrint(display, 4, 36, name2, BLACK, WHITE);
+            pauseMenuPrint(display, 4, 47, name3, WHITE, BLACK);
             break;
           case 2:
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(4, 25);
-            display->println(name2);
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(4, 36);
-            display->println(name3);
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(4, 47);
-            display->println(name4);
+            pauseMenuPrint(display, 4, 25, name2, WHITE, BLACK);
+            pauseMenuPrint(display, 4, 36, name3, BLACK, WHITE);
+            pauseMenuPrint(display, 4, 47, name4, WHITE, BLACK);
             break;
           case 3:
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(4, 25);
-            display->println(name3);
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(4, 36);
-            display->println(name4);
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(4, 47);
-            display->println(name1);
+            pauseMenuPrint(display, 4, 25, name3, WHITE, BLACK);
+            pauseMenuPrint(display, 4, 36, name4, BLACK, WHITE);
+            pauseMenuPrint(display, 4, 47, name1, WHITE, BLACK);
             break;
         }
         #endif
@@ -1174,10 +1125,7 @@ void ExtDisplay::SaveScreen(const int &status)
 {
     if(display != nullptr) {
         display->fillRect(0, 16, 128, SCREEN_CONTENT_HEIGHT, BLACK);
-        display->setTextColor(WHITE, BLACK);
-        display->setTextSize(2);
-        display->setCursor(24, 24);
-        display->println("Saving...");
+        pauseMenuPrint(display, 24, 24, TXT_SAVING, WHITE, BLACK);
         display->display();
     }
 }

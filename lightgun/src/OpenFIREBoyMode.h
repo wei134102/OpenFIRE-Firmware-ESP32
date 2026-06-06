@@ -13,6 +13,9 @@
 #include <Arduino.h>
 #include "OpenFIREcommon.h"
 #include "OpenFIREFeedback.h"
+#ifdef USES_DISPLAY
+#include "OpenFIREdisplay_i18n.h"
+#endif
 
 class BoyMode
 {
@@ -111,7 +114,7 @@ private:
 
         #ifdef USES_DISPLAY
         char buf[24];
-        snprintf(buf, sizeof(buf), "Boy? BOOT/TRIG %lus", (unsigned long)secs);
+        snprintf(buf, sizeof(buf), TXT_BOY_MODE_FMT, (unsigned long)secs);
         FW_Common::OLED.TopPanelUpdate(buf);
         #endif
         

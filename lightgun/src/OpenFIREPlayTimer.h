@@ -8,6 +8,9 @@
 
 #include <Arduino.h>
 #include "OpenFIREcommon.h"
+#ifdef USES_DISPLAY
+#include "OpenFIREdisplay_i18n.h"
+#endif
 
 /// @brief Play-time limiter that can be configured from the pause menu.
 /// @details
@@ -84,7 +87,7 @@ public:
             FW_Common::buttons.ReportDisable();
 
             #ifdef USES_DISPLAY
-            FW_Common::OLED.TopPanelUpdate("Play time over");
+            FW_Common::OLED.TopPanelUpdate(TXT_PLAY_TIME_OVER);
             #endif
         }
         else
