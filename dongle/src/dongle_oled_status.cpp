@@ -10,6 +10,9 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
+#include "OpenFIRE_wireless_i18n.h"
+#include "OpenFIRE_zh_print.h"
+
 extern Adafruit_SSD1306 display;
 extern bool display_init;
 extern volatile uint8_t dongle_oled_sniff_channel;
@@ -26,20 +29,16 @@ void dongle_oled_draw_scan_status(void) {
   dongle_oled_spin_scan = (dongle_oled_spin_scan + 1) % 8;
   uint8_t sniff = dongle_oled_sniff_channel;
   display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor(0, 0);
-  display.println(F("OpenFIRE DONGLE"));
-  display.setCursor(0, 10);
+  OF_ZH_PRINT(&display, 0, 0, TXT_DONGLE_TITLE, SSD1306_WHITE, SSD1306_BLACK);
   if (sniff >= 1 && sniff <= 13) {
-    display.printf("RF sniff ch %2d %c", sniff, rotazione[dongle_oled_spin_scan]);
+    OF_ZH_PRINTF(&display, 0, 12, SSD1306_WHITE, SSD1306_BLACK,
+                 TXT_RF_SNIFF_FMT, sniff, rotazione[dongle_oled_spin_scan]);
   } else {
-    display.printf("WiFi scan %c", rotazione[dongle_oled_spin_scan]);
+    OF_ZH_PRINTF(&display, 0, 12, SSD1306_WHITE, SSD1306_BLACK,
+                 TXT_WIFI_SCAN_FMT, rotazione[dongle_oled_spin_scan]);
   }
-  display.setCursor(0, 22);
-  display.println(F("Best channel eval"));
-  display.setCursor(0, 34);
-  display.print(F("Please wait"));
+  OF_ZH_PRINT(&display, 0, 24, TXT_BEST_CH_EVAL, SSD1306_WHITE, SSD1306_BLACK);
+  OF_ZH_PRINT(&display, 0, 36, TXT_PLEASE_WAIT, SSD1306_WHITE, SSD1306_BLACK);
   display.display();
 }
 
@@ -51,16 +50,11 @@ void dongle_oled_draw_link_status(void) {
   dongle_oled_spin_link = (dongle_oled_spin_link + 1) % 8;
   uint8_t ch = channel_display;
   display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor(0, 0);
-  display.println(F("OpenFIRE DONGLE"));
-  display.setCursor(0, 12);
-  display.printf("Ch:%02d Pair %c", ch, rotazione[dongle_oled_spin_link]);
-  display.setCursor(0, 24);
-  display.println(F("Turn on lightgun"));
-  display.setCursor(0, 36);
-  display.println(F("ESP-NOW listen"));
+  OF_ZH_PRINT(&display, 0, 0, TXT_DONGLE_TITLE, SSD1306_WHITE, SSD1306_BLACK);
+  OF_ZH_PRINTF(&display, 0, 12, SSD1306_WHITE, SSD1306_BLACK,
+               TXT_CH_PAIR_FMT, ch, rotazione[dongle_oled_spin_link]);
+  OF_ZH_PRINT(&display, 0, 24, TXT_TURN_ON_GUN, SSD1306_WHITE, SSD1306_BLACK);
+  OF_ZH_PRINT(&display, 0, 36, TXT_ESPNOW_LISTEN, SSD1306_WHITE, SSD1306_BLACK);
   display.display();
 }
 

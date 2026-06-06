@@ -15,6 +15,12 @@
 
 #include "OpenFIRE_Wireless.h"
 #include "esp_idf_version.h"
+#include <cstring>
+
+#if defined(USES_DISPLAY) && (defined(GUN) || defined(DONGLE))
+  #include "OpenFIRE_wireless_i18n.h"
+  #include "OpenFIRE_zh_print.h"
+#endif
 
 // ===================================================================================
 // INIZIALIZZAZIONE HARDWARE DIPENDENTE DAL RUOLO (GUN vs DONGLE)
@@ -371,35 +377,48 @@ void animTaskLink_pedal(void *pvParameters) {
   int8_t rotazioneIndex = 0;
   const uint8_t baseX = 1;
   const uint8_t baseY = 2;
-  const uint8_t charWidth = 6;
   uint8_t seconds_tread = seconds_display;
-  
-  // Setup iniziale display
-  display_OLED->setCursor(baseX, baseY);
-  display_OLED->setTextSize(1);
-  display_OLED->setTextColor(WHITE, BLACK);
-  display_OLED->fillRect(0, 0, 128, 16, BLACK);
-  display_OLED->drawFastHLine(0, 15, 128, WHITE);
-  char buffer[30];
-  sprintf(buffer, "Search Pedal [%2ds]", seconds_tread);                  
-  display_OLED->print(buffer);
-  display_OLED->display();
+  char buffer[40];
 
-  // Loop del task
-  for (;;) {
-    if (seconds_display != seconds_tread)
-    {
-      display_OLED->setCursor((14*6)+1, 2);
-      seconds_tread = seconds_display;
-      sprintf(buffer, "%2d", seconds_tread);
-      display_OLED->print(buffer);
-    }
-    display_OLED->setCursor(baseX + (19 * charWidth), baseY);
+  auto drawStatus = [&]() {
+    display_OLED->fillRect(0, 0, 128, 16, BLACK);
+    display_OLED->drawFastHLine(0, 15, 128, WHITE);
+    snprintf(buffer, sizeof(buffer), TXT_SEARCH_PEDAL_FMT, (int)seconds_tread);
+    OF_ZH_PRINT(display_OLED, baseX, baseY, buffer, WHITE, BLACK);
+#if defined(OLED_MENU_ZH)
+    const int spinX = baseX + OpenFIREZh::textWidth(buffer);
+#else
+    const int spinX = baseX + (int)strlen(buffer) * 6;
+#endif
+    display_OLED->setTextSize(1);
+    display_OLED->setTextColor(WHITE, BLACK);
+    display_OLED->setCursor(spinX, baseY);
     display_OLED->write(rotazione[rotazioneIndex]);
-    rotazioneIndex = (rotazioneIndex + 1) % 8;
     display_OLED->display();
-    vTaskDelay(pdMS_TO_TICKS(150)); // piccolo delay per non saturare la CPU
-  } 
+  };
+
+  drawStatus();
+
+  for (;;) {
+    if (seconds_display != seconds_tread) {
+      seconds_tread = seconds_display;
+      drawStatus();
+    } else {
+      snprintf(buffer, sizeof(buffer), TXT_SEARCH_PEDAL_FMT, (int)seconds_tread);
+#if defined(OLED_MENU_ZH)
+      const int spinX = baseX + OpenFIREZh::textWidth(buffer);
+#else
+      const int spinX = baseX + (int)strlen(buffer) * 6;
+#endif
+      display_OLED->setTextSize(1);
+      display_OLED->setTextColor(WHITE, BLACK);
+      display_OLED->setCursor(spinX, baseY);
+      display_OLED->write(rotazione[rotazioneIndex]);
+      display_OLED->display();
+    }
+    rotazioneIndex = (rotazioneIndex + 1) % 8;
+    vTaskDelay(pdMS_TO_TICKS(150));
+  }
 }
 #endif // GUN
 
@@ -411,35 +430,48 @@ void animTaskLink(void *pvParameters) {
   int8_t rotazioneIndex = 0;
   const uint8_t baseX = 1;
   const uint8_t baseY = 2;
-  const uint8_t charWidth = 6;
   uint8_t channel_tread = espnow_wifi_channel;
-  
-  // Setup iniziale display
-  display_OLED->setCursor(baseX, baseY);
-  display_OLED->setTextSize(1);
-  display_OLED->setTextColor(WHITE, BLACK);
-  display_OLED->fillRect(0, 0, 128, 16, BLACK);
-  display_OLED->drawFastHLine(0, 15, 128, WHITE);
-  char buffer[30];
-  sprintf(buffer, "Ch:%2d Waiting link", channel_tread);
-  display_OLED->print(buffer);
-  display_OLED->display();
+  char buffer[40];
 
-  // Loop del task
-  for (;;) {
-    if (channel_display != channel_tread)
-    {
-      display_OLED->setCursor(19, 2);
-      channel_tread = channel_display;
-      sprintf(buffer, "%2d", channel_tread);
-      display_OLED->print(buffer);
-    }
-    display_OLED->setCursor(baseX + (19 * charWidth), baseY);
+  auto drawStatus = [&]() {
+    display_OLED->fillRect(0, 0, 128, 16, BLACK);
+    display_OLED->drawFastHLine(0, 15, 128, WHITE);
+    snprintf(buffer, sizeof(buffer), TXT_WAIT_LINK_FMT, (int)channel_tread);
+    OF_ZH_PRINT(display_OLED, baseX, baseY, buffer, WHITE, BLACK);
+#if defined(OLED_MENU_ZH)
+    const int spinX = baseX + OpenFIREZh::textWidth(buffer);
+#else
+    const int spinX = baseX + (int)strlen(buffer) * 6;
+#endif
+    display_OLED->setTextSize(1);
+    display_OLED->setTextColor(WHITE, BLACK);
+    display_OLED->setCursor(spinX, baseY);
     display_OLED->write(rotazione[rotazioneIndex]);
-    rotazioneIndex = (rotazioneIndex + 1) % 8;
     display_OLED->display();
-    vTaskDelay(pdMS_TO_TICKS(150)); // piccolo delay per non saturare la CPU
-  } 
+  };
+
+  drawStatus();
+
+  for (;;) {
+    if (channel_display != channel_tread) {
+      channel_tread = channel_display;
+      drawStatus();
+    } else {
+      snprintf(buffer, sizeof(buffer), TXT_WAIT_LINK_FMT, (int)channel_tread);
+#if defined(OLED_MENU_ZH)
+      const int spinX = baseX + OpenFIREZh::textWidth(buffer);
+#else
+      const int spinX = baseX + (int)strlen(buffer) * 6;
+#endif
+      display_OLED->setTextSize(1);
+      display_OLED->setTextColor(WHITE, BLACK);
+      display_OLED->setCursor(spinX, baseY);
+      display_OLED->write(rotazione[rotazioneIndex]);
+      display_OLED->display();
+    }
+    rotazioneIndex = (rotazioneIndex + 1) % 8;
+    vTaskDelay(pdMS_TO_TICKS(150));
+  }
 }
 #endif // GUN
 
@@ -465,10 +497,8 @@ void animTaskLink(void *pvParameters) {
   tft.setTextSize(1);
   tft.setTextColor(WHITE, BLACK);
   tft.fillRect(70,20,100,60,BLACK);
-  tft.setCursor(baseX, baseY - 30);
-  tft.print("Selected");
-  tft.setCursor(baseX, baseY - 19);
-  tft.print("channel:");
+  OF_ZH_PRINT(&tft, baseX, baseY - 30, TXT_SELECTED, WHITE, BLACK);
+  OF_ZH_PRINT(&tft, baseX, baseY - 19, TXT_CHANNEL_LABEL, WHITE, BLACK);
   tft.setCursor(baseX + (9 * charWidth)+3, baseY - 26);
   tft.setTextSize(2);
   tft.setTextColor(RED, BLACK);
@@ -477,8 +507,7 @@ void animTaskLink(void *pvParameters) {
   tft.print(buffer);
   tft.setTextSize(1);
   tft.setTextColor(WHITE, BLACK);
-  tft.setCursor(baseX, baseY);
-  tft.print("Connecting");
+  OF_ZH_PRINT(&tft, baseX, baseY, TXT_CONNECTING, WHITE, BLACK);
   tft.display();
   tft.setTextSize(2);
   tft.setTextColor(BLUE, BLACK);
@@ -508,12 +537,9 @@ void animTask(void *pvParameters) {
   tft.setCursor(baseX, baseY);
   tft.setTextSize(1);
   tft.setTextColor(WHITE, BLACK);
-  tft.setCursor(baseX + 12, baseY - 20);
-  tft.print("Searching");
-  tft.setCursor(baseX+3, baseY - 10);
-  tft.print("best channel");
-  tft.setCursor(baseX, baseY);
-  tft.print("Scanning WiFi");
+  OF_ZH_PRINT(&tft, baseX + 12, baseY - 20, TXT_SEARCHING, WHITE, BLACK);
+  OF_ZH_PRINT(&tft, baseX + 3, baseY - 10, TXT_BEST_CHANNEL, WHITE, BLACK);
+  OF_ZH_PRINT(&tft, baseX, baseY, TXT_SCANNING_WIFI, WHITE, BLACK);
   tft.display();
   tft.setTextColor(RED, BLACK);
 

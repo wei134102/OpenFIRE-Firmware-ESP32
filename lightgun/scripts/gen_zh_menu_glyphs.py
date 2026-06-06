@@ -8,7 +8,8 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "src" / "OpenFIREdisplay_zh_glyphs.h"
+REPO = ROOT.parent
+OUT = REPO / "shared_lib" / "display" / "OpenFIREdisplay_zh_glyphs.h"
 
 STRINGS = [
     # Pause menu
@@ -35,7 +36,15 @@ STRINGS = [
     "枪号P1", "布局:菱形", "连发:开", "低键:关", "摇杆:十字",
     "按键:WASD", "死区30%", "轴:无符号", "互换:开", "震动:关",
     "震动:无", "计时:关", "计时5分", "X轴:反转", "Y轴:正常",
-    "X:反", "Y:正", "计时20分",
+    "X:反", "Y:正",     "计时20分",
+    # Wireless / dongle / pedal
+    "OpenFIRE接收器", "RF嗅探ch", "WiFi扫描", "优选信道", "请稍候",
+    "信道", "配对", "请开光枪", "ESP-NOW监听", "射频已连接",
+    "等待数据流", "等待踏板", "玩家:", "踏台搜索", "秒",
+    "等待连接", "已选", "连接中", "搜索中", "器:",
+    "踏", "台", "嗅", "探", "扫", "描", "优", "选", "稍", "候",
+    "对", "光", "射", "频", "数", "据", "流", "踏", "板", "家",
+    "接", "收", "器",
     # ASCII punctuation used in mixed strings
     ":", "%", "!", ".", "?", "P", "W", "A", "S", "D", "E", "s", "c",
     "M", "i", "T", "e", "r", "l", "u", ">", "0", "1", "2", "3", "4",

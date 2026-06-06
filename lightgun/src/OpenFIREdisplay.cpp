@@ -39,7 +39,7 @@
 #include "OpenFIREPlayTimer.h"
 
 #if defined(OLED_MENU_ZH) && defined(USE_LOVYAN_GFX)
-  #include "OpenFIREdisplay_zh_glyphs.h"
+  #include "OpenFIREdisplay_zh_glyphs.h"  /* shared_lib/display via -I */
 #endif
 
 namespace {

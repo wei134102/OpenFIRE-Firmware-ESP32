@@ -29,6 +29,8 @@
   #include <Wire.h>
   #include <Adafruit_GFX.h>
   #include <Adafruit_SSD1306.h>
+  #include "OpenFIRE_wireless_i18n.h"
+  #include "OpenFIRE_zh_print.h"
 
   #define SCREEN_WIDTH 128
   #define SCREEN_HEIGHT 64
@@ -37,6 +39,8 @@
 #endif
 
 #ifdef USES_DISPLAY
+  #include "OpenFIRE_wireless_i18n.h"
+  #include "OpenFIRE_zh_print.h"
   #include "OpenFIRE_logo.h"
   #ifdef USE_LOVYAN_GFX
     #define LGFX_USE_V1
@@ -183,8 +187,7 @@ void setup() {
       display.clearDisplay();
       display.setTextSize(1);
       display.setTextColor(SSD1306_WHITE);
-      display.setCursor(20, 0);
-      display.println("OpenFIRE DONGLE");
+      OF_ZH_PRINT(&display, 20, 0, TXT_DONGLE_TITLE, SSD1306_WHITE, SSD1306_BLACK);
       display.drawBitmap(40, 15, customSplash, CUSTSPLASH_WIDTH, CUSTSPLASH_HEIGHT, SSD1306_WHITE);
       display.display();
     }
@@ -208,7 +211,7 @@ void setup() {
     tft.setTextSize(2);
     tft.setTextColor(RED);
     tft.setCursor(0, 40);
-    tft.printf("AWAIT PEDAL");
+    OF_ZH_PRINT(&tft, 0, 40, TXT_AWAIT_PEDAL, RED, BLACK);
   }
   #endif // USES_DISPLAY
 
@@ -217,8 +220,8 @@ void setup() {
     display.setTextSize(1);
     display.setTextColor(SSD1306_WHITE);
     display.setCursor(0, 0);
-    display.println(F("RF link OK"));
-    display.println(F("Wait gun stream"));
+    OF_ZH_PRINT(&display, 0, 0, TXT_RF_LINK_OK, SSD1306_WHITE, SSD1306_BLACK);
+    OF_ZH_PRINT(&display, 0, 12, TXT_WAIT_GUN_STREAM, SSD1306_WHITE, SSD1306_BLACK);
     display.display();
   #endif
 
@@ -269,11 +272,10 @@ void setup() {
     tft.println(usb_data_wireless.deviceName);
     tft.setTextColor(RED);
     tft.setCursor(0, 40);
-    tft.printf("Player: %d", usb_data_wireless.devicePlayer);
+    OF_ZH_PRINTF(&tft, 0, 40, RED, BLACK, TXT_PLAYER_FMT, usb_data_wireless.devicePlayer);
     tft.setTextSize(2);
-    tft.setCursor(0, 60);
-    tft.setTextColor(GRAY); 
-    tft.printf("Channel: %d", usb_data_wireless.channel);
+    tft.setTextColor(GRAY, BLACK);
+    OF_ZH_PRINTF(&tft, 0, 60, GRAY, BLACK, TXT_CHANNEL_FMT, usb_data_wireless.channel);
     }
   #endif // USES_DISPLAY
 
@@ -284,17 +286,16 @@ void setup() {
     display.setCursor(20, 0);
     display.drawBitmap(20, 0, customSplashBanner, CUSTSPLASHBANN_WIDTH, CUSTSPLASHBANN_HEIGHT, SSD1306_WHITE);
     display.setCursor(0, 16);
-    display.printf("Player: %d", usb_data_wireless.devicePlayer);
-    display.setCursor(60, 16);
-    display.printf("Ch:%d", usb_data_wireless.channel);
-    display.setCursor(0, 28);
-    display.printf("Gun: %02X:%02X:%02X:%02X:%02X:%02X",
-                  SerialWireless.mac_esp_another_card[0], SerialWireless.mac_esp_another_card[1], SerialWireless.mac_esp_another_card[2],
-                  SerialWireless.mac_esp_another_card[3], SerialWireless.mac_esp_another_card[4], SerialWireless.mac_esp_another_card[5]);
-    display.setCursor(0, 46);
-    display.printf("Dng: %02X:%02X:%02X:%02X:%02X:%02X",
-                  SerialWireless.mac_esp_inteface[0], SerialWireless.mac_esp_inteface[1], SerialWireless.mac_esp_inteface[2],
-                  SerialWireless.mac_esp_inteface[3], SerialWireless.mac_esp_inteface[4], SerialWireless.mac_esp_inteface[5]);
+    OF_ZH_PRINTF(&display, 0, 16, SSD1306_WHITE, SSD1306_BLACK,
+                 TXT_PLAYER_FMT, usb_data_wireless.devicePlayer);
+    OF_ZH_PRINTF(&display, 60, 16, SSD1306_WHITE, SSD1306_BLACK,
+                 TXT_CH_SHORT_FMT, usb_data_wireless.channel);
+    OF_ZH_PRINTF(&display, 0, 28, SSD1306_WHITE, SSD1306_BLACK, TXT_GUN_MAC_FMT,
+                 SerialWireless.mac_esp_another_card[0], SerialWireless.mac_esp_another_card[1], SerialWireless.mac_esp_another_card[2],
+                 SerialWireless.mac_esp_another_card[3], SerialWireless.mac_esp_another_card[4], SerialWireless.mac_esp_another_card[5]);
+    OF_ZH_PRINTF(&display, 0, 46, SSD1306_WHITE, SSD1306_BLACK, TXT_DNG_MAC_FMT,
+                 SerialWireless.mac_esp_inteface[0], SerialWireless.mac_esp_inteface[1], SerialWireless.mac_esp_inteface[2],
+                 SerialWireless.mac_esp_inteface[3], SerialWireless.mac_esp_inteface[4], SerialWireless.mac_esp_inteface[5]);
     display.display();
   #endif
 }
