@@ -73,45 +73,41 @@ private:
     #endif // COMMENTO
     
     // ==========================================
-    // --- PARAMETRI DI TUNING E-SPORTS ---
+    // --- PARAMETRI DI TUNING E-SPORTS (BILANCIAMENTO DEFINITIVO) ---
 
-    // min_cutoff: La "lentezza" del mirino quando ti muovi pochissimo.
-    // 0.2f elimina l'effetto "fango" e garantisce tracciamento 1:1 nei panning lenti.
-    const float min_cutoff = 0.2f; 
+    // min_cutoff: La "lentezza" del mirino quando ti muovi pochissimo o sei fermo.
+    // Impostato a 0.1f: il punto di equilibrio perfetto. 0.2f era leggermente 
+    // scivoloso, 0.05f era troppo rigido. 0.1f garantisce mira da cecchino solida.
+    const float min_cutoff = 0.1f; 
     
     // --- GESTIONE ASIMMETRICA DELLA VELOCITÀ ---
     // d_cutoff_base: Reattività per i movimenti di precisione.
-    // Basso (1.0f) per spalmare gli scalini della telecamera in un'onda fluida.
+    // RIPORTATO A 1.0f. A 200Hz, un salto di 1 singolo pixel raw della telecamera
+    // equivale a 800 pixel/sec! Serve un cutoff basso (1.0f) per spalmare questi salti 
+    // quantizzati (0, 800, 0, 800) in una velocità costante e fluida (es. 400).
     const float d_cutoff_base = 1.0f; 
     
-    // d_cutoff_snap: Reattività per scatti violenti e frenate.
-    // Altissimo (25.0f) per abbattere l'inerzia e allineare le derivate in pochi millisecondi.
+    // d_cutoff_snap: Reattività per scatti violenti e frenate brusche.
     const float d_cutoff_snap = 25.0f; 
     
-    /*
-    // snap_threshold: Il "Punto di Rottura" (in pixel/sec). 
-    // Superata questa variazione (es. un flick shot), il filtro passa alla modalità brutale.
-    const float snap_threshold = 1000.0f;
-    */
-
-    // snap_base: La soglia di scatto al CENTRO dello schermo (sensibilità massima).
+    // snap_base: Il "Punto di Rottura" al CENTRO dello schermo (in pixel/sec).
+    // RIPORTATO A 1000.0f. Questo è FONDAMENTALE. Essendo il rumore di quantizzazione
+    // pari a ~800 px/s, se abbassiamo la soglia a 400 il filtro "scatta" ad ogni singolo
+    // aggiornamento dei pixel della telecamera, causando micro-vibrazioni continue.
+    // 1000.0f ignora i salti di 1 pixel (800) ma interviene sui flick-shot.
     const float snap_base = 1000.0f;
 
     // snap_edge_multiplier: Quanta "resistenza" aggiungere quando si mira ai BORDI.
-    // Con 2000.0f, la soglia agli angoli arriverà a 2600.0f. Richiederà uno strappo 
-    // intenzionale per innescare lo scatto, ignorando i tremori ottici del sensore.
     const float snap_edge_multiplier = 2000.0f;
 
     // max_cutoff: Il limite di banda passante superiore. 
-    // Previene reazioni esagerate o divisioni per zero.
     const float max_cutoff = 30.0f; 
     
     // beta_multiplier: Moltiplicatore di reattività spaziale.
-    // 2.5f apre il filtro a sufficienza per azzerare il lag, ma senza causare 
-    // pattinamenti elastici a fine corsa.
-    const float beta_multiplier = 2.5f; 
+    // Portato a 2.8f (dal 2.5f originale). Un boost chirurgico: apre il filtro un 
+    // pelo più velocemente per abbattere la latenza, senza i tremori visti a 3.5f.
+    const float beta_multiplier = 2.8f; 
     const float beta_base = ((0.011f * (float)CamResX) / (float)MouseResX) * beta_multiplier;
-
 
     // ==========================================
 

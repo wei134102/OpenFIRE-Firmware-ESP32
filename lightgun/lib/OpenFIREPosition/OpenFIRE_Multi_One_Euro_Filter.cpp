@@ -91,33 +91,29 @@ void OpenFIRE_One_Euro_Multi::process(int* x, int* y) {
         // Beta adattivo calcolato in base alla distanza dal centro
         float adaptiveBeta = beta_base * edge_attenuation;
 
-        // --- CALCOLO DELLA SOGLIA DINAMICA DI SCATTO ---
-        // Al centro (edge_attenuation = 1.0) -> dynamic_snap = snap_base (Sensibilità massima)
-        // Ai bordi (edge_attenuation = 0.2) -> dynamic_snap = snap_base + (snap_edge_multiplier * 0.8)
-        // Questo protegge i bordi dello schermo dai glitch ottici del sensore IR.
+        // Soglia di snap dinamica basata sulla posizione dello schermo
         float dynamic_snap = snap_base + (snap_edge_multiplier * (1.0f - edge_attenuation));
+        
+        // --- OTTIMIZZAZIONE LERP: PRE-CALCOLO ---
+        // Sostituiamo le divisioni costose dell'ESP32 con moltiplicazioni.
+        // Calcoliamo una sola volta i limiti e l'inverso del range di transizione (20% sotto e sopra la soglia).
+        float lower_bound = dynamic_snap * 0.8f;
+        float upper_bound = dynamic_snap * 1.2f;
+        float inv_lerp_range = 1.0f / (dynamic_snap * 0.4f); 
 
         // --- 2. FILTRAGGIO ASSE X ---
         float dx = ((float)x[i] - states[i].x_prev) * inv_dt;
         
         // --- TRANSIZIONE MORBIDA (LERP) DELLA DERIVATA (Asse X) ---
-        // Sostituisce il vecchio interruttore "on/off" duro con soglia adattiva.
-        // Utilizziamo una fascia di transizione tra l'80% e il 120% della soglia
-        // per sfumare gradualmente da a_d_base (fluido) ad a_d_snap (brutale).
-        // Questo elimina il jitter quando l'accelerazione del giocatore oscilla 
-        // esattamente sul punto di rottura (dynamic_snap).
         float diff_x = fabsf(dx - states[i].vel_x_hat);
-        float lower_bound_x = dynamic_snap * 0.8f;
-        float upper_bound_x = dynamic_snap * 1.2f;
         
         float a_d_current_x;
-        if (diff_x <= lower_bound_x) {
+        if (diff_x <= lower_bound) {
             a_d_current_x = a_d_base;
-        } else if (diff_x >= upper_bound_x) {
+        } else if (diff_x >= upper_bound) {
             a_d_current_x = a_d_snap;
         } else {
-            // Interpolazione lineare (LERP) nella fascia critica
-            float t_x = (diff_x - lower_bound_x) / (upper_bound_x - lower_bound_x);
+            float t_x = (diff_x - lower_bound) * inv_lerp_range;
             a_d_current_x = a_d_base + t_x * (a_d_snap - a_d_base);
         }
         
@@ -136,17 +132,14 @@ void OpenFIRE_One_Euro_Multi::process(int* x, int* y) {
         
         // --- TRANSIZIONE MORBIDA (LERP) DELLA DERIVATA (Asse Y) ---
         float diff_y = fabsf(dy - states[i].vel_y_hat);
-        float lower_bound_y = dynamic_snap * 0.8f;
-        float upper_bound_y = dynamic_snap * 1.2f;
         
         float a_d_current_y;
-        if (diff_y <= lower_bound_y) {
+        if (diff_y <= lower_bound) {
             a_d_current_y = a_d_base;
-        } else if (diff_y >= upper_bound_y) {
+        } else if (diff_y >= upper_bound) {
             a_d_current_y = a_d_snap;
         } else {
-            // Interpolazione lineare (LERP) nella fascia critica
-            float t_y = (diff_y - lower_bound_y) / (upper_bound_y - lower_bound_y);
+            float t_y = (diff_y - lower_bound) * inv_lerp_range;
             a_d_current_y = a_d_base + t_y * (a_d_snap - a_d_base);
         }
         
