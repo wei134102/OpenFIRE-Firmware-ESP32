@@ -144,6 +144,9 @@ public:
     // Button combination to toggle between mouse and gamepad mode
     static inline constexpr uint32_t ToggleMouseGamepadBtnMask = BtnMask_A | BtnMask_B | BtnMask_Trigger;
 
+    // Trigger + Gun A + Gun C (Reload idx): send Escape keypress
+    static inline constexpr uint32_t EscapeKeyTrigCABtnMask = BtnMask_Trigger | BtnMask_A | BtnMask_Reload;
+
     // button combo to skip the center calibration step
     static inline constexpr uint32_t SkipCalCenterBtnMask = BtnMask_A;
 

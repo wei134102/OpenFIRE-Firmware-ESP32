@@ -818,7 +818,8 @@ void loop1()
             if(!BoyMode::IsEnabled() && OF_Serial::serialMode) OF_Serial::SerialHandling();                                   // Process the force feedback from the current queue.
         #endif // MAMEHOOKER
         
-        if(FW_Common::buttons.pressedReleased == FW_Const::EscapeKeyBtnMask)
+        if(FW_Common::buttons.pressedReleased == FW_Const::EscapeKeyBtnMask ||
+           FW_Common::buttons.pressedReleased == FW_Const::EscapeKeyTrigCABtnMask)
             SendEscapeKey();
         
         // A+B+Trigger 快捷键检测：在运行模式下切换鼠标和手柄模式
@@ -1867,6 +1868,8 @@ void loop()
 
             } else if(FW_Common::buttons.pressedReleased & FW_Const::ExitPauseModeBtnMask) {
                 FW_Common::SetMode(FW_Const::GunMode_Run);
+            } else if(FW_Common::buttons.pressedReleased == FW_Const::EscapeKeyTrigCABtnMask) {
+                SendEscapeKey();
             } else if(FW_Common::buttons.pressedReleased == FW_Const::ToggleMouseGamepadBtnMask) {
                 // Toggle between mouse and gamepad mode
                 if(!OF_Serial::serialMode) {
@@ -2119,7 +2122,8 @@ void ExecRunMode()
             if(!BoyMode::IsEnabled() && OF_Serial::serialMode) OF_Serial::SerialHandling();                                   // Process the force feedback from the current queue.
         #endif // MAMEHOOKER
 
-        if(FW_Common::buttons.pressedReleased == FW_Const::EscapeKeyBtnMask)
+        if(FW_Common::buttons.pressedReleased == FW_Const::EscapeKeyBtnMask ||
+           FW_Common::buttons.pressedReleased == FW_Const::EscapeKeyTrigCABtnMask)
             SendEscapeKey();
 
         if(OF_Prefs::toggles[OF_Const::holdToPause]) {
