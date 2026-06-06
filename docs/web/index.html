@@ -99,6 +99,31 @@
             border-radius: 10px; overflow: hidden; margin-top: 10px; display: none;
         }
         .progress-fill { height: 100%; background-color: var(--success); width: 0%; transition: width 0.2s; }
+
+        .port-row {
+            display: flex;
+            gap: 8px;
+            align-items: stretch;
+        }
+        .port-row select { flex: 1; min-width: 0; }
+        .port-row button {
+            width: auto;
+            padding: 10px 14px;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+        .port-hint {
+            margin-top: 8px;
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+        .port-status {
+            margin-top: 6px;
+            font-size: 13px;
+            color: var(--success);
+            min-height: 18px;
+        }
     </style>
 </head>
 <body>
@@ -107,6 +132,7 @@
     <div class="lang-switcher">
         <select id="langSelect">
             <option value="en">🇬🇧 EN</option>
+            <option value="zh">🇨🇳 中文</option>
             <option value="it">🇮🇹 IT</option>
         </select>
     </div>
@@ -151,11 +177,24 @@
         </select>
     </div>
 
+    <div class="form-group" id="portGroup">
+        <label for="portSelect" data-i18n="portLabel">0. Select COM Port:</label>
+        <div class="port-row">
+            <select id="portSelect">
+                <option value="" data-i18n="noPortSelected">-- No port selected --</option>
+            </select>
+            <button type="button" id="selectPortBtn" data-i18n="selectPortBtn">Select COM Port</button>
+            <button type="button" id="refreshPortBtn" data-i18n="refreshPortBtn">Refresh</button>
+        </div>
+        <div class="port-hint" data-i18n="portHint">Use Chrome or Edge on PC. Click "Select COM Port" and choose your ESP32 device. If not listed, click "Show all devices" in the popup.</div>
+        <div class="port-status" id="portStatus"></div>
+    </div>
+
     <div class="info-box warning-box" id="instructionsBox" data-i18n="instructions">
         <strong>⚡ Important Instructions:</strong><br>
         1. Use a good quality data USB cable.<br>
-        2. Click Flash and select the port from the popup.<br>
-        3. If the board doesn't connect, <b>hold down the physical BOOT button</b> on the ESP32 while clicking.
+        2. Click "Select COM Port" first, then choose your device in the browser popup.<br>
+        3. If the board doesn't connect, <b>hold down the physical BOOT button</b> on the ESP32 while flashing.
     </div>
 
     <button id="flashBtn" disabled data-i18n="btnFlash">FLASH FIRMWARE</button>
@@ -181,7 +220,16 @@
             fsLabel: "3. Installation Type (Lightgun):",
             fsBase: "Base Update (Keeps Calibrations)",
             fsClean: "Clean Install (Erases Everything)",
-            instructions: "<strong>⚡ Important Instructions:</strong><br>1. Use a good quality data USB cable.<br>2. Click Flash and select the port from the popup.<br>3. If the board doesn't connect, <b>hold down the physical BOOT button</b> on the ESP32 while clicking.",
+            portLabel: "0. Select COM Port:",
+            noPortSelected: "-- No port selected --",
+            selectPortBtn: "Select COM Port",
+            refreshPortBtn: "Refresh",
+            portHint: "Use Chrome or Edge on PC (HTTPS or localhost required). Click \"Select COM Port\" and pick your ESP32. If missing, click \"Show all devices\" in the popup. Close Arduino IDE / serial monitors first.",
+            portConnected: "Port authorized:",
+            serialPort: "Serial Port",
+            portSelectFirst: "Please select a COM port first (click \"Select COM Port\").",
+            errSecureContext: "<strong>❌ ERROR:</strong> Web Serial requires a secure context. Open this page via <b>HTTPS</b> or <b>http://localhost</b> — not as a local file (file://).",
+            instructions: "<strong>⚡ Important Instructions:</strong><br>1. Use a good quality data USB cable.<br>2. Click \"Select COM Port\" first, then choose your device in the browser popup.<br>3. If the board doesn't connect, <b>hold down the physical BOOT button</b> on the ESP32 while flashing.",
             btnFlash: "FLASH FIRMWARE",
             btnUnavailable: "FILE UNAVAILABLE",
             prerelease: " (Pre-release)",
@@ -235,7 +283,16 @@
             fsLabel: "3. Tipo di Installazione (Lightgun):",
             fsBase: "Aggiornamento Base (Mantiene Calibrazioni)",
             fsClean: "Installazione Pulita (Cancella Tutto)",
-            instructions: "<strong>⚡ Istruzioni Importanti:</strong><br>1. Usa un cavo USB dati di buona qualità.<br>2. Clicca su Flash e seleziona la porta dal popup.<br>3. Se la scheda non si connette, <b>tieni premuto il tasto fisico BOOT</b> sull'ESP32 mentre clicchi.",
+            portLabel: "0. Seleziona Porta COM:",
+            noPortSelected: "-- Nessuna porta selezionata --",
+            selectPortBtn: "Seleziona Porta COM",
+            refreshPortBtn: "Aggiorna",
+            portHint: "Usa Chrome o Edge su PC (serve HTTPS o localhost). Clicca \"Seleziona Porta COM\" e scegli l'ESP32. Se manca, clicca \"Mostra tutti i dispositivi\" nel popup. Chiudi Arduino IDE e monitor seriali.",
+            portConnected: "Porta autorizzata:",
+            serialPort: "Porta Seriale",
+            portSelectFirst: "Seleziona prima una porta COM (clicca \"Seleziona Porta COM\").",
+            errSecureContext: "<strong>❌ ERRORE:</strong> Web Serial richiede un contesto sicuro. Apri questa pagina via <b>HTTPS</b> o <b>http://localhost</b> — non come file locale (file://).",
+            instructions: "<strong>⚡ Istruzioni Importanti:</strong><br>1. Usa un cavo USB dati di buona qualità.<br>2. Clicca prima \"Seleziona Porta COM\", poi scegli il dispositivo nel popup.<br>3. Se la scheda non si connette, <b>tieni premuto il tasto BOOT</b> sull'ESP32 durante il flash.",
             btnFlash: "FLASH FIRMWARE",
             btnUnavailable: "FILE NON DISPONIBILE",
             prerelease: " (Pre-release)",
@@ -275,6 +332,69 @@
             errGestureUI: "Errore Browser. Ricarica la pagina.",
             errUnknown: "❌ ERRORE:",
             errUI: "Errore durante l'operazione."
+        },
+        zh: {
+            title: "OpenFIRE ESP32 固件刷写工具",
+            versionLabel: "固件版本：",
+            loadingVersions: "正在加载版本...",
+            obsoleteWarning: "<strong>⚠️ 警告：</strong> 您正在查看已过时的版本。请从上方菜单选择最新发布版本。",
+            deviceLabel: "1. 选择设备：",
+            selectDevice: "-- 请选择 --",
+            boardLabel: "2. 选择开发板 (ESP32-S3)：",
+            selectBoard: "-- 请选择开发板 --",
+            noFirmware: "（此版本无可用固件）",
+            fsLabel: "3. 安装类型（光枪）：",
+            fsBase: "基础更新（保留校准数据）",
+            fsClean: "全新安装（清除所有数据）",
+            portLabel: "0. 选择串口：",
+            noPortSelected: "-- 未选择串口 --",
+            selectPortBtn: "选择串口",
+            refreshPortBtn: "刷新",
+            portHint: "请使用 PC 版 Chrome 或 Edge（需 HTTPS 或 localhost）。点击「选择串口」后在弹窗中选取 ESP32 设备；若未显示，请点击弹窗中的「显示所有设备」。请先关闭 Arduino IDE、串口监视器等占用 COM 口的程序。",
+            portConnected: "已授权串口：",
+            serialPort: "串口",
+            portSelectFirst: "请先选择串口（点击「选择串口」按钮）。",
+            errSecureContext: "<strong>❌ 错误：</strong> Web Serial 需要安全上下文。请通过 <b>HTTPS</b> 或 <b>http://localhost</b> 打开此页面，不能直接双击本地 HTML 文件（file://）。",
+            instructions: "<strong>⚡ 重要说明：</strong><br>1. 请使用优质数据线（非仅充电线）。<br>2. 先点击「选择串口」，在浏览器弹窗中选择 ESP32 设备。<br>3. 若无法连接，刷写时<b>按住 ESP32 的 BOOT 键</b>。",
+            btnFlash: "刷写固件",
+            btnUnavailable: "固件文件不可用",
+            prerelease: "（预发布）",
+            stable: "（稳定版）",
+            errBrowser: "<strong>❌ 错误：</strong> 您的浏览器不支持 Web Serial API。请使用 PC 版 <b>Google Chrome</b>、<b>Microsoft Edge</b>、<b>Opera</b> 或 <b>Brave</b>。",
+            errRateLimit: "<strong>⚠️ 警告：</strong> GitHub API 请求频率超限，请一小时后重试。",
+            errNetwork: "网络错误",
+            errNetworkBox: "<strong>❌ 错误：</strong> 无法连接 GitHub，请检查网络或防火墙。",
+            noReleaseFound: "未找到发布版本",
+            apiError: "GitHub API 错误",
+            loadingDrivers: "正在加载系统驱动...",
+            dlStart: "正在下载固件...",
+            dlComplete: "下载完成：",
+            waitPort: "正在等待选择串口...",
+            connChip: "正在连接芯片...",
+            handshake: "握手成功！",
+            startWrite: "开始写入 Flash...",
+            writePct: "写入进度：",
+            flashSuccess: "🚀 固件刷写成功！",
+            successInfo: "操作完成！请断开并重新连接 ESP32。",
+            errCancelLog: "用户取消了操作。",
+            errCancelUI: "就绪。",
+            errPortLockLog1: "❌ 错误：COM 口被其他程序占用。",
+            errPortLockLog2: "💡 解决方法：关闭占用串口的程序（如 Arduino IDE、串口助手）或重新插拔 USB 线。",
+            errPortLockUI: "COM 口被占用。",
+            errTimeoutLog1: "❌ 错误：无法与开发板通信。",
+            errTimeoutLog2: "💡 解决方法：重试并按住 ESP32 的 BOOT 键，直到进度条开始走动。",
+            errTimeoutUI: "连接失败（请使用 BOOT 键）。",
+            errReset: "⚠️ 无法自动重启，请按 RESET/EN 键或重新插拔 USB。",
+            err404Log: "❌ 错误：文件未找到 (404)。",
+            err404UI: "错误：固件文件缺失。",
+            errLibLog: "❌ 错误：无法加载 esptool-js 库。",
+            errLibUI: "系统错误，请检查网络或关闭广告拦截。",
+            errNetFetchLog: "❌ 错误：下载过程中连接中断。",
+            errNetFetchUI: "下载时网络错误。",
+            errGestureLog: "❌ 浏览器安全限制：需要用户直接点击操作。",
+            errGestureUI: "浏览器错误，请刷新页面后重试。",
+            errUnknown: "❌ 错误：",
+            errUI: "操作过程中发生错误。"
         }
     };
 
@@ -287,7 +407,7 @@
     function setLanguage(lang) {
         if (!translations[lang]) lang = 'en';
         currentLang = lang;
-        document.documentElement.lang = lang;
+        document.documentElement.lang = lang === 'zh' ? 'zh-CN' : lang;
         document.getElementById('langSelect').value = lang;
 
         document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -299,7 +419,13 @@
             }
         });
 
+        const selectPortBtn = document.getElementById('selectPortBtn');
+        const refreshPortBtn = document.getElementById('refreshPortBtn');
+        if (selectPortBtn) selectPortBtn.innerText = t('selectPortBtn');
+        if (refreshPortBtn) refreshPortBtn.innerText = t('refreshPortBtn');
+
         populateVersionSelect();
+        refreshPortList();
         const devSelect = document.getElementById('deviceType');
         if (devSelect && devSelect.value !== "") {
             devSelect.dispatchEvent(new Event('change'));
@@ -326,11 +452,22 @@
     const REPO_OWNER = "alessandro-satanassi";
     const REPO_NAME = "OpenFIRE-Firmware-ESP32";
     const IMG_BASE_URL = `https://github.com/${REPO_OWNER}/${REPO_NAME}/raw/main/docs/board_scheme/`;
+    const ESP_PORT_FILTERS = [
+        { usbVendorId: 0x303a }, // Espressif (native USB / S3)
+        { usbVendorId: 0x10c4 }, // Silicon Labs CP210x
+        { usbVendorId: 0x1a86 }, // QinHeng CH340
+        { usbVendorId: 0x0403 }, // FTDI
+        { usbVendorId: 0x2341 }, // Arduino
+        { usbVendorId: 0x1a86, usbProductId: 0x7523 }, // CH340 common
+        { usbVendorId: 0x10c4, usbProductId: 0xea60 }, // CP2102 common
+    ];
     
     let allReleases = [];
     let currentAssets = [];
     let targetTag = "";
     let latestGlobalTag = "";
+    let portRegistry = new Map(); // index -> SerialPort
+    let selectedPortIndex = "";
 
     const boards = {
         LIGHTGUN: [
@@ -358,11 +495,153 @@
         ]
     };
 
+    const USB_VENDOR_NAMES = {
+        0x303a: 'Espressif',
+        0x10c4: 'Silicon Labs (CP210x)',
+        0x1a86: 'QinHeng (CH340)',
+        0x0403: 'FTDI',
+        0x2341: 'Arduino',
+    };
+
+    function formatPortLabel(port, index) {
+        const info = port.getInfo ? port.getInfo() : {};
+        const vid = info.usbVendorId;
+        const pid = info.usbProductId;
+        if (vid !== undefined) {
+            const vendor = USB_VENDOR_NAMES[vid] || `USB 0x${vid.toString(16)}`;
+            const pidStr = pid !== undefined ? `:${pid.toString(16)}` : '';
+            return `${t('serialPort')} #${index + 1} — ${vendor}${pidStr}`;
+        }
+        return `${t('serialPort')} #${index + 1}`;
+    }
+
+    async function refreshPortList() {
+        if (!navigator.serial) return;
+        const portSelect = document.getElementById('portSelect');
+        if (!portSelect) return;
+
+        const ports = await navigator.serial.getPorts();
+        portRegistry.clear();
+        portSelect.innerHTML = '';
+
+        const emptyOpt = document.createElement('option');
+        emptyOpt.value = '';
+        emptyOpt.textContent = t('noPortSelected').replace(/<[^>]*>?/gm, '');
+        portSelect.appendChild(emptyOpt);
+
+        ports.forEach((port, index) => {
+            portRegistry.set(String(index), port);
+            const opt = document.createElement('option');
+            opt.value = String(index);
+            opt.textContent = formatPortLabel(port, index);
+            portSelect.appendChild(opt);
+        });
+
+        if (selectedPortIndex && portRegistry.has(selectedPortIndex)) {
+            portSelect.value = selectedPortIndex;
+        } else {
+            selectedPortIndex = ports.length === 1 ? '0' : '';
+            if (selectedPortIndex) portSelect.value = selectedPortIndex;
+        }
+        updatePortStatus();
+    }
+
+    function updatePortStatus() {
+        const statusEl = document.getElementById('portStatus');
+        if (!statusEl) return;
+        const port = getSelectedPort();
+        if (port) {
+            const idx = document.getElementById('portSelect').value;
+            statusEl.textContent = `${t('portConnected')} ${formatPortLabel(port, parseInt(idx, 10) || 0)}`;
+            statusEl.style.color = 'var(--success)';
+        } else {
+            statusEl.textContent = '';
+        }
+    }
+
+    function getSelectedPort() {
+        const portSelect = document.getElementById('portSelect');
+        if (!portSelect || portSelect.value === '') return null;
+        return portRegistry.get(portSelect.value) || null;
+    }
+
+    async function requestSerialPort() {
+        if (!navigator.serial) return null;
+        try {
+            const port = await navigator.serial.requestPort({ filters: ESP_PORT_FILTERS });
+            await refreshPortList();
+            const ports = await navigator.serial.getPorts();
+            const idx = ports.indexOf(port);
+            if (idx >= 0) {
+                selectedPortIndex = String(idx);
+                document.getElementById('portSelect').value = selectedPortIndex;
+            }
+            updatePortStatus();
+            logMsg(`${t('portConnected')} ${formatPortLabel(port, idx >= 0 ? idx : 0)}`);
+            return port;
+        } catch (e) {
+            if (e.name !== 'NotFoundError') throw e;
+            return null;
+        }
+    }
+
+    async function preloadEsptool() {
+        if (!window.ESPLoader || !window.Transport) {
+            const esptoolModule = await import("https://unpkg.com/esptool-js@0.6.0/bundle.js");
+            window.ESPLoader = esptoolModule.ESPLoader;
+            window.Transport = esptoolModule.Transport;
+        }
+    }
+
+    function setupPortUI() {
+        const selectPortBtn = document.getElementById('selectPortBtn');
+        const refreshPortBtn = document.getElementById('refreshPortBtn');
+        const portSelect = document.getElementById('portSelect');
+
+        selectPortBtn.addEventListener('click', async () => {
+            try {
+                await requestSerialPort();
+            } catch (e) {
+                logMsg(`${t('errUnknown')} ${e.message || e}`);
+            }
+        });
+
+        refreshPortBtn.addEventListener('click', () => refreshPortList());
+
+        portSelect.addEventListener('change', (e) => {
+            selectedPortIndex = e.target.value;
+            updatePortStatus();
+        });
+
+        if (navigator.serial) {
+            navigator.serial.addEventListener('connect', () => refreshPortList());
+            navigator.serial.addEventListener('disconnect', () => refreshPortList());
+        }
+    }
+
     async function init() {
         const urlParams = new URLSearchParams(window.location.search);
         
         let requestedLang = urlParams.get('lang');
-        setLanguage(requestedLang || 'en');
+        if (!requestedLang) {
+            const bl = (navigator.language || 'en').toLowerCase();
+            if (bl.startsWith('zh')) requestedLang = 'zh';
+            else if (bl.startsWith('it')) requestedLang = 'it';
+            else requestedLang = 'en';
+        }
+        setLanguage(requestedLang);
+
+        if (!window.isSecureContext) {
+            const warnBox = document.getElementById('obsoleteWarning');
+            warnBox.setAttribute('data-i18n', 'errSecureContext');
+            warnBox.innerHTML = t('errSecureContext');
+            warnBox.className = "info-box warning-box";
+            warnBox.style.display = 'block';
+            document.getElementById('instructionsBox').style.display = 'none';
+            document.getElementById('portGroup').style.display = 'none';
+            document.getElementById('flashBtn').disabled = true;
+            return;
+        }
 
         if (!navigator.serial) {
             const vSelect = document.getElementById('versionSelect');
@@ -439,6 +718,9 @@
             document.getElementById('instructionsBox').style.display = 'none';
             return;
         }
+        setupPortUI();
+        await refreshPortList();
+        preloadEsptool().catch(() => {});
         setupUI();
     }
 
@@ -657,57 +939,71 @@
         progressText.removeAttribute('data-i18n'); 
         
         try {
-            progressText.setAttribute('data-i18n', 'waitPort');
-            progressText.innerText = t('waitPort');
-            logMsg(t('waitPort'));
-            const port = await navigator.serial.requestPort(); 
-
-            if (!window.ESPLoader || !window.Transport) {
-                progressText.setAttribute('data-i18n', 'loadingDrivers');
-                progressText.innerText = t('loadingDrivers');
-                logMsg(t('loadingDrivers'));
-                try {
-                    const esptoolModule = await import("https://unpkg.com/esptool-js@0.6.0/bundle.js");
-                    window.ESPLoader = esptoolModule.ESPLoader;
-                    window.Transport = esptoolModule.Transport;
-                } catch (importErr) {
-                    throw new Error("LIB_NOT_LOADED");
+            let port = getSelectedPort();
+            if (!port) {
+                progressText.setAttribute('data-i18n', 'waitPort');
+                progressText.innerText = t('waitPort');
+                logMsg(t('waitPort'));
+                port = await requestSerialPort();
+                if (!port) {
+                    logMsg(t('portSelectFirst'));
+                    progressText.innerText = t('portSelectFirst');
+                    progressBar.style.display = 'none';
+                    return;
                 }
+            }
+
+            progressText.setAttribute('data-i18n', 'loadingDrivers');
+            progressText.innerText = t('loadingDrivers');
+            logMsg(t('loadingDrivers'));
+            try {
+                await preloadEsptool();
+            } catch (importErr) {
+                throw new Error("LIB_NOT_LOADED");
             }
             
             progressText.setAttribute('data-i18n', 'dlStart'); 
             progressText.innerText = t('dlStart');
             
-            // Scarica direttamente senza limiti API
             const firmwareBuffer = await downloadFirmware(fileUrl);
-            const firmwareString = new Uint8Array(firmwareBuffer);
+            const firmwareData = new Uint8Array(firmwareBuffer);
 
             progressText.setAttribute('data-i18n', 'connChip'); 
             progressText.innerText = t('connChip');
-            const transport = new window.Transport(port);
-            const esploader = new window.ESPLoader(transport, 921600, {
-                logMsg: logMsg,
-                debugMsg: () => {} 
+            logMsg(t('connChip'));
+
+            const espTerminal = {
+                clean() {},
+                writeLine(data) { logMsg(data); },
+                write(data) { logMsg(data); }
+            };
+
+            const transport = new window.Transport(port, false);
+            const esploader = new window.ESPLoader({
+                transport,
+                baudrate: 921600,
+                terminal: espTerminal,
+                debugLogging: false
             });
 
-            logMsg(t('connChip'));
-            await esploader.main_fn();
+            await esploader.main();
             logMsg(t('handshake'));
 
             logMsg(t('startWrite'));
             progressText.removeAttribute('data-i18n'); 
-            await esploader.write_flash(
-                [{ data: firmwareString, address: 0x0 }],
-                'keep', 
-                'keep', 
-                'keep', 
-                0,      
-                (fileIndex, written, total) => {
+            await esploader.writeFlash({
+                fileArray: [{ data: firmwareData, address: 0x0 }],
+                eraseAll: false,
+                compress: true,
+                flashMode: 'keep',
+                flashFreq: 'keep',
+                flashSize: 'keep',
+                reportProgress: (fileIndex, written, total) => {
                     const pct = Math.round((written / total) * 100);
                     progressFill.style.width = pct + '%';
                     progressText.innerText = `${t('writePct')} ${pct}%`;
                 }
-            );
+            });
 
             logMsg(t('flashSuccess'));
             progressText.setAttribute('data-i18n', 'successInfo'); 
@@ -715,7 +1011,7 @@
             progressFill.style.backgroundColor = "var(--accent)";
 
             try {
-                await esploader.hard_reset();
+                await esploader.after();
             } catch (resetErr) {
                 logMsg(t('errReset'));
             }
