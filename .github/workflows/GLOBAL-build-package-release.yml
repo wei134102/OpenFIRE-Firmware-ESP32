@@ -48,6 +48,14 @@ permissions:
   contents: write
 
 jobs:
+  set_build_date:
+    runs-on: ubuntu-latest
+    outputs:
+      build_date: ${{ steps.date.outputs.build_date }}
+    steps:
+      - id: date
+        run: echo "build_date=$(date -u +%Y%m%d)" >> $GITHUB_OUTPUT
+
   # ==========================================
   # 1. BUILD FIRMWARE (PARALLELO)
   # ==========================================
@@ -276,9 +284,11 @@ jobs:
   # 2. PACKAGE ASSETS (PARALLELO)
   # ==========================================
   package_lightgun:
-    needs: build_lightgun
+    needs: [build_lightgun, set_build_date]
     if: ${{ github.event.inputs.sistemi_operativi == 'yes' }}
     runs-on: ${{ matrix.os_config.runner }}
+    env:
+      BUILD_DATE: ${{ needs.set_build_date.outputs.build_date }}
     strategy:
       matrix:
         boards:
@@ -336,7 +346,7 @@ jobs:
           fi
       - shell: bash
         run: |
-          ARCHIVE_FILENAME="OpenFIRE-LIGHTGUN-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip"
+          ARCHIVE_FILENAME="OpenFIRE-LIGHTGUN-${{ matrix.boards.name }}-${{ matrix.os_config.name }}-${BUILD_DATE}.zip"
           if [[ "${{ matrix.os_config.name }}" == "windows-64bit" ]]; then
             powershell -Command "Compress-Archive -Path staging_dir\* -DestinationPath ${{ github.workspace }}/$ARCHIVE_FILENAME -Force"
           else
@@ -344,13 +354,15 @@ jobs:
           fi
       - uses: actions/upload-artifact@v7
         with:
-          name: OpenFIRE-LIGHTGUN-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip
-          path: ${{ github.workspace }}/OpenFIRE-LIGHTGUN-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip
+          name: OpenFIRE-LIGHTGUN-${{ matrix.boards.name }}-${{ matrix.os_config.name }}-${{ needs.set_build_date.outputs.build_date }}.zip
+          path: ${{ github.workspace }}/OpenFIRE-LIGHTGUN-${{ matrix.boards.name }}-${{ matrix.os_config.name }}-${{ needs.set_build_date.outputs.build_date }}.zip
 
   package_dongle:
-    needs: build_dongle
+    needs: [build_dongle, set_build_date]
     if: ${{ github.event.inputs.sistemi_operativi == 'yes' }}
     runs-on: ${{ matrix.os_config.runner }}
+    env:
+      BUILD_DATE: ${{ needs.set_build_date.outputs.build_date }}
     strategy:
       matrix:
         boards:
@@ -398,7 +410,7 @@ jobs:
           fi
       - shell: bash
         run: |
-          ARCHIVE_FILENAME="OpenFIRE-DONGLE-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip"
+          ARCHIVE_FILENAME="OpenFIRE-DONGLE-${{ matrix.boards.name }}-${{ matrix.os_config.name }}-${BUILD_DATE}.zip"
           if [[ "${{ matrix.os_config.name }}" == "windows-64bit" ]]; then
             powershell -Command "Compress-Archive -Path staging_dir\* -DestinationPath ${{ github.workspace }}/$ARCHIVE_FILENAME -Force"
           else
@@ -406,13 +418,15 @@ jobs:
           fi
       - uses: actions/upload-artifact@v7
         with:
-          name: OpenFIRE-DONGLE-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip
-          path: ${{ github.workspace }}/OpenFIRE-DONGLE-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip
+          name: OpenFIRE-DONGLE-${{ matrix.boards.name }}-${{ matrix.os_config.name }}-${{ needs.set_build_date.outputs.build_date }}.zip
+          path: ${{ github.workspace }}/OpenFIRE-DONGLE-${{ matrix.boards.name }}-${{ matrix.os_config.name }}-${{ needs.set_build_date.outputs.build_date }}.zip
 
   package_pedal:
-    needs: build_pedal
+    needs: [build_pedal, set_build_date]
     if: ${{ github.event.inputs.sistemi_operativi == 'yes' }}
     runs-on: ${{ matrix.os_config.runner }}
+    env:
+      BUILD_DATE: ${{ needs.set_build_date.outputs.build_date }}
     strategy:
       matrix:
         boards:
@@ -441,7 +455,7 @@ jobs:
           if [[ "${{ matrix.os_config.name }}" == "linux-amd-64bit" || "${{ matrix.os_config.name }}" == "macos-64bit" ]]; then chmod +x "staging_dir/${{ matrix.os_config.esptool_filename_in_zip }}"; fi
       - shell: bash
         run: |
-          ARCHIVE_FILENAME="OpenFIRE-PEDAL-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip"
+          ARCHIVE_FILENAME="OpenFIRE-PEDAL-${{ matrix.boards.name }}-${{ matrix.os_config.name }}-${BUILD_DATE}.zip"
           if [[ "${{ matrix.os_config.name }}" == "windows-64bit" ]]; then
             powershell -Command "Compress-Archive -Path staging_dir\* -DestinationPath ${{ github.workspace }}/$ARCHIVE_FILENAME -Force"
           else
@@ -449,8 +463,8 @@ jobs:
           fi
       - uses: actions/upload-artifact@v7
         with:
-          name: OpenFIRE-PEDAL-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip
-          path: ${{ github.workspace }}/OpenFIRE-PEDAL-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip
+          name: OpenFIRE-PEDAL-${{ matrix.boards.name }}-${{ matrix.os_config.name }}-${{ needs.set_build_date.outputs.build_date }}.zip
+          path: ${{ github.workspace }}/OpenFIRE-PEDAL-${{ matrix.boards.name }}-${{ matrix.os_config.name }}-${{ needs.set_build_date.outputs.build_date }}.zip
 
 # ==========================================
   # 3. SYNC FIRMWARE TO WEB FLASHER REPOSITORY
@@ -606,7 +620,7 @@ jobs:
   # ==========================================
   create_global_release:
     # BLOCCO DI SICUREZZA: Questa release si avvia SOLO se sync_web_firmware ha finito con successo (spunta verde)
-    needs: [package_lightgun, package_dongle, package_pedal, sync_web_firmware]
+    needs: [package_lightgun, package_dongle, package_pedal, sync_web_firmware, set_build_date]
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.release == 'yes' && github.event.inputs.sistemi_operativi == 'yes' }}
     steps:
@@ -617,9 +631,10 @@ jobs:
         id: prepare_body
         run: |
           TEMPLATE_PATH=".github/release_templates/GLOBAL_template.md"
+          BUILD_DATE="${{ needs.set_build_date.outputs.build_date }}"
           
-          # Sostituisce <TAG> con il valore inserito nel trigger
-          sed "s/<TAG>/${{ github.event.inputs.tag_name }}/g" "$TEMPLATE_PATH" > final_body.md
+          # Sostituisce <TAG> e <DATE> con i valori inseriti nel trigger
+          sed -e "s/<TAG>/${{ github.event.inputs.tag_name }}/g" -e "s/<DATE>/${BUILD_DATE}/g" "$TEMPLATE_PATH" > final_body.md
           
           # Carica il contenuto in GITHUB_ENV gestendo correttamente i ritorni a capo
           echo "RELEASE_BODY<<EOF" >> $GITHUB_ENV

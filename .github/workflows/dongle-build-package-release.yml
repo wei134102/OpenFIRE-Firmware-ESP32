@@ -48,6 +48,14 @@ permissions:
   contents: write
 
 jobs:
+  set_build_date:
+    runs-on: ubuntu-latest
+    outputs:
+      build_date: ${{ steps.date.outputs.build_date }}
+    steps:
+      - id: date
+        run: echo "build_date=$(date -u +%Y%m%d)" >> $GITHUB_OUTPUT
+
   build_firmware:
     runs-on: ubuntu-latest
     timeout-minutes: 120
@@ -142,9 +150,11 @@ jobs:
 
   package_assets:
     name: Package for ${{ matrix.boards.name }} on ${{ matrix.os_config.name }}
-    needs: build_firmware
+    needs: [build_firmware, set_build_date]
     if: ${{ github.event.inputs.sistemi_operativi == 'yes' }}
     runs-on: ${{ matrix.os_config.runner }}
+    env:
+      BUILD_DATE: ${{ needs.set_build_date.outputs.build_date }}
     strategy:
       matrix:
         boards:
@@ -286,7 +296,7 @@ jobs:
       - name: Create ZIP archive
         shell: bash
         run: |
-          ARCHIVE_FILENAME="OpenFIRE-DONGLE-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip"
+          ARCHIVE_FILENAME="OpenFIRE-DONGLE-${{ matrix.boards.name }}-${{ matrix.os_config.name }}-${BUILD_DATE}.zip"
           if [[ "${{ matrix.os_config.name }}" == "windows-64bit" ]]; then
             powershell -Command "Compress-Archive -Path staging_dir\* -DestinationPath ${{ github.workspace }}/$ARCHIVE_FILENAME -Force"
           else
@@ -296,12 +306,12 @@ jobs:
       - name: Upload ZIP Assets
         uses: actions/upload-artifact@v7
         with:
-          name: OpenFIRE-DONGLE-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip
-          path: ${{ github.workspace }}/OpenFIRE-DONGLE-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip
+          name: OpenFIRE-DONGLE-${{ matrix.boards.name }}-${{ matrix.os_config.name }}-${{ needs.set_build_date.outputs.build_date }}.zip
+          path: ${{ github.workspace }}/OpenFIRE-DONGLE-${{ matrix.boards.name }}-${{ matrix.os_config.name }}-${{ needs.set_build_date.outputs.build_date }}.zip
           if-no-files-found: error
 
   create_release:
-    needs: package_assets
+    needs: [package_assets, set_build_date]
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.release == 'yes' && github.event.inputs.sistemi_operativi == 'yes' }}
     steps:
@@ -312,7 +322,8 @@ jobs:
         id: prepare_body
         run: |
           TEMPLATE_PATH=".github/release_templates/dongle_template.md"
-          sed "s/<TAG>/${{ github.event.inputs.tag_name }}/g" "$TEMPLATE_PATH" > final_body.md
+          BUILD_DATE="${{ needs.set_build_date.outputs.build_date }}"
+          sed -e "s/<TAG>/${{ github.event.inputs.tag_name }}/g" -e "s/<DATE>/${BUILD_DATE}/g" "$TEMPLATE_PATH" > final_body.md
           echo "RELEASE_BODY<<EOF" >> $GITHUB_ENV
           cat final_body.md >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
