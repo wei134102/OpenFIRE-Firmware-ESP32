@@ -30,11 +30,56 @@
 #include <TinyUSB_Devices.h>
 
 #include "OpenFIREdisplay.h"
+#include "OpenFIREdisplay_i18n.h"
 #include "OpenFIREprefs.h"
 #include "OpenFIREFeedback.h"
 #include "OpenFIREDefines.h"
 #include "OpenFIREcommon.h" //wei134102 add
 #include "OpenFIREPlayTimer.h"
+
+#if defined(OLED_MENU_ZH) && defined(USE_LOVYAN_GFX)
+  #include <lgfx/v1/lgfx_fonts.hpp>
+#endif
+
+namespace {
+
+#if defined(OLED_MENU_ZH) && defined(USE_LOVYAN_GFX)
+static inline void pauseMenuBeginZh(LGFX_SSD1306 *d)
+{
+    d->setFont(&fonts::efontCN_12);
+}
+
+static inline void pauseMenuEndZh(LGFX_SSD1306 *d)
+{
+    d->setFont(nullptr);
+}
+#endif
+
+static void pauseMenuPrint(
+    #ifdef USE_LOVYAN_GFX
+    LGFX_SSD1306 *disp,
+    #else
+    Adafruit_SSD1306 *disp,
+    #endif
+    int x, int y, const char *text, uint16_t fg, uint16_t bg)
+{
+    if(!disp || !text) {
+        return;
+    }
+    disp->setTextSize(1);
+    disp->setTextColor(fg, bg);
+    disp->setCursor(x, y);
+#if defined(OLED_MENU_ZH) && defined(USE_LOVYAN_GFX)
+    pauseMenuBeginZh((LGFX_SSD1306 *)disp);
+#endif
+    disp->print(text);
+#if defined(OLED_MENU_ZH) && defined(USE_LOVYAN_GFX)
+    pauseMenuEndZh((LGFX_SSD1306 *)disp);
+#endif
+}
+
+} // namespace
+
 bool ExtDisplay::Begin()
 {
     if(display != nullptr) {
@@ -581,74 +626,38 @@ void ExtDisplay::PauseListUpdate(const int &selection)
         switch(selection) {
           case ScreenPause_AnalogRangeCal:
             #ifdef OLED_091_INCH
-            // 0.91寸屏幕：只显示当前选中的项目
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 20);
-            display->println(" Range Calibrate ");
+            pauseMenuPrint(display, 0, 20, PM_RANGE_CAL, BLACK, WHITE);
             #else
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 25);
-            display->println(" Save Gun Settings ");
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 36);
-            display->println(" Range Calibrate ");
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 47);
-            display->println(" Calibrate ");
+            pauseMenuPrint(display, 0, 25, PM_SAVE_SETTINGS, WHITE, BLACK);
+            pauseMenuPrint(display, 0, 36, PM_RANGE_CAL, BLACK, WHITE);
+            pauseMenuPrint(display, 0, 47, PM_CALIBRATE, WHITE, BLACK);
             #endif
             break;
           case ScreenPause_Calibrate:
             #ifdef OLED_091_INCH
-            // 0.91寸屏幕：只显示当前选中的项目
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 20);
-            display->println(" Calibrate ");
+            pauseMenuPrint(display, 0, 20, PM_CALIBRATE, BLACK, WHITE);
             #else
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 25);
-            display->println(" Range Calibrate ");
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 36);
-            display->println(" Calibrate ");
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 47);
-            display->println(" Profile Select ");
+            pauseMenuPrint(display, 0, 25, PM_RANGE_CAL, WHITE, BLACK);
+            pauseMenuPrint(display, 0, 36, PM_CALIBRATE, BLACK, WHITE);
+            pauseMenuPrint(display, 0, 47, PM_PROFILE_SELECT, WHITE, BLACK);
             #endif
             break;
           case ScreenPause_ProfileSelect:
             #ifdef OLED_091_INCH
-            // 0.91寸屏幕：只显示当前选中的项目
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 20);
-            display->println(" Profile Select ");
+            pauseMenuPrint(display, 0, 20, PM_PROFILE_SELECT, BLACK, WHITE);
             #else
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 25);
-            display->println(" Calibrate ");
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 36);
-            display->println(" Profile Select ");
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 47);
-            display->println(" Save Gun Settings ");
+            pauseMenuPrint(display, 0, 25, PM_CALIBRATE, WHITE, BLACK);
+            pauseMenuPrint(display, 0, 36, PM_PROFILE_SELECT, BLACK, WHITE);
+            pauseMenuPrint(display, 0, 47, PM_SAVE_SETTINGS, WHITE, BLACK);
             #endif
             break;
           case ScreenPause_Save:
             #ifdef OLED_091_INCH
-            // 0.91寸屏幕：只显示当前选中的项目
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 20);
-            display->println(" Save Gun Settings ");
+            pauseMenuPrint(display, 0, 20, PM_SAVE_SETTINGS, BLACK, WHITE);
             #else
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 25);
-            display->println(" Center Calibrate ");
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 36);
-            display->println(" Save Gun Settings ");
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 47);
-            display->println(" Range Calibrate ");
+            pauseMenuPrint(display, 0, 25, PM_CENTER_CAL, WHITE, BLACK);
+            pauseMenuPrint(display, 0, 36, PM_SAVE_SETTINGS, BLACK, WHITE);
+            pauseMenuPrint(display, 0, 47, PM_RANGE_CAL, WHITE, BLACK);
             #endif
             break;
           case ScreenPause_Rumble:
@@ -949,19 +958,11 @@ void ExtDisplay::PauseListUpdate(const int &selection)
             break;
           case ScreenPause_AnalogCenterCal:
             #ifdef OLED_091_INCH
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 20);
-            display->println(" Center Calibrate ");
+            pauseMenuPrint(display, 0, 20, PM_CENTER_CAL, BLACK, WHITE);
             #else
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 25);
-            display->println(" Send Escape Keypress");
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 36);
-            display->println(" Center Calibrate ");
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 47);
-            display->println(" Save Gun Settings ");
+            pauseMenuPrint(display, 0, 25, PM_ESCAPE_KEY, WHITE, BLACK);
+            pauseMenuPrint(display, 0, 36, PM_CENTER_CAL, BLACK, WHITE);
+            pauseMenuPrint(display, 0, 47, PM_SAVE_SETTINGS, WHITE, BLACK);
             #endif
             break;
           #ifdef USES_RUMBLE
@@ -1066,36 +1067,34 @@ void ExtDisplay::PauseListUpdate(const int &selection)
 //wei134102 add start
           case ScreenPause_ModeChange:
             #ifdef OLED_091_INCH
-            // 0.91寸屏幕：显示当前选中的项目和当前模式
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 20);
-            display->println(" Mode Change ");
+            pauseMenuPrint(display, 0, 20, PM_MODE_CHANGE, BLACK, WHITE);
             #else
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 25);
             if(OF_Prefs::pins[OF_Const::solenoidPin] >= 0 && OF_Prefs::pins[OF_Const::solenoidSwitch] == -1) {
-              display->println(" Solenoid Toggle ");
+              pauseMenuPrint(display, 0, 25, PM_SOLENOID_TOGGLE, WHITE, BLACK);
             } else if(OF_Prefs::pins[OF_Const::rumblePin] >= 0 && OF_Prefs::pins[OF_Const::rumbleSwitch] == -1) {
-              display->println(" Rumble Toggle ");
+              pauseMenuPrint(display, 0, 25, PM_RUMBLE_TOGGLE, WHITE, BLACK);
             } else if(OF_Prefs::toggles[OF_Const::lowButtonsMode]) {
-              display->println(" Low Button: ON ");              
+              #ifdef OLED_MENU_ZH
+              pauseMenuPrint(display, 0, 25, "低键:开", WHITE, BLACK);
+              #else
+              pauseMenuPrint(display, 0, 25, " Low Button: ON ", WHITE, BLACK);
+              #endif
             } else {
-              display->println(" Low Button: OFF ");
+              #ifdef OLED_MENU_ZH
+              pauseMenuPrint(display, 0, 25, "低键:关", WHITE, BLACK);
+              #else
+              pauseMenuPrint(display, 0, 25, " Low Button: OFF ", WHITE, BLACK);
+              #endif
             }
-            display->setTextColor(BLACK, WHITE);
-            display->setCursor(0, 36);
-            display->println(" Mode Change ");
-            // Display current mode
-            display->setTextColor(WHITE, BLACK);
-            display->setCursor(0, 47);
+            pauseMenuPrint(display, 0, 36, PM_MODE_CHANGE, BLACK, WHITE);
             if(FW_Common::OLED.mister) {
-              display->println(" Current: MiSTer ");
+              pauseMenuPrint(display, 0, 47, PM_CURRENT_MISTER, WHITE, BLACK);
             } else if(FW_Common::buttons.analogOutput) {
-              display->println(" Current: Gamepad ");
+              pauseMenuPrint(display, 0, 47, PM_CURRENT_GAMEPAD, WHITE, BLACK);
             } else {
-              display->println(" Current: Mouse/KB ");
+              pauseMenuPrint(display, 0, 47, PM_CURRENT_MOUSEKB, WHITE, BLACK);
             }
-            #endif  // 这个 endif 对应第743行的 ifdef OLED_091_INCH
+            #endif
             break;
 //wei134102 add end                        
           case ScreenPause_EscapeKey:
