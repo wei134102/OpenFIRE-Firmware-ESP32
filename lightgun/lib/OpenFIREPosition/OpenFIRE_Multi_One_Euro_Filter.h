@@ -124,9 +124,9 @@ private:
 public:
     OpenFIRE_One_Euro_Multi();
     
-    // Il passaggio tramite puntatori int* previene costose copie di array per valore,
-    // manipolando direttamente la memoria del layer chiamante (Zero Copy).
-    void process(int* x, int* y);
+    // Il passaggio tramite puntatori permette di leggere i raw (int) e restituire le coordinate
+    // sub-pixel perfette (float) senza copie di array.
+    void process(int* x_in, int* y_in, float* x_out, float* y_out);
 };
 
 #endif // OpenFIRE_Multi_One_Euro_Filter_h

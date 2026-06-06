@@ -736,28 +736,39 @@ void FW_Common::GetPosition()
                                 res_y, res_x, res_y / 2);
             } else { // layoutSquare = 0
                 OpenFIREsquare.begin(dfrIRPos->xPositions(), dfrIRPos->yPositions(), dfrIRPos->seen());              
-
-                X_pos[0] = OpenFIREsquare.X(0);
-                Y_pos[0] = OpenFIREsquare.Y(0);
-                X_pos[1] = OpenFIREsquare.X(1);
-                Y_pos[1] = OpenFIREsquare.Y(1);
-                X_pos[2] = OpenFIREsquare.X(2);
-                Y_pos[2] = OpenFIREsquare.Y(2);
-                X_pos[3] = OpenFIREsquare.X(3);
-                Y_pos[3] = OpenFIREsquare.Y(3);              
-                
+               
                 #ifdef USE_MULTI_ONE_EURO_FILTER 
-                    oef_multi.process(X_pos, Y_pos);
-                #endif // USE_MULTI_ONE_EURO_FILTER 
+                    X_in[0] = OpenFIREsquare.X(0);
+                    Y_in[0] = OpenFIREsquare.Y(0);
+                    X_in[1] = OpenFIREsquare.X(1);
+                    Y_in[1] = OpenFIREsquare.Y(1);
+                    X_in[2] = OpenFIREsquare.X(2);
+                    Y_in[2] = OpenFIREsquare.Y(2);
+                    X_in[3] = OpenFIREsquare.X(3);
+                    Y_in[3] = OpenFIREsquare.Y(3);          
 
-                OpenFIREper.warp(X_pos[0], Y_pos[0],
-                                X_pos[1], Y_pos[1],
-                                X_pos[2], Y_pos[2],
-                                X_pos[3], Y_pos[3],
+                    oef_multi.process(X_in, Y_in, X_out, Y_out);
+
+                    OpenFIREper.warp(X_out[0], Y_out[0],
+                                X_out[1], Y_out[1],
+                                X_out[2], Y_out[2],
+                                X_out[3], Y_out[3],
                                 OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, 0,
                                 OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, 0,
                                 OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, res_y,
                                 OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, res_y);
+   
+                #else
+                    OpenFIREper.warp(OpenFIREsquare.X(0), OpenFIREsquare.Y(0),
+                                OpenFIREsquare.X(1), OpenFIREsquare.Y(1),
+                                OpenFIREsquare.X(2), OpenFIREsquare.Y(2),
+                                OpenFIREsquare.X(3), OpenFIREsquare.Y(3),
+                                OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, 0,
+                                OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, 0,
+                                OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, res_y,
+                                OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, res_y);
+                #endif // USE_MULTI_ONE_EURO_FILTER 
+
             }
 
             // Output mapped to screen resolution because offsets are measured in pixels

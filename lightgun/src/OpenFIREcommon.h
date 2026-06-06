@@ -173,8 +173,11 @@ public:
     // ================================ 696969 for filter ==================================//
     //////////////////////////////////////////////////////////////////////////////////////////
     
-    static inline int X_pos[4];
-    static inline int Y_pos[4];
+    static inline int X_in[4];
+    static inline int Y_in[4];
+    static inline float X_out[4];
+    static inline float Y_out[4];
+
     #ifdef USE_MULTI_ONE_EURO_FILTER   
         // position
         // 0 = Top_Left;

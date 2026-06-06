@@ -242,9 +242,12 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
                 }
                 float dx_v = Vx[p2]-Vx[p1], dy_v = Vy[p2]-Vy[p1];
                 float base = sqrtf(dx_v*dx_v + dy_v*dy_v);
+                
                 if (base > 2.0f) {
-                    float cos_angle = fabsf(dx_v) / base;
-                    base = base / fmaxf(cos_angle, 0.3f);
+                    // FIX GEOMETRICO CRITICO: 
+                    // Rimosso il calcolo scorretto "base / cos_angle" che in caso di rotazione 
+                    // della pistola (Roll) causava l'esplosione matematica delle coordinate,
+                    // ingigantendo il rettangolo virtuale e teletrasportando il mirino.
                     float newH = fmaxf(base / ideal_aspect_ratio, height * 0.5f);
                     float inv_base = 1.0f / base;
                     float sx = -dy_v*inv_base*newH, sy = dx_v*inv_base*newH;

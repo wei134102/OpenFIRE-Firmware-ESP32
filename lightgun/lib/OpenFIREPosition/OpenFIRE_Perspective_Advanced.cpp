@@ -146,16 +146,16 @@ inline float OpenFIRE_Perspective::calculateQuadArea(float x0, float y0, float x
 // 3. ESECUZIONE WARP (CUORE DEL SISTEMA)
 // ========================================================================================
 
-void OpenFIRE_Perspective::warp(int x0, int y0, int x1, int y1, int x2, int y2, int x3, int y3, float dx0, float dy0, float dx1, float dy1, float dx2, float dy2, float dx3, float dy3) {
+void OpenFIRE_Perspective::warp(float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3, float dx0, float dy0, float dx1, float dy1, float dx2, float dy2, float dx3, float dy3) {
   
   // Riorganizzazione Ciclica Pura: TL, TR, BR, BL.
   // Essenziale. L'algoritmo matematico esplode se i vertici del quadrilatero 
   // si incrociano ad X (Bug Clessidra). Questa mappatura fissa garantisce 
   // un perimetro sempre chiuso e ordinato per il proiettore matriciale.
-  float pt_TL_x = (float)x0,  pt_TL_y = (float)y0;
-  float pt_TR_x = (float)x1,  pt_TR_y = (float)y1;
-  float pt_BR_x = (float)x3,  pt_BR_y = (float)y3; 
-  float pt_BL_x = (float)x2,  pt_BL_y = (float)y2; 
+  float pt_TL_x = x0,  pt_TL_y = y0;
+  float pt_TR_x = x1,  pt_TR_y = y1;
+  float pt_BR_x = x3,  pt_BR_y = y3; 
+  float pt_BL_x = x2,  pt_BL_y = y2; 
 
   applyLensCorrection(pt_TL_x, pt_TL_y);
   applyLensCorrection(pt_TR_x, pt_TR_y);
