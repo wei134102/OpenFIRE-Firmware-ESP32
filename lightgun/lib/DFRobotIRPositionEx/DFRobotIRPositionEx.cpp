@@ -32,7 +32,7 @@
 #include <Wire.h>
 #include "DFRobotIRPositionEx.h"
 
-#ifdef ARDUINO_ARCH_ESP32  // 696969
+#ifdef ARDUINO_ARCH_ESP32  // [ESP32_PORT]
     #define delay(ms) vTaskDelay(pdMS_TO_TICKS(ms))                    
 #endif //ARDUINO_ARCH_ESP32
 

@@ -29,7 +29,7 @@
 #include "OpenFIRElights.h"
 #include "OpenFIREserial.h"
 
-// ============ 696969 ========== redifinizione di Serial per gestire le connessione wireless seriali ========
+// ============ [ESP32_PORT] ========== redifinizione di Serial per gestire le connessione wireless seriali ========
 #ifdef OPENFIRE_WIRELESS_ENABLE
     extern Stream* Serial_OpenFIRE_Stream;
     #ifdef Serial
@@ -38,9 +38,9 @@
     #endif
     #define Serial (*Serial_OpenFIRE_Stream)
 #endif // OPENFIRE_WIRELESS_ENABLE
-// ============ 696969 ===== fine redifinizione di Serial per gestire le connessione wireless seriali ========
+// ============ [ESP32_PORT] ===== fine redifinizione di Serial per gestire le connessione wireless seriali ========
 
-#ifdef ARDUINO_ARCH_ESP32  // 696969
+#ifdef ARDUINO_ARCH_ESP32  // [ESP32_PORT]
     #define delay(ms) vTaskDelay(pdMS_TO_TICKS(ms))                    
 #endif //ARDUINO_ARCH_ESP32
 
@@ -198,7 +198,7 @@ void FW_Common::PinsReset()
 void FW_Common::CameraSet()
 {
     #ifdef ARDUINO_ARCH_ESP32
-        Wire.setPins(OF_Prefs::pins[OF_Const::camSDA], OF_Prefs::pins[OF_Const::camSCL]); // MODIFICATO 696969 per ESP32
+        Wire.setPins(OF_Prefs::pins[OF_Const::camSDA], OF_Prefs::pins[OF_Const::camSCL]); // MODIFICATO [ESP32_PORT] per ESP32
         dfrIRPos = new DFRobotIRPositionEx(Wire);
     #else // rp2040   
     // Sanity check: which channel do these pins correlate to?
@@ -698,7 +698,7 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
             analogWrite(OF_Prefs::pins[OF_Const::rumblePin], OF_Prefs::settings[OF_Const::rumbleStrength]);
             delay(80);
             #ifdef ARDUINO_ARCH_ESP32
-                analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0);  // 696969 per EPS32
+                analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0);  // [ESP32_PORT] per EPS32
             #else // rp2040
             digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);
             #endif
@@ -706,7 +706,7 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
             analogWrite(OF_Prefs::pins[OF_Const::rumblePin], OF_Prefs::settings[OF_Const::rumbleStrength]);
             delay(125);
             #ifdef ARDUINO_ARCH_ESP32
-                analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0);  // 696969 per ESP32
+                analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0);  // [ESP32_PORT] per ESP32
             #else // rp2040            
             digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);
             #endif
@@ -1265,8 +1265,7 @@ void FW_Common::UpdateStartSelect()
 }
 
 
-
-// ============ 696969 ========== ripristino di Serial dopo definizione per connessione seriali ==============
+// ============ [ESP32_PORT] ========== ripristino di Serial dopo definizione per connessione seriali ==============
 #ifdef OPENFIRE_WIRELESS_ENABLE
     #undef Serial
     #ifdef AUX_SERIAL
@@ -1274,4 +1273,4 @@ void FW_Common::UpdateStartSelect()
         #undef AuxSerial
     #endif
 #endif // OPENFIRE_WIRELESS_ENABLE
-// ============ 696969 ===== fine ripristino di Serial dopo definizione per connessione seriali ==============
+// ============ [ESP32_PORT] ===== fine ripristino di Serial dopo definizione per connessione seriali ==============

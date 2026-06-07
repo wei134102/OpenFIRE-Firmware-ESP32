@@ -27,7 +27,7 @@ bool display_init = false;
 const int8_t leds[4] = {PIN_LED1, 
                         PIN_LED2, 
                         PIN_LED3, 
-                        PIN_LED4}; // I tuoi 4 GPIO
+                        PIN_LED4}; // I GPIO ove sono collegati i 4 LED
 
 // Manteniamo lo stato di tutti i pedali in un singolo byte (maschera di bit). 
 // Questo permette di trasmettere l'intero stato del modulo con un solo byte di payload radio, 
@@ -40,14 +40,14 @@ volatile uint8_t buttons_last_state = 0;
 // ===================================================================================
 
 volatile bool send_packet_pedal = false; // true se bisogna spedire un pacchetto
-#define DEBOUNCE_DELAY 15 // o meglio 20 ms ??// tempo di deboincing per pulsanti
+#define DEBOUNCE_DELAY 15 // tempo di deboincing per pulsanti in ms (forse 20ms è più sicuro)
 
 // Quando un pedale viene tenuto premuto a lungo (es. per ripararsi in Time Crisis), 
 // il dongle potrebbe perdere la connessione o interpretare il silenzio radio come disconnessione.
 // Questo timer garantisce un reinvio periodico (keep-alive) dello stato attivo.
-// NOTA: il valore è sfasato a 69ms invece dei canonici 50ms per evitare collisioni 
-// di battimento di frequenza con il modulo Lightgun principale sulla stessa rete radio.
-#define TIME_REPEAT_SEND (uint64_t)69000 // 50 ms // 69 reinvias il pacchetto ogni tot ms solo se qualche buttone è premuto .. il valore va specificato in microsecondi quidi ms x 1000
+// NOTA: il valore è trasmesso ogni TIME_REPEAT_SEND solo se qualche buttone è premuto 
+// per ridurre al minimo le collisioni. Il valore va specificato in microsecondi quindi ms x 1000
+#define TIME_REPEAT_SEND (uint64_t)69000 // tempo in microsendi (impostato a 69ms, forse meglio a 50ms)
 
 #define NUM_BUTTONS 2
 
@@ -69,7 +69,7 @@ Button buttons[NUM_BUTTONS] = {
 
 
 // ===================================================================================
-// MULTITHREADING: FEEDBACK VISIVO (CORE 1)
+// FEEDBACK VISIVO CON I 4 LED
 // ===================================================================================
 // L'inizializzazione del layer Wireless è bloccante e può richiedere secondi.
 // Sfruttiamo il processore dual-core dell'ESP32 delegando un task indipendente a 
@@ -109,7 +109,6 @@ void timer_callback_send_repeat(void* arg) {
 
 esp_timer_handle_t timer_handle_send_repeat;
 
-
 // ===============================================================================
 // MAIN SETUP
 // ===============================================================================
@@ -127,16 +126,16 @@ void setup() {
     digitalWrite(leds[i], LOW); 
   }
 
-  // Creazione del task visivo asincrono prima di bloccare la CPU con la rete.
+  // Creazione del task visivo asincrono.
   TaskHandle_t animTaskHandleLink = NULL;  
   xTaskCreatePinnedToCore(
         animTaskLink,          // funzione del task
         "AnimTaskLink",        // nome
-        4096,              // stack size
-        NULL,              // parametri
-        1,                 // priorità
+        4096,                  // stack size
+        NULL,                  // parametri
+        1,                     // priorità
         &animTaskHandleLink,   // handle
-        APP_CPU_NUM        // core (puoi usare 0 o 1)
+        APP_CPU_NUM            // core (puoi usare 0 o 1)
   );  
   
   // ====== gestione connessione wireless ====================
@@ -146,8 +145,7 @@ void setup() {
   SerialWireless.connection_pedal();
   // ====== fine gestione wireless .. va avanti solo dopo che si è accoppiato il dispositivo =======
     
-  // Connessione stabilita. Uccidiamo il task visivo parallelo per liberare memoria 
-  // e cicli CPU, poiché ora il controllo dei LED passa alla logica di sistema.
+  // Connessione stabilita. Uccidiamo il task visivo poiché ora il controllo dei LED passa alla logica di sistema.
   if (animTaskHandleLink != NULL) {
       vTaskDelete(animTaskHandleLink);
       animTaskHandleLink = NULL;
@@ -192,7 +190,7 @@ void loop()
   uint8_t bitMask = 1;
   buttons_state = 0;
 
-  // 1. SCANSIONE PEDALI E DEBOUNCING NON-BLOCCANTE
+  // SCANSIONE PEDALI E DEBOUNCING NON-BLOCCANTE
   for (uint8_t i = 0; i < NUM_BUTTONS; i++, bitMask <<= 1) {
     if (!buttons[i].debounceTime) {
       // Pedale a riposo (o stato stabile raggiunto). Leggiamo l'hardware.
@@ -228,7 +226,7 @@ void loop()
     }
   }
 
-  // 2. LOGICA EVENT-DRIVEN DI TRASMISSIONE RADIO
+  // LOGICA EVENT-DRIVEN DI TRASMISSIONE RADIO
   // Trasmettiamo sulla rete ESCLUSIVAMENTE in due scenari:
   // A) È avvenuto un cambio di stato fisico (salita/discesa di un pedale).
   // B) Il timer hardware ha alzato la flag per il keep-alive (pedale mantenuto premuto).

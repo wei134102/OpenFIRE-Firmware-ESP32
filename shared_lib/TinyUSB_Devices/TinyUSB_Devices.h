@@ -60,8 +60,8 @@
 #define _TINYUSB_DEVICES_H_
 
 #include <Arduino.h>
-#include <Adafruit_TinyUSB.h> // 696969 inserito per le define di ambiente in particolare collegate a lighgunButtons.cpp
-#include "tusb_gamepad16.h"   // 696969 inserito per gamepad16
+#include <Adafruit_TinyUSB.h> // [ESP32_PORT] inserito per le define di ambiente in particolare collegate a lighgunButtons.cpp
+#include "tusb_gamepad16.h"   // [ESP32_PORT] inserito per gamepad16
 
 #ifdef OPENFIRE_WIRELESS_ENABLE
   #ifdef ARDUINO_ARCH_ESP32
@@ -164,11 +164,11 @@ uint8_t const desc_hid_report[] = {
 //#include <stdint.h>
 
 // OpenFIRE define           TinyUSB define in hid.c     
-#define MOUSE_LEFT    hid_mouse_button_bm_t::MOUSE_BUTTON_LEFT     // 0x01    // 696969 definito in TinyUSB in hid.h
-#define MOUSE_RIGHT   hid_mouse_button_bm_t::MOUSE_BUTTON_RIGHT    // 0x02    // 696969 definito in TinyUSB in hid.h
-#define MOUSE_MIDDLE  hid_mouse_button_bm_t::MOUSE_BUTTON_MIDDLE   // 0x04    // 696969 definito in TinyUSB in hid.h
-#define MOUSE_BUTTON4 hid_mouse_button_bm_t::MOUSE_BUTTON_BACKWARD // 0x08    // 696969 definito in TinyUSB in hid.h
-#define MOUSE_BUTTON5 hid_mouse_button_bm_t::MOUSE_BUTTON_FORWARD  // 0x10    // 696969 definito in TinyUSB in hid.h
+#define MOUSE_LEFT    hid_mouse_button_bm_t::MOUSE_BUTTON_LEFT     // 0x01    // [ESP32_PORT] definito in TinyUSB in hid.h
+#define MOUSE_RIGHT   hid_mouse_button_bm_t::MOUSE_BUTTON_RIGHT    // 0x02    // [ESP32_PORT] definito in TinyUSB in hid.h
+#define MOUSE_MIDDLE  hid_mouse_button_bm_t::MOUSE_BUTTON_MIDDLE   // 0x04    // [ESP32_PORT] definito in TinyUSB in hid.h
+#define MOUSE_BUTTON4 hid_mouse_button_bm_t::MOUSE_BUTTON_BACKWARD // 0x08    // [ESP32_PORT] definito in TinyUSB in hid.h
+#define MOUSE_BUTTON5 hid_mouse_button_bm_t::MOUSE_BUTTON_FORWARD  // 0x10    // [ESP32_PORT] definito in TinyUSB in hid.h
 
 // 5 button absolute mouse
 class AbsMouse5_
@@ -225,7 +225,7 @@ extern AbsMouse5_ AbsMouse5;
   #define KEY_BACKSPACE   0xB2
   #define KEY_TAB         0xB3
   #define KEY_RETURN      0xB0
-  #define KEY_ESC         0xB1  // 696969 non corrisponde a HID_KEY_ESCAPE di TinyUSB, boh ???
+  #define KEY_ESC         0xB1  // [ESP32_PORT] non corrisponde a HID_KEY_ESCAPE di TinyUSB, boh ???
   #define KEY_INSERT      0xD1
   #define KEY_DELETE      0xD4
   #define KEY_PAGE_UP     0xD3

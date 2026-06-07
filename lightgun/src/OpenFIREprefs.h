@@ -27,11 +27,11 @@
 
 #include <stdint.h>
 #include <unordered_map>
-//#include <FS.h> // 696969 //non serve, viene richiamata direttamente da littlefs
+//#include <FS.h> // [ESP32_PORT] //non serve, viene richiamata direttamente da littlefs
 
-// = 696969 = per la compilazione su esp32 - la libreria exfatlib che viene chiamata da Arduino TinyUSB
+// = [ESP32_PORT] = per la compilazione su esp32 - la libreria exfatlib che viene chiamata da Arduino TinyUSB
 // =========== definisce quelle costanti e ricevo un warning in quanto anche LittleFS le definisce  ===
-// =========== non usola libreria 'adafruit exfatlib', quindi annullo le sue definizioni ==============
+// =========== non uso la libreria 'adafruit exfatlib', quindi annullo le sue definizioni ==============
 #ifdef ARDUINO_ARCH_ESP32
     #ifdef FILE_READ
         #undef FILE_READ
@@ -40,7 +40,7 @@
         #undef FILE_WRITE
     #endif
 #endif //ARDUINO_ARCH_ESP32
-// = 696969 ===========================================================================================
+// = [ESP32_PORT] ===========================================================================================
 
 #include <LittleFS.h>
 #include <OpenFIREBoard.h>
@@ -107,7 +107,11 @@ public:
         false,          // low buttons mode
         false,          // rumble force-feedback mode
         false,          // invert static pixels
-        true, //false,          // i2c OLED enabled //696969 per abilitare subito display
+        #ifdef ARDUINO_ARCH_ESP32
+        false, //true, //false,          // i2c OLED enabled //[ESP32_PORT] per abilitare subito display
+        #else //rp2040
+        false,          // i2c OLED enabled
+        #endif //ARDUINO_ARCH_ESP32
         false,          // i2c OLED alt address
     };
 
@@ -118,7 +122,11 @@ public:
     static inline uint32_t settings[OF_Const::settingsTypesCount] = {
         255,                        // rumble strength
         150,                        // rumble length
-        20, // 696969 // 45,                         // solenoid on length
+        #ifdef ARDUINO_ARCH_ESP32
+        20, // [ESP32_PORT] // 45,                         // solenoid on length
+        #else //rp2040
+        45,                         // solenoid on length
+        #endif // ARDUINO_ARCH_ESP32
         80,                         // solenoid off length
         500,                        // solenoid hold length
         2500,                       // hold-to-pause length
@@ -224,11 +232,6 @@ public:
     static void LoadPresets();
 
     #if defined(OPENFIRE_WIRELESS_ENABLE) && defined(ARDUINO_ARCH_ESP32)
-        /// @brief Carica le impostazione wireless // CANALE // POTENZA
-        static int LoadWireless(uint8_t *channel, uint8_t *power);
-        
-        /// @brief Salva le impostazioni wireless // CANALE // POTENZA
-        static int SaveWireless(uint8_t *channel, uint8_t *power);  
 
         /// @brief Carica le impostazione dell'ultimo DONGLE a cui è stato connesso // canale e mac addres
         static int LoadLastDongleWireless(uint8_t *address, uint8_t *channel);

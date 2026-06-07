@@ -244,10 +244,6 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
                 float base = sqrtf(dx_v*dx_v + dy_v*dy_v);
                 
                 if (base > 2.0f) {
-                    // FIX GEOMETRICO CRITICO: 
-                    // Rimosso il calcolo scorretto "base / cos_angle" che in caso di rotazione 
-                    // della pistola (Roll) causava l'esplosione matematica delle coordinate,
-                    // ingigantendo il rettangolo virtuale e teletrasportando il mirino.
                     float newH = fmaxf(base / ideal_aspect_ratio, height * 0.5f);
                     float inv_base = 1.0f / base;
                     float sx = -dy_v*inv_base*newH, sy = dx_v*inv_base*newH;
@@ -380,7 +376,7 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
         current_point_seen_mask = 0;
         
         // Lambda in-place (Il Setaccio Universale): confronta i punti ordinati finali
-        // con il backup "real_x/y" salvato in FASE 0. Segnala alla logica quali di questi 
+        // con il backup "real_x/y". Segnala alla logica quali di questi 
         // sono veri punti fisici e quali sono il risultato delle predizioni matematiche 
         // calcolate sopra. Essenziale per pilotare la molla cinematica.
         auto is_real_point = [&](int px, int py) {
@@ -396,7 +392,7 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
         if (is_real_point(positionXX[d], positionYY[d])) current_point_seen_mask |= 0b0001;
 
 
-        // OTTIMIZZAZIONE 5: Unrolling Booleano puro per l'emulatore Shift-Register.
+        // OTTIMIZZAZIONE: Unrolling Booleano puro per l'emulatore Shift-Register.
         // Mantiene intatta l'interfaccia verso le API originali Samco che si aspettavano 
         // di leggere cicli progressivi, ma qui lo eseguiamo senza i salti condizionali di un ciclo for.
         see[0] = (see[0] << 1) | ((current_point_seen_mask >> 3) & 1);
@@ -455,7 +451,7 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
             //float consumo = (float)spostamento * COSTANTE_MOLLA; 
             float consumo = fmaxf(1.0f, (float)spostamento * COSTANTE_MOLLA);
             
-            // OTTIMIZZAZIONE 3: Branchless Math per la Molla. 
+            // OTTIMIZZAZIONE: Branchless Math per la Molla. 
             // Usa le istruzioni hardware min/max per non far spezzare la pipeline della CPU 
             // all'indovinare i salti logici negativi/positivi del debito.
             for (uint8_t i = 0; i < 4; i++) {
@@ -473,7 +469,7 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
         // ======== APPLICAZIONE FINALE E SALVATAGGIO STATO ========================//
         // =========================================================================//
         
-        // OTTIMIZZAZIONE 4: Lookup array per evitare lunghe clausole if/else nidificate.
+        // OTTIMIZZAZIONE: Lookup array per evitare lunghe clausole if/else nidificate.
         // Assegna l'offset alla geometria, spingendo la correzione smorzata sui finali di frame.
         uint8_t assign_map[4] = {a, b, c, d};
         for (uint8_t i = 0; i < 4; i++) {
@@ -493,7 +489,7 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
         medianX = (FinalX[A] + FinalX[B] + FinalX[C] + FinalX[D] + 2) / 4;
         medianY = (FinalY[A] + FinalY[B] + FinalY[C] + FinalY[D] + 2) / 4;
 
-        // OTTIMIZZAZIONE 6: Sottrazione eseguita sui registri interi *prima* della
+        // OTTIMIZZAZIONE: Sottrazione eseguita sui registri interi *prima* della
         // conversione per non caricare la FPU (Floating Point Unit hardware) di stress doppio.
         float dX_AC = (float)(FinalX[A] - FinalX[C]), dY_AC = (float)(FinalY[A] - FinalY[C]);
         height_left = sqrtf(dX_AC*dX_AC + dY_AC*dY_AC); 
@@ -507,7 +503,7 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
         float dX_CD = (float)(FinalX[C] - FinalX[D]), dY_CD = (float)(FinalY[C] - FinalY[D]);
         width_bottom = sqrtf(dX_CD*dX_CD + dY_CD*dY_CD); 
         
-        // OTTIMIZZAZIONE 7: In algebra computazionale IEEE-754 la moltiplicazione per 0.5f 
+        // OTTIMIZZAZIONE: In algebra computazionale IEEE-754 la moltiplicazione per 0.5f 
         // è radicalmente più veloce rispetto alla divisione in virgola mobile e produce esatto output.
         height = (height_left + height_right) * 0.5f;
         width = (width_top + width_bottom) * 0.5f;

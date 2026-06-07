@@ -48,7 +48,7 @@
 #include "OpenFIREDefines.h"
 #include "OpenFIREconstant.h"
 
-//inline AbsMouse5_ AbsMouse5(2); // 696969 rimosso da me
+//inline AbsMouse5_ AbsMouse5(2); // [ESP32_PORT] rimosso da me
 
 class FW_Common
 {
@@ -170,25 +170,25 @@ public:
     static inline int moveIndex = 0;
 
     //////////////////////////////////////////////////////////////////////////////////////////
-    // ================================ 696969 for filter ==================================//
-    //////////////////////////////////////////////////////////////////////////////////////////
-    
-    static inline int X_in[4];
-    static inline int Y_in[4];
-    static inline float X_out[4];
-    static inline float Y_out[4];
+    // ================================ [ESP32_PORT] for filter ============================//
+    //////////////////////////////////////////////////////////////////////////////////////////  
 
     #ifdef USE_MULTI_ONE_EURO_FILTER   
+        static inline int X_in[4];
+        static inline int Y_in[4];
+        static inline float X_out[4];
+        static inline float Y_out[4];
+
         // position
         // 0 = Top_Left;
         // 1 = Top_Right;
         // 2 = Botton_Left;
         // 3 = Botton_Right;      
         static inline OpenFIRE_One_Euro_Multi oef_multi;
-    #endif // USE_POS_KALMAN_FILTER
+    #endif // USE_MULTI_ONE_EURO_FILTER
 
     //////////////////////////////////////////////////////////////////////////////////////////
-    // ================================ 696969 for filter ==================================//
+    // ================================ [ESP32_PORT] for filter ============================//
     //////////////////////////////////////////////////////////////////////////////////////////
 
     // timer will set this to 1 when the IR position can update
@@ -202,7 +202,7 @@ public:
     
     //// General Runtime Flags
     static inline bool justBooted = true;                              // For ops we need to do on initial boot (custom pins, joystick centering)
-    static inline bool dockedSaving = false; //false; //true; // false;  // 696969  se false invia dati di stick analogico, temperatura e tasti  - se true non invia nulla                     // To block sending test output in docked mode.
+    static inline bool dockedSaving = false; //false; //true; // false;  // [ESP32_PORT]  se false invia dati di stick analogico, temperatura e tasti  - se true non invia nulla                     // To block sending test output in docked mode.
 
     static LightgunButtons buttons;
 

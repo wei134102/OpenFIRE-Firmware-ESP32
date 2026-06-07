@@ -30,7 +30,7 @@
 #include <math.h>
 
 // ========================================================================================
-// 1. MOTORE ALGEBRICO E REGISTRI CPU (Zero Overhead)
+// MOTORE ALGEBRICO E REGISTRI CPU (Zero Overhead)
 // ========================================================================================
 
 // Calcola la matrice di trasformazione prospettica proiettando un quadrato ideale
@@ -109,7 +109,7 @@ inline void multMats(const float* a, const float* b, float* res) {
 }
 
 // ========================================================================================
-// 2. FISICA E CALCOLO AREA
+// FISICA E CALCOLO AREA
 // ========================================================================================
 
 // Algoritmo di de-warping spaziale di Brown-Conrady semplificato.
@@ -143,7 +143,7 @@ inline float OpenFIRE_Perspective::calculateQuadArea(float x0, float y0, float x
 }
 
 // ========================================================================================
-// 3. ESECUZIONE WARP (CUORE DEL SISTEMA)
+// ESECUZIONE WARP (CUORE DEL SISTEMA)
 // ========================================================================================
 
 void OpenFIRE_Perspective::warp(float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3, float dx0, float dy0, float dx1, float dy1, float dx2, float dy2, float dx3, float dy3) {

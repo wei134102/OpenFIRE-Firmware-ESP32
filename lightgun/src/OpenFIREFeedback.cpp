@@ -19,7 +19,7 @@
 
 #include "OpenFIREFeedback.h"
 
-// ============ 696969 ========== redifinizione di Serial per gestire le connessione wireless seriali ========
+// ============ [ESP32_PORT] ========== redifinizione di Serial per gestire le connessione wireless seriali ========
 #ifdef OPENFIRE_WIRELESS_ENABLE
     extern Stream* Serial_OpenFIRE_Stream;
     #ifdef Serial
@@ -28,7 +28,7 @@
     #endif
     #define Serial (*Serial_OpenFIRE_Stream)
 #endif // OPENFIRE_WIRELESS_ENABLE
-// ============ 696969 ===== fine redifinizione di Serial per gestire le connessione wireless seriali ========
+// ============ [ESP32_PORT] ===== fine redifinizione di Serial per gestire le connessione wireless seriali ========
 
 
 void OF_FFB::FFBOnScreen()
@@ -108,7 +108,7 @@ void OF_FFB::FFBRelease()
     if(OF_Prefs::toggles[OF_Const::rumbleFF] && OF_Prefs::toggles[OF_Const::autofire]) {
         if(rumbleHappening || rumbleHappened) {
             #ifdef ARDUINO_ARCH_ESP32
-                analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0);      // Make sure the rumble is OFF. // 696969 per esp32
+                analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0);      // Make sure the rumble is OFF. // [ESP32_PORT] per esp32
             #else // rp2040
                 digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);      // Make sure the rumble is OFF.
             #endif
@@ -175,7 +175,7 @@ void OF_FFB::TemperatureUpdate()
     if(currentMillis - previousMillisTemp > TEMP_UPDATE_INTERVAL) {
         previousMillisTemp = currentMillis;           
         
-        #ifdef ARDUINO_ARCH_ESP32  // 696969
+        #ifdef ARDUINO_ARCH_ESP32  // [ESP32_PORT]
         uint32_t millivolts = analogReadMilliVolts(OF_Prefs::pins[OF_Const::tempPin]);
         if (millivolts < 80 || millivolts > 2000) {
         #else
@@ -194,7 +194,7 @@ void OF_FFB::TemperatureUpdate()
         }
 
         
-        #ifdef ARDUINO_ARCH_ESP32  // 696969
+        #ifdef ARDUINO_ARCH_ESP32  // [ESP32_PORT]
         temperatureGraph[tempGraphIndex] = ((int32_t)millivolts - 500) / 10;
         #else
         temperatureGraph[tempGraphIndex] = (((analogValue * 3.3) / 4096) - 0.5) * 100; // Convert reading from mV->3.3->12-bit->Celsius
@@ -241,7 +241,7 @@ void OF_FFB::RumbleActivation()
             if(!OF_Prefs::toggles[OF_Const::autofire]) {       // We only want to use the rumble timer if Autofire is not active. Otherwise, keep it going
                 if(currentMillis - previousMillisRumble >= (OF_Prefs::settings[OF_Const::rumbleInterval] >> 1)) { // If we've been waiting long enough for this whole rumble command,
                     #ifdef ARDUINO_ARCH_ESP32
-                        analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0);                         // Make sure the rumble is OFF. // 696969 per ESP32
+                        analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0);                         // Make sure the rumble is OFF. // [ESP32_PORT] per ESP32
                     #else // rp2040
                         digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);                         // Make sure the rumble is OFF.
                     #endif
@@ -252,7 +252,7 @@ void OF_FFB::RumbleActivation()
         } else {
             if(currentMillis - previousMillisRumble >= OF_Prefs::settings[OF_Const::rumbleInterval]) { // If we've been waiting long enough for this whole rumble command,
                 #ifdef ARDUINO_ARCH_ESP32
-                    analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0);                         // Make sure the rumble is OFF. // 696969 per ESP32
+                    analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0);                         // Make sure the rumble is OFF. // [ESP32_PORT] per ESP32
                 #else // rp2040
                     digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);                         // Make sure the rumble is OFF.
                 #endif
@@ -294,7 +294,7 @@ void OF_FFB::FFBShutdown()
 {
     digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], LOW);
     #ifdef ARDUINO_ARCH_ESP32
-        analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0); // 696969
+        analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0); // [ESP32_PORT]
     #else // rp2040
         digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);
     #endif
@@ -306,7 +306,7 @@ void OF_FFB::FFBShutdown()
     burstFireCount = 0;
 }
 
-// ============ 696969 ========== ripristino di Serial dopo definizione per connessione seriali ==============
+// ============ [ESP32_PORT] ========== ripristino di Serial dopo definizione per connessione seriali ==============
 #ifdef OPENFIRE_WIRELESS_ENABLE
     #undef Serial
     #ifdef AUX_SERIAL
@@ -314,4 +314,4 @@ void OF_FFB::FFBShutdown()
         #undef AuxSerial
     #endif
 #endif // OPENFIRE_WIRELESS_ENABLE
-// ============ 696969 ===== fine ripristino di Serial dopo definizione per connessione seriali ==============
+// ============ [ESP32_PORT] ===== fine ripristino di Serial dopo definizione per connessione seriali ==============
