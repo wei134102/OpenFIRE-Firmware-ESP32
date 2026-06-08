@@ -43,6 +43,8 @@
   // vediamo
 #endif
 
+// numero di secondi massimi a disposizione per la connessione del Pedal
+#define MAX_SECONDI_CONNESSIONE_PEDAL 10
 
 /*****************************
  *   ESP_NOW E VARIABILI DI STATO GLOBALI

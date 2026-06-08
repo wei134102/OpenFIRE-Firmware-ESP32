@@ -138,10 +138,11 @@ void setup() {
   #endif // USES_DISPLAY
 
   // =========== attesa segnale del pedale da parte della lightgun
-
+  const unsigned long start_millis = millis();
+  const unsigned long timeout_ms = (MAX_SECONDI_CONNESSIONE_PEDAL + 2) * 1000;
   SerialWireless.is_pedal_wireless_comunication = false;
-  while (!SerialWireless.is_pedal_wireless_comunication) {
-    vTaskDelay(pdMS_TO_TICKS(300));
+  while (!SerialWireless.is_pedal_wireless_comunication && (millis() - start_millis < timeout_ms)) {
+    vTaskDelay(pdMS_TO_TICKS(100));
   }
 
   // ===================================================================================

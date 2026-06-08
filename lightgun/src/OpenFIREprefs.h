@@ -86,12 +86,23 @@ public:
     } ProfileData_t;
 
     /// @brief Instance of profile data 
+    
+    #ifdef USE_MULTI_ONE_EURO_FILTER
     static inline ProfileData_t profiles[PROFILE_COUNT] = {
-        {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, DFRobotIRPositionEx::Sensitivity_Default, FW_Const::RunMode_Normal/*1*/, OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF0000, "Profile A"},
-        {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, DFRobotIRPositionEx::Sensitivity_Default, FW_Const::RunMode_Normal/*1*/, OF_Const::layoutSquare, OF_Const::ar16_9, 0x00FF00, "Profile B"},
-        {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, DFRobotIRPositionEx::Sensitivity_Default, FW_Const::RunMode_Normal/*1*/, OF_Const::layoutSquare, OF_Const::ar16_9, 0x0000FF, "Profile Start"},
-        {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, DFRobotIRPositionEx::Sensitivity_Default, FW_Const::RunMode_Normal/*1*/, OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF00FF, "Profile Select"}
+        {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, DFRobotIRPositionEx::Sensitivity_Default, FW_Const::RunMode_Normal, OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF0000, "Profile A"},
+        {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, DFRobotIRPositionEx::Sensitivity_Default, FW_Const::RunMode_Normal, OF_Const::layoutSquare, OF_Const::ar16_9, 0x00FF00, "Profile B"},
+        {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, DFRobotIRPositionEx::Sensitivity_Default, FW_Const::RunMode_Normal, OF_Const::layoutSquare, OF_Const::ar16_9, 0x0000FF, "Profile Start"},
+        {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, DFRobotIRPositionEx::Sensitivity_Default, FW_Const::RunMode_Normal, OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF00FF, "Profile Select"}
     };
+    #else
+    static inline ProfileData_t profiles[PROFILE_COUNT] = {
+        {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, DFRobotIRPositionEx::Sensitivity_Default, 1, OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF0000, "Profile A"},
+        {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, DFRobotIRPositionEx::Sensitivity_Default, 1, OF_Const::layoutSquare, OF_Const::ar16_9, 0x00FF00, "Profile B"},
+        {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, DFRobotIRPositionEx::Sensitivity_Default, 1, OF_Const::layoutSquare, OF_Const::ar16_9, 0x0000FF, "Profile Start"},
+        {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, DFRobotIRPositionEx::Sensitivity_Default, 1, OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF00FF, "Profile Select"}
+    };
+    #endif // USE_MULTI_ONE_EURO_FILTER
+
 
     static inline uint currentProfile = 0;
 

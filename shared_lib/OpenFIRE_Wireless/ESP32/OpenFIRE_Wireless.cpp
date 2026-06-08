@@ -1755,7 +1755,7 @@ void SerialWireless_::tx_gun_at_dongle_pedal_ready() {
 #ifdef GUN
 bool SerialWireless_::connection_gun_at_pedal() {
   
-  uint8_t seconds = 10; 
+  uint8_t seconds = MAX_SECONDI_CONNESSIONE_PEDAL;  //10; 
   seconds_display = seconds;
 
   channel_display = espnow_wifi_channel;
@@ -1780,7 +1780,7 @@ bool SerialWireless_::connection_gun_at_pedal() {
   
   
   #define TIMEOUT_GUN_AT_PEDAL_TX_PACKET 50 //500 // in millisecondi
-  #define TIMEOUT_GUN_AT_PEDAL_CHANGE_SECONDS 1000 // in millisecondi - cambia canale ogni
+  #define TIMEOUT_GUN_AT_PEDAL_CHANGE_SECONDS 1000 // in millisecondi =  1 secondo
   #define TIMEOUT_GUN_AT_PEDAL_DIALOGUE 3000 //6000 // in millisecondi - tempo massimo per completare operazione accoppiamento
   unsigned long lastMillis_tx_packet = millis ();
   unsigned long lastMillis_change_seconds = millis ();
@@ -1822,7 +1822,7 @@ bool SerialWireless_::connection_gun_at_pedal() {
       }
       if ((millis() - lastMillis_tx_packet) > TIMEOUT_GUN_AT_PEDAL_TX_PACKET) {
         SerialWireless.SendPacket((const uint8_t *)aux_buffer_tx, 14, PACKET_TX::CONNECTION_PEDAL); // aggiunto un byte per trasmettere anche il canale di trasmissione
-        //Serial.print("DONGLE - inviato pacchetto broadcast sul canale: ");
+        //Serial.print("GUN -> PEDAL - inviato pacchetto broadcast sul canale: ");
         //Serial.println(channel);
         lastMillis_tx_packet = millis (); 
       }
@@ -1831,7 +1831,7 @@ bool SerialWireless_::connection_gun_at_pedal() {
     else {
       if (((millis() - lastMillis_start_dialogue) > TIMEOUT_GUN_AT_PEDAL_DIALOGUE) && stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED) {
         stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION;
-        //Serial.println("DONGLE - Non si è conclusa la negoziazione tra DONGLE/GUN e si riparte da capo");
+        //Serial.println("GUN - Non si è conclusa la negoziazione tra GUN/PEDAL e si riparte da capo");
         lastMillis_change_seconds = millis ();
       }  
     }
@@ -1841,7 +1841,7 @@ bool SerialWireless_::connection_gun_at_pedal() {
   broadcast_receiver = false;
 
   if (esp_now_del_peer(peerAddress) != ESP_OK) {  // cancella il broadcast dai peer
-      //Serial.println("DONGLE - Errore nella cancellazione del peer broadcast");
+      //Serial.println("GUN - Errore nella cancellazione del peer broadcast");
   }
 
   memcpy(peerAddress, peerAddress_copy, 6);
