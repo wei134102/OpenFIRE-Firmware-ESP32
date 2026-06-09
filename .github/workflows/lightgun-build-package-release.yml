@@ -91,6 +91,20 @@ jobs:
             flash_mode: 'dio'
             flash_freq: '80m'
             address_littleFS: '0x290000'
+          - name: 'ESP32_S3_N8R8'
+            boards: 'ESP32_S3_N8R8'
+            chip: 'esp32s3'
+            flash_size: '8MB'
+            flash_mode: 'dio'
+            flash_freq: '80m'
+            address_littleFS: '0x670000'
+          - name: 'ESP32_S3_N8R8_OLED091'
+            boards: 'ESP32_S3_N8R8_OLED091'
+            chip: 'esp32s3'
+            flash_size: '8MB'
+            flash_mode: 'dio'
+            flash_freq: '80m'
+            address_littleFS: '0x670000'
 
     steps:
       - name: Checkout repository OpenFIRE-Firmware-Esp32
@@ -182,6 +196,18 @@ jobs:
             flash_mode: 'dio'
             flash_freq: '80m'
             address_littleFS: '0x290000'
+          - name: 'ESP32_S3_N8R8'
+            chip: 'esp32s3'
+            flash_size: '8MB'
+            flash_mode: 'dio'
+            flash_freq: '80m'
+            address_littleFS: '0x670000'
+          - name: 'ESP32_S3_N8R8_OLED091'
+            chip: 'esp32s3'
+            flash_size: '8MB'
+            flash_mode: 'dio'
+            flash_freq: '80m'
+            address_littleFS: '0x670000'
         os_config:
           - name: windows-64bit
             runner: windows-latest

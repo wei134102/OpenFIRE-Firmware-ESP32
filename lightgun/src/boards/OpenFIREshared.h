@@ -60,6 +60,8 @@
     #define OPENFIRE_BOARD "esp32-s3-devkitc-1"
 #elif defined(ARDUINO_ESP32_S3_super_mini)
     #define OPENFIRE_BOARD "esp32-s3-devkitc-1"
+#elif defined(ARDUINO_ESP32_S3_N8R8)
+    #define OPENFIRE_BOARD "esp32-s3-n8r8"
 #elifdef ARDUINO_WAVESHARE_ESP32_S3_PICO
     #define OPENFIRE_BOARD "waveshare-esp32-s3-pico"
 #elifdef ARDUINO_WAVESHARE_ESP32_S3_ZERO
@@ -506,6 +508,19 @@ public:
                                      /*40*/ btnGunUp,       btnGunDown,     btnGunLeft,     unavailable,    unavailable,
                                      /*45*/ btnPump,        btnUnmapped,    btnUnmapped,    unavailable                        }},
         //=====================================================================================================================
+        // ESP32-S3 N8R8 (LC@SC / Super Mini form factor, 8 MB Flash + 8 MB OPI PSRAM)
+        // Board Type: ESP32
+        {"esp32-s3-n8r8",           {/*00*/ unavailable,    btnTrigger,     btnGunRight,    btnUnmapped,    analogX,
+                                     /*05*/ analogY,        tempPin,        btnUnmapped,    camSDA,         camSCL,
+                                     /*10*/ btnUnmapped,    btnUnmapped,    btnUnmapped,    btnUnmapped,    neoPixel,
+                                     /*15*/ periphSCL,      rumblePin,      solenoidPin,    periphSDA,      btnUnmapped,
+                                     /*20*/ btnUnmapped,    btnGunC,        unavailable,    unavailable,    unavailable,
+                                     /*25*/ unavailable,    unavailable,    unavailable,    unavailable,    unavailable,
+                                     /*30*/ unavailable,    unavailable,    unavailable,    unavailable,    unavailable,
+                                     /*35*/ btnHome,        btnGunA,        btnGunB,        btnSelect,      btnStart,
+                                     /*40*/ btnGunUp,       btnGunDown,     btnGunLeft,     unavailable,    unavailable,
+                                     /*45*/ btnPump,        btnUnmapped,    btnUnmapped,    unavailable                        }},
+        //=====================================================================================================================
         // Waveshare ESP32 S3 Pico
         // Board Type: ESP32
         {"waveshare-esp32-s3-pico", {/*00*/ unavailable,    btnUnmapped,    btnUnmapped,    unavailable,    camSDA,
@@ -550,6 +565,7 @@ public:
         {"arduinoNanoRP2040",       "Arduino Nano Connect RP2040"},
         {"waveshareZero",           "Waveshare Zero RP2040"},
         {"esp32-s3-devkitc-1",      "ESP32-S3 WROOM-1 DevkitC-1"},
+        {"esp32-s3-n8r8",           "ESP32-S3 N8R8 (Super Mini / LC@SC)"},
         {"waveshare-esp32-s3-pico", "Waveshare ESP32-S3-Pico"},
         {"waveshare-esp32-s3-zero", "Waveshare ESP32-S3-Zero"},
         // Add more here!
@@ -785,6 +801,19 @@ public:
                                      /*35*/ 10 | posLeft,   11 | posLeft,   12 | posLeft,   13 | posLeft,   14 | posLeft,
                                      /*40*/ 15 | posLeft,   16 | posLeft,   17 | posLeft,     posNothing,     posNothing,
                                      /*45*/ 8  | posLeft,  9  | posRight,   6  | posLeft,    posNothing                    }},
+        //=====================================================================================================================
+        // ESP32-S3 N8R8 (LC@SC / Super Mini form factor)
+        // Board Type: ESP32-S3
+        {"esp32-s3-n8r8",           {/*00*/   16 | posRight,   1  | posLeft,    2  | posLeft,    3  | posLeft,    4  | posLeft,
+                                     /*05*/  5  | posLeft,    6  | posLeft,     posNothing,    7  | posLeft,    8  | posLeft,
+                                     /*10*/  9  | posLeft,   10  | posLeft,   11  | posLeft,   12  | posLeft,   13  | posLeft,
+                                     /*15*/ 14  | posLeft,    5  | posRight,   6  | posRight,   7  | posRight,   8  | posRight,
+                                     /*20*/   posNothing,    10 | posRight,     posNothing,     posNothing,     posNothing,
+                                     /*25*/   posNothing,     posNothing,     posNothing,     posNothing,     posNothing,
+                                     /*30*/   posNothing,     posNothing,     posNothing,     posNothing,     posNothing,
+                                     /*35*/   posNothing,     posNothing,     posNothing,    13 | posRight,  12 | posRight,
+                                     /*40*/ 11 | posRight,    4 | posRight,    3 | posRight,     posNothing,     posNothing,
+                                     /*45*/  2  | posRight,   1  | posRight,  14 | posRight,  15 | posRight                    }},
         //=====================================================================================================================
         // Waveshare ESP32 S3 Pico
         // Board Type: ESP32-S3
