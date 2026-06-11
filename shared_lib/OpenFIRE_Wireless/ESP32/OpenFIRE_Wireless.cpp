@@ -474,7 +474,9 @@ void animTaskLink(void *pvParameters) {
   tft.setTextColor(WHITE, BLACK);
   tft.setCursor(baseX, baseY);
   tft.print("Connecting");
+  #ifdef USE_LOVYAN_GFX
   tft.display();
+  #endif // USE_LOVYAN_GFX
   tft.setTextSize(2);
   tft.setTextColor(BLUE, BLACK);
 
@@ -483,7 +485,9 @@ void animTaskLink(void *pvParameters) {
     tft.setCursor(baseX + (11 * charWidth) + 3, baseY);
     tft.write(rotazione[rotazioneIndex]);
     rotazioneIndex = (rotazioneIndex + 1) % 8;
+    #ifdef USE_LOVYAN_GFX
     tft.display();
+    #endif // USE_LOVYAN_GFX
     vTaskDelay(pdMS_TO_TICKS(150)); // piccolo delay per non saturare la CPU
   } 
 }
@@ -509,7 +513,9 @@ void animTask(void *pvParameters) {
   tft.print("best channel");
   tft.setCursor(baseX, baseY);
   tft.print("Scanning WiFi");
+  #ifdef USE_LOVYAN_GFX
   tft.display();
+  #endif // USE_LOVYAN_GFX
   tft.setTextColor(RED, BLACK);
 
   // Loop del task
@@ -533,7 +539,9 @@ void animTask(void *pvParameters) {
     break;
     }
     currentIndex = (currentIndex + 1) % 4;
+    #ifdef USE_LOVYAN_GFX
     tft.display();
+    #endif // USE_LOVYAN_GFX
     vTaskDelay(pdMS_TO_TICKS(150)); // piccolo delay per non saturare la CPU
   }
 }

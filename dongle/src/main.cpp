@@ -85,7 +85,8 @@ void setup() {
       tft.setColorDepth(16);
       }
     #else
-      display_init = tft.initR(INITR_MINI160x80_PLUGIN);
+      tft.initR(INITR_MINI160x80_PLUGIN); // non riporta alcun valore, quindi display_init va inizializzato da solo
+      display_init = true;
       if(display_init) {  // Init ST7735S mini display
       pinMode(TFT_PIN_BL, OUTPUT);
       digitalWrite(TFT_PIN_BL, 0); // accende retroilluminazione del display
