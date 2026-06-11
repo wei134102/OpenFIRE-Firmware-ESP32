@@ -614,23 +614,43 @@ void ExtDisplay::IdleOps()
           }
 
           // 正常状态栏：始终显示
-          // P?(GunID): <ProfileName> <Diam/Squa> <Temp> + 右侧倒计时
+          // GunID + Profile + Layout + Temp + 右侧倒计时
           if(millis() - idleTimeStamp > OLED_IDLEUPD_INTERVAL) {
               idleTimeStamp = millis();
 
-              // Gun ID
               uint8_t gunIndex = (uint8_t)(OF_Prefs::settings[OF_Const::gunId] % 4);
+              const uint8_t profIdx = (uint8_t)(OF_Prefs::currentProfile % PROFILE_COUNT);
+
+              char line[24];
+
+              #ifdef OLED_MENU_ZH
+              const char *layoutStr = (OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout == OF_Const::layoutDiamond)
+                  ? TXT_TOP_LAYOUT_DIAM : TXT_TOP_LAYOUT_SQUA;
+              #ifdef USES_TEMP
+              char tempBuf[6];
+              int temp = OF_FFB::temperatureCurrent;
+              if (temp == (int)OF_Const::TEMPERATURE_SENSOR_ERROR_VALUE) {
+                  snprintf(tempBuf, sizeof(tempBuf), "%s", TXT_TEMP_ERR_TOP);
+              } else {
+                  if (temp < 0) temp = 0;
+                  if (temp > 99) temp = 99;
+                  snprintf(tempBuf, sizeof(tempBuf), "%2dC", temp);
+              }
+              snprintf(line, sizeof(line), "%u %c %s %s",
+                       (unsigned)(gunIndex + 1), (char)('A' + (profIdx % 4)), layoutStr, tempBuf);
+              #else
+              snprintf(line, sizeof(line), "%u %c %s",
+                       (unsigned)(gunIndex + 1), (char)('A' + (profIdx % 4)), layoutStr);
+              #endif
+              TopPanelUpdate("", line);
+              #else
               char prefix[8];
               snprintf(prefix, sizeof(prefix), "P%u: ", (unsigned)(gunIndex + 1));
 
-              // Profile + layout + temp
-              char line[32];
-
-              // 简写配置文件名：P_A / P_B / P_C / P_D（按槽位）
-              const uint8_t profIdx = (uint8_t)(OF_Prefs::currentProfile % PROFILE_COUNT);
               char profShort[5] = { 'P', '_', 'A', '\0', '\0' };
               profShort[2] = (char)('A' + (profIdx % 4));
-              const char* layoutStr = (OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout == OF_Const::layoutDiamond) ? TXT_LAYOUT_DIAM_SHORT : TXT_LAYOUT_SQUA_SHORT;
+              const char *layoutStr = (OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout == OF_Const::layoutDiamond)
+                  ? TXT_LAYOUT_DIAM_SHORT : TXT_LAYOUT_SQUA_SHORT;
 
               #ifdef USES_TEMP
               char tempBuf[6];
@@ -648,6 +668,7 @@ void ExtDisplay::IdleOps()
               #endif
 
               TopPanelUpdate(prefix, line);
+              #endif
           }
           break;
         case Screen_Pause:
