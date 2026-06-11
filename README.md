@@ -22,8 +22,13 @@
 <p align="center">
   <a href="https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?lang=en">
     <img src="https://img.shields.io/badge/🚀_LAUNCH_WEB_FLASHER-Easiest_way_to_install_firmware_from_browser-2ea44f?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Launch Web Flasher">
-  </a>
+  </a><br>
+  <a href="https://alessandro-satanassi.github.io/OpenFIRE-ESP32-Tools/?lang=en">
+    <img src="https://img.shields.io/badge/🛠️_OPENFIRE_ESP32_TOOLS-Simplified_OpenFIRE_App_download-007ec6?style=for-the-badge" alt="OpenFIRE ESP32 Tools">
+  </a>  
 </p>
+
+
 
 ---
 > 🛠️ **Hardware sponsored by [PCBWay](https://www.pcbway.com)**
@@ -41,7 +46,7 @@ This repository hosts an advanced port of the [OpenFIRE-firmware](https://github
 
 The main goal of this work is to introduce native support for **wireless gameplay via ESP-NOW**. The aim is to enable completely cable-free operation while simultaneously maintaining real-time responsiveness and behavior aligned with a directly connected PC system under typical usage conditions.
 
-Furthermore, the **tracking system has been refined**. The integration of anti-jitter techniques, better rotation handling, and increased tolerance to the temporary loss of IR emitter visibility contribute to a more stable and fluid cursor behavior. The result is more consistent tracking across different usage scenarios, with good precision even near the edges of the screen and greater flexibility in the operating distance from the monitor.
+Furthermore, the **tracking system has been refined** specifically for the "square" IR LED configuration. The integration of anti-jitter techniques, better rotation handling, and increased tolerance to the temporary loss of IR emitter visibility contribute to a more stable and fluid cursor behavior. The result is more consistent tracking across different usage scenarios, with good precision even near the edges of the screen and greater flexibility in the operating distance from the monitor. ***(Note: the "diamond" configuration retains the original standard tracking).***
 
 ## Main Features and Capabilities
 The firmware transforms the microcontroller into a highly advanced lightgun controller, offering the following core features (inherited from the original project):
@@ -49,7 +54,7 @@ The firmware transforms the microcontroller into a highly advanced lightgun cont
 * **Advanced IR Tracking:** Utilizes a four-point infrared system with real-time perspective correction. Supports multiple emitter configurations, including double lightbar (recommended) or diamond layouts, ensuring absolute precision regardless of the player's angle to the screen.
 * **Complete Peripheral Support:** Native management of tactile and force feedback (Solenoid and Rumble motor), temperature monitoring via TMP36 sensor, and dynamic lighting via WS2812B NeoPixel LEDs.
 * **Flexible Inputs and Mapping:** The system provides simultaneous outputs such as Keyboard, 5-button Absolute Positioning Mouse (ABS), and dual-stick Gamepad (with D-pad support). It offers a robust button mapping system configurable for any need.
-* **Dedicated App and Internal Memory:** Full integration with the **[OpenFIRE App](https://github.com/TeamOpenFIRE/OpenFIRE-App)** for cross-platform, on-the-fly configuration. Calibration profiles and user settings are saved directly to the lightgun's internal memory, making it portable across different PCs without needing to run the setup again.
+* **Dedicated App and Internal Memory:** Full integration with the **[OpenFIRE App](https://github.com/TeamOpenFIRE/OpenFIRE-App)** for cross-platform, on-the-fly configuration. Calibration profiles and user settings are saved directly to the lightgun's internal memory, making it portable across different PCs without needing to run the setup again. You can easily download the latest version of the App from the **[OpenFIRE ESP32 Tools](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-Tools/?lang=en)** portal.
 * **OLED Visual Feedback:** Support for I2C SSD1306 displays, used for menu navigation and providing visual indicators for in-game elements (e.g., life count, ammo).
 * **Advanced Compatibility:** Fully compatible with PC Force Feedback handlers (such as Mame Hooker, The Hook Of The Reaper, and QMamehook) and the MiSTer FPGA ecosystem.
 * **Dual-Core Optimization:** Leverages the microcontroller's dual-core capabilities to simultaneously manage input polling, camera processing, and peripheral management without any slowdowns.
@@ -61,7 +66,7 @@ The distinctive features of this port include:
 
 * **Transparent Wireless Integration**: The implementation of the ESP-NOW protocol allows direct communication between the peripheral and a dedicated dongle connected to the PC. This solution is designed to be totally transparent: the operating system detects the lightgun as a standard USB peripheral, with no perceivable latency and no need for third-party drivers or software.
 
-* **Enhanced Tracking Algorithms:** This port introduces deep refinements to the spatial calculation algorithms. The system now offers exceptional cursor stability even at very close distances and correctly calculates tracking even during wide rotations of the lightgun on its axis (tilt). At the end of the testing phase, if these implementations prove solid and superior, it is my intention to propose a Pull Request (PR) to the original project so that the entire OpenFIRE community can benefit from them.
+* **Enhanced Tracking Algorithms:** This port introduces deep refinements to the spatial calculation algorithms, specifically for the "square" IR LED configuration. The system now offers exceptional cursor stability even at very close distances and correctly calculates tracking even during wide rotations of the lightgun on its axis (tilt). ***(Note: the "diamond" configuration retains the original standard tracking).*** At the end of the testing phase, if these implementations prove solid and superior, it is my intention to propose a Pull Request (PR) to the original project so that the entire OpenFIRE community can benefit from them.
 
 * **Fidelity to the Original Code**: Excluding the necessary adaptations for the ESP32 architecture and radio transmission management, the core control logic remains consistent with the official version. This ensures that improvements and fixes made by TeamOpenFIRE can be cyclically integrated into this repository.
 
@@ -145,6 +150,7 @@ Depending on the type of support you need, you can join two different Discord co
 **Useful Resources and Websites:**
 In addition to the Discord servers, you can check out the following websites:
 * [OpenFIRE Firmware (Official Site)](https://openfirelightgun.org/)
+* [OpenFIRE ESP32 Tools (Download OpenFIRE-App and Web Flasher)](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-Tools/?lang=en)
 * [DIY Lightgun](https://diylightgun.com/lightguns/?pt=lightgun)
 * [Picon-AS (Picon-AS lightgun website)](https://alessandro-satanassi.github.io/OpenFIRE-PICON-AS-ESP32/)
 
@@ -228,7 +234,10 @@ In full compliance with the original license and the vision of the OpenFIRE crea
 <p align="center">
   <a href="https://alessandro-satanassi.github.io/OpenFIRE-ESP32-WebFlasher/?lang=it">
     <img src="https://img.shields.io/badge/🚀_AVVIA_WEB_FLASHER-Installazione_semplice_del_firmware_dal_browser-2ea44f?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Avvia Web Flasher">
-  </a>
+  </a><br>
+  <a href="https://alessandro-satanassi.github.io/OpenFIRE-ESP32-Tools/?lang=it">
+    <img src="https://img.shields.io/badge/🛠️_OPENFIRE_ESP32_TOOLS-Download_semplificato_dell'App_OpenFIRE-007ec6?style=for-the-badge" alt="OpenFIRE ESP32 Tools">
+  </a>  
 </p>
 
 ---
@@ -248,7 +257,7 @@ Questo repository ospita un porting avanzato del progetto [OpenFIRE-firmware](ht
 
 L'obiettivo principale di questo lavoro è introdurre un supporto nativo al **gameplay wireless tramite ESP-NOW**. Lo scopo è consentire un'operatività totalmente priva di cavi, pur mantenendo al contempo una reattività in tempo reale e un comportamento allineato a un sistema con connessione diretta al PC in condizioni d'uso tipiche.
 
-Inoltre, il **sistema di tracciamento è stato affinato**. L'integrazione di tecniche anti-jitter, una migliore gestione della rotazione e una maggiore tolleranza alla perdita temporanea della visibilità degli emettitori IR contribuiscono a un comportamento del cursore più stabile e fluido. Il risultato è un tracciamento più consistente tra i diversi scenari d’uso, con buona precisione anche vicino ai bordi dello schermo e una maggiore flessibilità nella distanza di utilizzo dal monitor.
+Inoltre, il **sistema di tracciamento è stato affinato** specificatamente per la configurazione "square" dei LED IR. L'integrazione di tecniche anti-jitter, una migliore gestione della rotazione e una maggiore tolleranza alla perdita temporanea della visibilità degli emettitori IR contribuiscono a un comportamento del cursore più stabile e fluido. Il risultato è un tracciamento più consistente tra i diversi scenari d’uso, con buona precisione anche vicino ai bordi dello schermo e una maggiore flessibilità nella distanza di utilizzo dal monitor. ***(Nota: la configurazione "diamond" mantiene il tracciamento standard originale).***
 
 ## Caratteristiche e Funzionalità Principali
 Il firmware trasforma il microcontrollore in un controller per lightgun estremamente avanzato, offrendo le seguenti funzionalità di base (ereditate dal progetto originale):
@@ -256,7 +265,7 @@ Il firmware trasforma il microcontrollore in un controller per lightgun estremam
 * **Tracciamento IR Avanzato:** Utilizza un sistema a quattro punti a infrarossi con correzione prospettica in tempo reale. Supporta configurazioni multiple degli emettitori, inclusi layout a doppia barra luminosa (consigliato) o a diamante, garantendo una precisione assoluta indipendentemente dall'angolazione del giocatore rispetto allo schermo.
 * **Supporto Periferiche Completo:** Gestione nativa del feedback tattile e di forza (Solenoide e motore Rumble), monitoraggio della temperatura tramite sensore TMP36 e illuminazione dinamica tramite LED NeoPixel WS2812B.
 * **Input Flessibili e Mappatura:** Il sistema fornisce output simultanei come Tastiera, Mouse a posizionamento assoluto (ABS) a 5 pulsanti e Gamepad dual-stick (con supporto D-pad). Offre un robusto sistema di mappatura dei pulsanti configurabile per ogni esigenza.
-* **App Dedicata e Memoria Interna:** Piena integrazione con la **[OpenFIRE App](https://github.com/TeamOpenFIRE/OpenFIRE-App)** per una configurazione multipiattaforma e "al volo". I profili di calibrazione e le impostazioni dell'utente vengono salvati direttamente nella memoria interna della lightgun, rendendola portabile tra diversi PC senza dover rifare il setup.
+* **App Dedicata e Memoria Interna:** Piena integrazione con la **[OpenFIRE App](https://github.com/TeamOpenFIRE/OpenFIRE-App)** per una configurazione multipiattaforma e "al volo". I profili di calibrazione e le impostazioni dell'utente vengono salvati direttamente nella memoria interna della lightgun, rendendola portabile tra diversi PC senza dover rifare il setup. Puoi scaricare in modo facilitato la versione più recente dell'App dal portale **[OpenFIRE ESP32 Tools](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-Tools/?lang=it)**.
 * **Feedback Visivo OLED:** Supporto per display I2C SSD1306, utilizzati per la navigazione dei menu e per fornire indicazioni visive degli elementi in-game (es. conteggio vite, munizioni).
 * **Compatibilità Avanzata:** Pienamente compatibile con i gestori di Force Feedback per PC (come Mame Hooker, The Hook Of The Reaper e QMamehook) e con l'ecosistema MiSTer FPGA.
 * **Ottimizzazione Dual-Core:** Sfrutta le capacità dual-core del microcontrollore per gestire simultaneamente e senza rallentamenti il polling degli input, l'elaborazione della videocamera e la gestione delle periferiche.
@@ -268,7 +277,7 @@ Le caratteristiche distintive di questo porting includono:
 
 * **Integrazione Wireless Trasparente**: L'implementazione del protocollo ESP-NOW permette una comunicazione diretta tra la periferica e un dongle dedicato collegato al PC. Questa soluzione è progettata per essere totalmente trasparente: il sistema operativo rileva la lightgun come una periferica USB standard, senza latenze percepibili e senza la necessità di driver o software di terze parti.
 
-* **Algoritmi di Tracciamento Potenziati:** Questo porting introduce profondi affinamenti agli algoritmi di calcolo spaziale. Il sistema offre ora una stabilità del cursore eccezionale anche a distanze ravvicinate e calcola correttamente il tracciamento anche durante ampie rotazioni della lightgun sull'asse (tilt). Al termine della fase di testing, se queste implementazioni si confermeranno solide e superiori, è mia intenzione proporre una Pull Request (PR) al progetto originale affinché tutta la community di OpenFIRE possa beneficiarne.
+* **Algoritmi di Tracciamento Potenziati:** Questo porting introduce profondi affinamenti agli algoritmi di calcolo spaziale, specificatamente per la configurazione "square" dei LED IR. Il sistema offre ora una stabilità del cursore eccezionale anche a distanze ravvicinate e calcola correttamente il tracciamento anche durante ampie rotazioni della lightgun sull'asse (tilt). ***(Nota: la configurazione "diamond" mantiene il tracciamento standard originale).*** Al termine della fase di testing, se queste implementazioni si confermeranno solide e superiori, è mia intenzione proporre una Pull Request (PR) al progetto originale affinché tutta la community di OpenFIRE possa beneficiarne.
 
 * **Fedeltà al Codice Originale**: Ad esclusione degli adattamenti necessari per l'architettura ESP32 e per la gestione della trasmissione radio, il cuore della logica di controllo rimane coerente con la versione ufficiale. Questo garantisce che i miglioramenti e le correzioni apportate dal TeamOpenFIRE possano essere integrati ciclicamente in questo repository.
 
@@ -352,6 +361,7 @@ A seconda del tipo di supporto di cui hai bisogno, puoi unirti a due diverse com
 **Risorse e Siti Web Utili:**
 Oltre ai server Discord, puoi consultare i seguenti siti web:
 * [OpenFIRE Firmware (Sito Ufficiale)](https://openfirelightgun.org/)
+* [OpenFIRE ESP32 Tools (Download OpenFIRE-App e Web Flasher)](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-Tools/?lang=it)
 * [DIY Lightgun](https://diylightgun.com/lightguns/?pt=lightgun)
 * [Picon-AS (Sito della lightgun Picon-AS)](https://alessandro-satanassi.github.io/OpenFIRE-PICON-AS-ESP32/)
 

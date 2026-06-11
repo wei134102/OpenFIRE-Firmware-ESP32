@@ -140,7 +140,7 @@ For advanced users who prefer to use GUI tools like **NodeMCU PyFlasher** or the
 
 * **Flashing won't start (Connecting...):** Some ESP32-S3 boards can be "stubborn" about automatically entering download mode. If you see `Connecting...` repeating during the script without progressing, hold down the small physical **BOOT** (or `B`) button on your ESP32 board until the installation begins.
 * **Antivirus False Positive (Windows):** The script uses the original `esptool.exe` from Espressif. Some antivirus software might block it or flag it as a false positive. The file is 100% safe; you may need to add it to your temporary exceptions.
-* **Post-Installation Configuration:** Remember that these scripts are *only* for installing the firmware. To configure the lightgun (map pins, buttons, perform IR calibration) you must use the original **OpenFIRE Desktop App**. Check the release notes to download the App version compatible with the firmware.
+* **Post-Installation Configuration:** Remember that these scripts are *only* for installing the firmware. To configure the lightgun (map pins, buttons, perform IR calibration) you must use the original **[OpenFIRE App](https://github.com/TeamOpenFIRE/OpenFIRE-App)**. You can easily download the most recent version of the App from the **[OpenFIRE ESP32 Tools](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-Tools/?lang=en)** portal.
 
 ## 👨‍💻 Technical Information for Developers
 
@@ -350,7 +350,7 @@ Per gli utenti avanzati che preferiscono utilizzare tool grafici come **NodeMCU 
 
 * **Il Flashing non parte (Connecting...):** Alcune schede ESP32-S3 possono essere "capricciose" nell'entrare automaticamente in modalità download. Se durante lo script vedi la scritta `Connecting...` che si ripete senza avanzare, tieni premuto il piccolo pulsante fisico **BOOT** (o `B`) sulla tua scheda ESP32 finché l'installazione non inizia.
 * **Falso Positivo Antivirus (Windows):** Lo script utilizza `esptool.exe` originale di Espressif. Alcuni antivirus potrebbero bloccarlo o segnalarlo come falso positivo. Il file è sicuro al 100%, potresti doverlo aggiungere alle eccezioni temporanee.
-* **Configurazione Post-Installazione:** Ricorda che questi script servono *solo* a installare il firmware. Per configurare la lightgun (mappare i pin, i pulsanti, effettuare la calibrazione IR) dovrai utilizzare la **OpenFIRE Desktop App** originale. Controlla le note di release per scaricare la versione dell'App compatibile con il firmware.
+* **Configurazione Post-Installazione:** Ricorda che questi script servono *solo* a installare il firmware. Per configurare la lightgun (mappare i pin, i pulsanti, effettuare la calibrazione IR) dovrai utilizzare la **[OpenFIRE App](https://github.com/TeamOpenFIRE/OpenFIRE-App)** originale. Puoi scaricare in modo facilitato la versione più recente dell'App dal portale **[OpenFIRE ESP32 Tools](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-Tools/?lang=it)**.
 
 ## 👨‍💻 Informazioni Tecniche per gli Sviluppatori
 

@@ -37,7 +37,7 @@ if you're playing on a small PC monitor, you can use 2 Wii sensor bars; one on t
 The **OpenFIRE Desktop App** has an alignment assistant that can be used to help align your emitters to the display (by selecting ***Help->Open IR Emitter Alignment Assistant***) - alternatively, you can refer to this online alignment guide [here @ diylightgun.com](https://diylightgun.com/align/)
 
 ## Board Configuration
-The gun is configured through the companion [OpenFIRE Desktop Application.](https://github.com/TeamOpenFIRE/OpenFIRE-App) The latest version of the App (v3.0.3 or later) can be opened without plugging in a microcontroller prior, and will regularly search for devices flashed with the latest Firmware.
+The gun is configured through the companion [OpenFIRE Desktop Application](https://github.com/TeamOpenFIRE/OpenFIRE-App), which can be launched even without a microcontroller plugged in and will automatically search for compatible flashed devices. You can easily download the latest version of the App from the **[OpenFIRE ESP32 Tools](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-Tools/?lang=en)** portal.
 
 When the board's COM port is selected in the app, the gun will go into a *Docked* state - this is what allows for real-time configuration of pin mappings, settings, changing between and renaming calibration profiles, and testing button inputs and force feedback devices. The camera will be disabled while in this mode, unless the gun is set to IR test mode.
 
@@ -215,7 +215,7 @@ L'App Desktop OpenFIRE dispone di un assistente di allineamento che può aiutart
 <a id="configurazione-della-scheda-italiano"></a>
 
 ## Configurazione della Scheda
-La pistola viene configurata tramite l'[Applicazione Desktop OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-App) complementare. L'ultima versione dell'App (v3.0.3 o successiva) può essere avviata senza dover prima collegare un microcontrollore e cercherà regolarmente i dispositivi flashati con il Firmware più recente.
+La pistola viene configurata tramite l'[Applicazione Desktop OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-App), che può essere avviata anche senza aver prima collegato un microcontrollore e cercherà automaticamente i dispositivi già flashati compatibili. Puoi scaricare in modo facilitato la versione più recente dell'App dal portale **[OpenFIRE ESP32 Tools](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-Tools/?lang=it)**.
 
 Quando la porta COM della scheda viene selezionata nell'app, la pistola entrerà in uno stato *Docked* (Ancorato) - questo è ciò che consente la configurazione in tempo reale della mappatura dei pin, delle impostazioni, la modifica e rinomina dei profili di calibrazione e il test degli input dei pulsanti e dei dispositivi di force feedback. La telecamera sarà disabilitata in questa modalità, a meno che la pistola non sia impostata sulla modalità di test IR.
 
