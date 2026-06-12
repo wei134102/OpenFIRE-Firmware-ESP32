@@ -178,8 +178,9 @@ The script will guide you through the installation and automatically search for 
 #### Compatibility
 Compatibility between **lightgun**, **dongle**, and **pedal** is guaranteed using the firmware listed above.
 
-To configure all lightgun features (pins, buttons, name, player, etc.), the original **OpenFIRE App** (commit **d0f3334** of April 19, 2026) **Release 3.0.3 - Tokinomiya Turbo: Hyper Fighting** is required:
-[Download OpenFIRE App Release 3.0.3](https://github.com/TeamOpenFIRE/OpenFIRE-App/releases/tag/v3.0.3)
+To configure the lightgun (pins, buttons, calibration, name, player, etc.) the **[OpenFIRE App](https://github.com/TeamOpenFIRE/OpenFIRE-App)** is required. 
+You can easily download the most recent pre-compiled binaries for your operating system (Windows, Linux, ARM) directly from our Tools portal:
+👉 **[Download OpenFIRE App from ESP32 Ecosystem](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-Tools/?lang=en)**
 
 ---
 
@@ -368,7 +369,8 @@ Lo script ti guiderà nell'installazione e cercherà automaticamente la porta se
 #### Compatibilità
 La compatibilità tra **lightgun**, **dongle** e **pedal** è garantita utilizzando i firmware sopra elencati.
 
-Per configurare la lightgun (pin, pulsanti, nome, player, ecc.) è richiesta l'**App OpenFIRE** originale (commit **d0f3334** del 19 aprile 2026) **Release 3.0.3 - Tokinomiya Turbo: Hyper Fighting**:
-[Scarica OpenFIRE App Release 3.0.3](https://github.com/TeamOpenFIRE/OpenFIRE-App/releases/tag/v3.0.3)
+Per configurare la lightgun (pin, pulsanti, calibrazione, nome, player, ecc.) è necessaria l'**[App OpenFIRE](https://github.com/TeamOpenFIRE/OpenFIRE-App)**. 
+Puoi scaricare facilmente gli eseguibili precompilati più recenti per il tuo sistema operativo (Windows, Linux, ARM) direttamente dal nostro portale Tools:
+👉 **[Scarica OpenFIRE App dall'Ecosistema ESP32](https://alessandro-satanassi.github.io/OpenFIRE-ESP32-Tools/?lang=it)**
 
 ---

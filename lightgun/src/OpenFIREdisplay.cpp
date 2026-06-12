@@ -21,7 +21,7 @@
 #include <Arduino.h>
 
 #ifdef USE_LOVYAN_GFX
-  // nulla ???
+  // nulla 
 #else
   //#include <Adafruit_GFX.h>
 #endif
@@ -46,7 +46,7 @@ bool ExtDisplay::Begin()
     // causes the board to hang. Even though this is all correct (and any display objects should get deleted from the above, so don't think it can be a new object thing)...
     if(OF_Prefs::pins[OF_Const::periphSCL] >= 0 && OF_Prefs::pins[OF_Const::periphSDA] >= 0) {
       #ifdef ARDUINO_ARCH_ESP32
-        Wire1.setPins(OF_Prefs::pins[OF_Const::periphSDA], OF_Prefs::pins[OF_Const::periphSCL]);  // 696969 per esp32
+        Wire1.setPins(OF_Prefs::pins[OF_Const::periphSDA], OF_Prefs::pins[OF_Const::periphSCL]);  // [ESP32_PORT] per esp32
         #ifdef USE_LOVYAN_GFX
         display = new LGFX_SSD1306(1/*i2c_port wire_1*/,OF_Prefs::pins[OF_Const::periphSDA], OF_Prefs::pins[OF_Const::periphSCL], OF_Prefs::toggles[OF_Const::i2cOLEDaltAddr] ? 0x3D : 0x3C, SCREEN_WIDTH, SCREEN_HEIGHT);
         #else

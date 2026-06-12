@@ -40,7 +40,7 @@ public:
     // Main routine that prints information to connected serial monitor when the gun enters Pause Mode.
     static void PrintResults();
 
-    // utility function to wait for n bytes with timeout //696969 inserita da me
+    // utility function to wait for n bytes with timeout //[ESP32_PORT] inserita da me
     static bool Serial_available(uint8_t min = 1);
 
     #ifdef DEBUG_SERIAL

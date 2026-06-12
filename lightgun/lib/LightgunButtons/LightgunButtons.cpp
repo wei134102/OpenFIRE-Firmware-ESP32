@@ -30,9 +30,9 @@
 #include <Arduino.h>
 #include "LightgunButtons.h"
 #include <TinyUSB_Devices.h>
-#include "../../src/boards/OpenFIREshared.h"  //696969 serve per gli indici di Pedal e Pedal2
+#include "../../src/boards/OpenFIREshared.h"  //[ESP32_PORT] serve per gli indici di Pedal e Pedal2
 
-// valutare 696969 tolti poichè già definiti in Arduino TinyUSB in hid.h // /// Standard Gamepad HAT/DPAD Buttons (from Linux input event codes)
+// valutare [ESP32_PORT] tolti poichè già definiti in Arduino TinyUSB in hid.h // /// Standard Gamepad HAT/DPAD Buttons (from Linux input event codes)
 
 #define GAMEPAD_HAT_CENTERED   hid_gamepad_hat_t::GAMEPAD_HAT_CENTERED   // 0
 #define GAMEPAD_HAT_UP         hid_gamepad_hat_t::GAMEPAD_HAT_UP         // 1
@@ -70,10 +70,10 @@ void LightgunButtons::Begin()
 {
     // set button pins to input with pullup
     for(unsigned int i = 0; i < count; ++i) {
-        bool is_current_wireless_pedal = (TinyUSBDevices.is_pedal_wireless && (i == OF_Const::btnPedal || i == OF_Const::btnPedal2));  // 696969
+        bool is_current_wireless_pedal = (TinyUSBDevices.is_pedal_wireless && (i == OF_Const::btnPedal || i == OF_Const::btnPedal2));  // [ESP32_PORT]
         // do no setup if the pin is uninitialized
-        if((ButtonDesc[i].pin >= 0) || is_current_wireless_pedal) {  //696969
-            if (!is_current_wireless_pedal) pinMode(ButtonDesc[i].pin, INPUT_PULLUP);  //696969
+        if((ButtonDesc[i].pin >= 0) || is_current_wireless_pedal) {  //[ESP32_PORT]
+            if (!is_current_wireless_pedal) pinMode(ButtonDesc[i].pin, INPUT_PULLUP);  //[ESP32_PORT]
             stateFifo[i] = 0xFFFFFFFF;
             debounceCount[i] = 0;
         }
@@ -84,10 +84,10 @@ void LightgunButtons::Unset()
 {
     // set button pins to normal input
     for(unsigned int i = 0; i < count; ++i) {
-        bool is_current_wireless_pedal = (TinyUSBDevices.is_pedal_wireless && (i == OF_Const::btnPedal || i == OF_Const::btnPedal2));  // 696969
+        bool is_current_wireless_pedal = (TinyUSBDevices.is_pedal_wireless && (i == OF_Const::btnPedal || i == OF_Const::btnPedal2));  // [ESP32_PORT]
         // do no setup if the pin is uninitialized
-        if((ButtonDesc[i].pin >= 0) || is_current_wireless_pedal) {  //696969
-            if (!is_current_wireless_pedal) pinMode(ButtonDesc[i].pin, INPUT); // 696969
+        if((ButtonDesc[i].pin >= 0) || is_current_wireless_pedal) {  //[ESP32_PORT]
+            if (!is_current_wireless_pedal) pinMode(ButtonDesc[i].pin, INPUT); // [ESP32_PORT]
             debounceCount[i] = 0;
         }
     }
@@ -123,8 +123,8 @@ uint32_t LightgunButtons::Poll(unsigned long minTicks)
         for(unsigned int i = 0; i < count; ++i, bitMask <<= 1) {
             const Desc_t& btn = ButtonDesc[i];
             // Condizione ottimizzata
-            bool is_current_wireless_pedal = (TinyUSBDevices.is_pedal_wireless && (i == OF_Const::btnPedal || i == OF_Const::btnPedal2)); // 696969
-            if((ButtonDesc[i].pin >= 0) || is_current_wireless_pedal) { // 696969
+            bool is_current_wireless_pedal = (TinyUSBDevices.is_pedal_wireless && (i == OF_Const::btnPedal || i == OF_Const::btnPedal2)); // [ESP32_PORT]
+            if((ButtonDesc[i].pin >= 0) || is_current_wireless_pedal) { // [ESP32_PORT]
                 if(debounceCount[i]) {
                     if(ticks < debounceCount[i]) {
                         debounceCount[i] -= ticks;
@@ -141,14 +141,14 @@ uint32_t LightgunButtons::Poll(unsigned long minTicks)
     for(unsigned int i = 0; i < count; ++i, bitMask <<= 1) {
         const Desc_t& btn = ButtonDesc[i];
         
-        bool is_current_wireless_pedal = (TinyUSBDevices.is_pedal_wireless && (i == OF_Const::btnPedal || i == OF_Const::btnPedal2));  // 696969
+        bool is_current_wireless_pedal = (TinyUSBDevices.is_pedal_wireless && (i == OF_Const::btnPedal || i == OF_Const::btnPedal2));  // [ESP32_PORT]
         // do no processing if the pin is uninitialized
-        if((ButtonDesc[i].pin >= 0) || is_current_wireless_pedal) { // 696969
+        if((ButtonDesc[i].pin >= 0) || is_current_wireless_pedal) { // [ESP32_PORT]
             // if not debouncing
             if(!debounceCount[i]) {
-                uint32_t state; //696969
+                uint32_t state; //[ESP32_PORT]
                 
-                // 696969
+                // [ESP32_PORT]
                 if (is_current_wireless_pedal) {
                     // Mappa true (premuto) in 0, e false (rilasciato) in 1
                     //state = (i == OF_Const::btnPedal) ? (TinyUSBDevices.pedal_wireless ? 0 : 1) : (TinyUSBDevices.pedal2_wireless ? 0 : 1);
@@ -160,7 +160,7 @@ uint32_t LightgunButtons::Poll(unsigned long minTicks)
                     // read the pin, expected to return 0 or 1
                     state = digitalRead(btn.pin);
                 }
-                // 696969
+                // [ESP32_PORT]
 
                 // if a state fifo mask is defined
                 if(btn.debounceFifoMask) {
