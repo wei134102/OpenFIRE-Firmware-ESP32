@@ -34,7 +34,7 @@
   #include <hardware/irq.h>
   // declare PWM ISR
   void rp2040pwmIrq(void);
-#elif defined(ARDUINO_ARCH_ESP32)  // 696969 per ESP32
+#elif defined(ARDUINO_ARCH_ESP32)  // [ESP32_PORT] per ESP32
   hw_timer_t *My_timer = NULL;
   void ARDUINO_ISR_ATTR esp32s3pwmIrq(void);
 #endif
@@ -42,7 +42,7 @@
 #define POLL_RATE 1
 
 // TinyUSB devices interface object that's initialized in MainCoreSetup
-// TinyUSBDevices_ TUSBDeviceSetup; // 696969 tolto non serve
+// TinyUSBDevices_ TUSBDeviceSetup; // [ESP32_PORT] tolto non serve
 
 // Selector for which profile in the profile selector of the simple pause menu you're picking.
 uint8_t profileModeSelection = 0;
@@ -63,17 +63,17 @@ unsigned long lastUSBpoll = 0;
 
 uint32_t fifoData = 0;
 
-// ============ VARIABILI e COSTANTI AGGIUNTE DA ME ========= 696969
+// ============ VARIABILI e COSTANTI AGGIUNTE  ========= [ESP32_PORT]
 
 Stream* Serial_OpenFIRE_Stream; // SERVE PER GESTIRE LE SERIALE WIRELESS
 
 // == per gestione Analog Stick ==
-#define ANALOG_STICK_MIN_X 0 // al momento non serve
-#define ANALOG_STICK_MAX_X 4095 // al momento non serve
-#define ANALOG_STICK_MIN_Y 0 // al momento non serve
-#define ANALOG_STICK_MAX_Y 4095 // al momento non serve
-#define ANALOG_STICK_CENTER_X 2048 // serve per inviare dati nel joystic simulato valore tra 0 a 4095
-#define ANALOG_STICK_CENTER_Y 2048 // serve per inviare dati nel joystic simulato valore tra 0 a 4095
+#define ANALOG_STICK_MIN_X 0    // valore minimo X 
+#define ANALOG_STICK_MAX_X 4095 // valore massimo X
+#define ANALOG_STICK_MIN_Y 0    // valore minimo Y
+#define ANALOG_STICK_MAX_Y 4095 // valore massimo Y
+#define ANALOG_STICK_CENTER_X 2048 // centro - serve per inviare dati nel joystic simulato valore tra 0 a 4095
+#define ANALOG_STICK_CENTER_Y 2048 // centro - serve per inviare dati nel joystic simulato valore tra 0 a 4095
 #if defined(ARDUINO_ARCH_RP2040)
     uint16_t ANALOG_STICK_DEADZONE_X_MIN = 1900;  // impostati gli stessi valori originali di OpenFIRE 
     uint16_t ANALOG_STICK_DEADZONE_X_MAX = 2200;  // impostati gli stessi valori originali di OpenFIRE 
@@ -92,7 +92,7 @@ Stream* Serial_OpenFIRE_Stream; // SERVE PER GESTIRE LE SERIALE WIRELESS
 // == FINE per gestione Analog Stick ==
 
 
-// ============ DEFINIZIONE DELLE FUNZIONI ================== 696969 per platformio - in arduino IDE si possono anche nonn definire prima
+// ============ DEFINIZIONE DELLE FUNZIONI ================== [ESP32_PORT] per platformio - in arduino IDE si possono anche non definire prima
 void startIrCamTimer(const int &frequencyHz);
 void ExecGunModeDocked();
 void TriggerFire();

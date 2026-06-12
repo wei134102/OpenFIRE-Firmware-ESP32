@@ -32,7 +32,7 @@
   #include <PicoBluetoothHID.h>
 #endif // ARDUINO_RASPBERRY_PI_PICO_W
 
-#ifdef ARDUINO_ARCH_ESP32  // 696969
+#ifdef ARDUINO_ARCH_ESP32  // [ESP32_PORT]
     #define delay(ms) vTaskDelay(pdMS_TO_TICKS(ms))                    
 #endif //ARDUINO_ARCH_ESP32
 
@@ -42,7 +42,7 @@
 Adafruit_USBD_HID usbHid;
 
 #ifdef COMMENTO
-/* // 696969 spostato in TinyUSB_Devices
+/* // [ESP32_PORT] spostato in TinyUSB_Devices
 enum HID_RID_e{
   HID_RID_KEYBOARD = 1,
   HID_RID_MOUSE,   //2  
@@ -81,7 +81,7 @@ void TinyUSBDevices_::begin(int polRate) {
     usbHid.setPollInterval(polRate);
     usbHid.setReportDescriptor(desc_hid_report, sizeof(desc_hid_report));
     usbHid.begin();
-    // 696969 aggiunto da me If already enumerated, additional class driverr begin() e.g msc, hid, midi won't take effect until re-enumeration
+    // [ESP32_PORT] aggiunto da me If already enumerated, additional class driverr begin() e.g msc, hid, midi won't take effect until re-enumeration
     if (TinyUSBDevice.mounted()) {
       TinyUSBDevice.detach();
       delay(10);

@@ -32,7 +32,7 @@
 #include "OpenFIREdisplay_i18n.h"
 #endif
 
-// ============ 696969 ========== redifinizione di Serial per gestire le connessione wireless seriali ========
+// ============ [ESP32_PORT] ========== redifinizione di Serial per gestire le connessione wireless seriali ========
 #ifdef OPENFIRE_WIRELESS_ENABLE
     extern Stream* Serial_OpenFIRE_Stream;
     #ifdef Serial
@@ -41,9 +41,9 @@
     #endif
     #define Serial (*Serial_OpenFIRE_Stream)
 #endif // OPENFIRE_WIRELESS_ENABLE
-// ============ 696969 ===== fine redifinizione di Serial per gestire le connessione wireless seriali ========
+// ============ [ESP32_PORT] ===== fine redifinizione di Serial per gestire le connessione wireless seriali ========
 
-#ifdef ARDUINO_ARCH_ESP32  // 696969
+#ifdef ARDUINO_ARCH_ESP32  // [ESP32_PORT]
     #define delay(ms) vTaskDelay(pdMS_TO_TICKS(ms))                    
 #endif //ARDUINO_ARCH_ESP32
 
@@ -201,7 +201,7 @@ void FW_Common::PinsReset()
 void FW_Common::CameraSet()
 {
     #ifdef ARDUINO_ARCH_ESP32
-        Wire.setPins(OF_Prefs::pins[OF_Const::camSDA], OF_Prefs::pins[OF_Const::camSCL]); // MODIFICATO 696969 per ESP32
+        Wire.setPins(OF_Prefs::pins[OF_Const::camSDA], OF_Prefs::pins[OF_Const::camSCL]); // MODIFICATO [ESP32_PORT] per ESP32
         dfrIRPos = new DFRobotIRPositionEx(Wire);
     #else // rp2040   
     // Sanity check: which channel do these pins correlate to?
@@ -247,8 +247,12 @@ void FW_Common::CameraSet()
     #ifdef ARDUINO_ARCH_ESP32
         // --- CLOCK WII CAMERA: 24 MHz @ 50% DC ---
         #ifdef CLOCK_CAM_WII
+            /*
             #define WII_CLOCK_FREQUENCY_HZ 25000000  // 25 MHz target //la cam wii parla di 24Mhz ma OpenFire la imposta a 25Mhz
-            // il sistema riesce a produrre Hz 24975610
+            // il sistema riesce a produrre Hz 24975610    .... ma con jitter il clock non è mai stabile
+            */
+            #define WII_CLOCK_FREQUENCY_HZ 20000000  // 20 MHz target (integer division of 80MHz APB to prevent jitter) .. così il clock è stabile e la cam funziona bene tra 20 e 25Mhz
+            
             #define WII_CLOCK_DUTY_CYCLE 1      // 50%
 
             const int gpio_pin = OF_Prefs::pins[OF_Const::wiiClockGen];  // gpio 10 sia su Esp32 pico che su esp32 wroom, si imposta da board
@@ -701,7 +705,7 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
             analogWrite(OF_Prefs::pins[OF_Const::rumblePin], OF_Prefs::settings[OF_Const::rumbleStrength]);
             delay(80);
             #ifdef ARDUINO_ARCH_ESP32
-                analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0);  // 696969 per EPS32
+                analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0);  // [ESP32_PORT] per EPS32
             #else // rp2040
             digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);
             #endif
@@ -709,7 +713,7 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
             analogWrite(OF_Prefs::pins[OF_Const::rumblePin], OF_Prefs::settings[OF_Const::rumbleStrength]);
             delay(125);
             #ifdef ARDUINO_ARCH_ESP32
-                analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0);  // 696969 per ESP32
+                analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0);  // [ESP32_PORT] per ESP32
             #else // rp2040            
             digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);
             #endif
@@ -739,28 +743,39 @@ void FW_Common::GetPosition()
                                 res_y, res_x, res_y / 2);
             } else { // layoutSquare = 0
                 OpenFIREsquare.begin(dfrIRPos->xPositions(), dfrIRPos->yPositions(), dfrIRPos->seen());              
-
-                X_pos[0] = OpenFIREsquare.X(0);
-                Y_pos[0] = OpenFIREsquare.Y(0);
-                X_pos[1] = OpenFIREsquare.X(1);
-                Y_pos[1] = OpenFIREsquare.Y(1);
-                X_pos[2] = OpenFIREsquare.X(2);
-                Y_pos[2] = OpenFIREsquare.Y(2);
-                X_pos[3] = OpenFIREsquare.X(3);
-                Y_pos[3] = OpenFIREsquare.Y(3);              
-                
+               
                 #ifdef USE_MULTI_ONE_EURO_FILTER 
-                    oef_multi.process(X_pos, Y_pos);
-                #endif // USE_MULTI_ONE_EURO_FILTER 
+                    X_in[0] = OpenFIREsquare.X(0);
+                    Y_in[0] = OpenFIREsquare.Y(0);
+                    X_in[1] = OpenFIREsquare.X(1);
+                    Y_in[1] = OpenFIREsquare.Y(1);
+                    X_in[2] = OpenFIREsquare.X(2);
+                    Y_in[2] = OpenFIREsquare.Y(2);
+                    X_in[3] = OpenFIREsquare.X(3);
+                    Y_in[3] = OpenFIREsquare.Y(3);          
 
-                OpenFIREper.warp(X_pos[0], Y_pos[0],
-                                X_pos[1], Y_pos[1],
-                                X_pos[2], Y_pos[2],
-                                X_pos[3], Y_pos[3],
+                    oef_multi.process(X_in, Y_in, X_out, Y_out);
+
+                    OpenFIREper.warp(X_out[0], Y_out[0],
+                                X_out[1], Y_out[1],
+                                X_out[2], Y_out[2],
+                                X_out[3], Y_out[3],
                                 OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, 0,
                                 OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, 0,
                                 OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, res_y,
                                 OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, res_y);
+   
+                #else
+                    OpenFIREper.warp(OpenFIREsquare.X(0), OpenFIREsquare.Y(0),
+                                OpenFIREsquare.X(1), OpenFIREsquare.Y(1),
+                                OpenFIREsquare.X(2), OpenFIREsquare.Y(2),
+                                OpenFIREsquare.X(3), OpenFIREsquare.Y(3),
+                                OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, 0,
+                                OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, 0,
+                                OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, res_y,
+                                OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, res_y);
+                #endif // USE_MULTI_ONE_EURO_FILTER 
+
             }
 
             // Output mapped to screen resolution because offsets are measured in pixels
@@ -1268,8 +1283,7 @@ void FW_Common::UpdateStartSelect()
 }
 
 
-
-// ============ 696969 ========== ripristino di Serial dopo definizione per connessione seriali ==============
+// ============ [ESP32_PORT] ========== ripristino di Serial dopo definizione per connessione seriali ==============
 #ifdef OPENFIRE_WIRELESS_ENABLE
     #undef Serial
     #ifdef AUX_SERIAL
@@ -1277,4 +1291,4 @@ void FW_Common::UpdateStartSelect()
         #undef AuxSerial
     #endif
 #endif // OPENFIRE_WIRELESS_ENABLE
-// ============ 696969 ===== fine ripristino di Serial dopo definizione per connessione seriali ==============
+// ============ [ESP32_PORT] ===== fine ripristino di Serial dopo definizione per connessione seriali ==============
