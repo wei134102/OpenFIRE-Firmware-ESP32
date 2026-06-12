@@ -244,8 +244,12 @@ void FW_Common::CameraSet()
     #ifdef ARDUINO_ARCH_ESP32
         // --- CLOCK WII CAMERA: 24 MHz @ 50% DC ---
         #ifdef CLOCK_CAM_WII
+            /*
             #define WII_CLOCK_FREQUENCY_HZ 25000000  // 25 MHz target //la cam wii parla di 24Mhz ma OpenFire la imposta a 25Mhz
-            // il sistema riesce a produrre Hz 24975610
+            // il sistema riesce a produrre Hz 24975610    .... ma con jitter il clock non è mai stabile
+            */
+            #define WII_CLOCK_FREQUENCY_HZ 20000000  // 20 MHz target (integer division of 80MHz APB to prevent jitter) .. così il clock è stabile e la cam funziona bene tra 20 e 25Mhz
+            
             #define WII_CLOCK_DUTY_CYCLE 1      // 50%
 
             const int gpio_pin = OF_Prefs::pins[OF_Const::wiiClockGen];  // gpio 10 sia su Esp32 pico che su esp32 wroom, si imposta da board
