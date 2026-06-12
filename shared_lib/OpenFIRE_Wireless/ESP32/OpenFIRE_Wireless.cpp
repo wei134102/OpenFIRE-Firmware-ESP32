@@ -117,7 +117,7 @@ USB_Data_GUN_Wireless usb_data_wireless = {
   1,                  // PLAYER
   espnow_wifi_channel
   //OPENFIRE_ESPNOW_WIFI_CHANNEL // CHANNEL
-  //,""               // ????
+  //,""               // 
 };
 
 SerialWireless_ SerialWireless;
@@ -254,17 +254,17 @@ void usbTask(void *pvParameters) {
   static int currentRotation = 0; 
 
   for (;;) {
-    // 1. METTI IN PAUSA IL TASK
+    // METTI IN PAUSA IL TASK
     // Si sveglierà istantaneamente se:
     // - La radio riceve un dato nuovo (il tuo xTaskNotifyGive)
     // - La USB ha finito di trasmettere (la callback tud_hid_report_complete_cb)
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
-    // 2. CONTROLLO HARDWARE
+    // CONTROLLO HARDWARE
     // Procediamo solo se l'Endpoint HID è fisicamente libero
     if (usbHid.ready()) {
 
-      // 3. ROTAZIONE ROUND-ROBIN
+      // ROTAZIONE ROUND-ROBIN
       // Facciamo un ciclo di massimo 3 tentativi per trovare il primo dispositivo con dati pendenti
       for (int i = 0; i < 3; i++) {
         int target = (currentRotation + i) % 3;
@@ -322,13 +322,13 @@ void radioTask(void *pvParameters) {
     do {
       progress = false;
 
-      // 1. GESTIONE RICEZIONE (Invariata)
+      // GESTIONE RICEZIONE
       if (SerialWireless._reader != SerialWireless._writer) {
         SerialWireless.checkForRxPacket();
         progress = true;
       }
 
-      // 2. GESTIONE SERIALE -> RECOVERY MODE!
+      // GESTIONE SERIALE -> RECOVERY MODE!
       // Interveniamo SOLO se il timer ha fallito in precedenza
       if (SerialWireless._serial_needs_recovery && (SerialWireless.availableBufferSerialWrite() > 0)) {
         if (SerialWireless.flush_sem()) {
@@ -338,7 +338,7 @@ void radioTask(void *pvParameters) {
         }
       }
 
-      // 3. GESTIONE TRASMISSIONE RADIO (Invariata)
+      // GESTIONE TRASMISSIONE RADIO
       if (radioFree && (SerialWireless.readIndex != SerialWireless.writeIndex)) {
         SerialWireless.SendData_sem();
         progress = true;
@@ -474,7 +474,9 @@ void animTaskLink(void *pvParameters) {
   tft.setTextColor(WHITE, BLACK);
   tft.setCursor(baseX, baseY);
   tft.print("Connecting");
+  #ifdef USE_LOVYAN_GFX
   tft.display();
+  #endif // USE_LOVYAN_GFX
   tft.setTextSize(2);
   tft.setTextColor(BLUE, BLACK);
 
@@ -483,7 +485,9 @@ void animTaskLink(void *pvParameters) {
     tft.setCursor(baseX + (11 * charWidth) + 3, baseY);
     tft.write(rotazione[rotazioneIndex]);
     rotazioneIndex = (rotazioneIndex + 1) % 8;
+    #ifdef USE_LOVYAN_GFX
     tft.display();
+    #endif // USE_LOVYAN_GFX
     vTaskDelay(pdMS_TO_TICKS(150)); // piccolo delay per non saturare la CPU
   } 
 }
@@ -509,7 +513,9 @@ void animTask(void *pvParameters) {
   tft.print("best channel");
   tft.setCursor(baseX, baseY);
   tft.print("Scanning WiFi");
+  #ifdef USE_LOVYAN_GFX
   tft.display();
+  #endif // USE_LOVYAN_GFX
   tft.setTextColor(RED, BLACK);
 
   // Loop del task
@@ -533,7 +539,9 @@ void animTask(void *pvParameters) {
     break;
     }
     currentIndex = (currentIndex + 1) % 4;
+    #ifdef USE_LOVYAN_GFX
     tft.display();
+    #endif // USE_LOVYAN_GFX
     vTaskDelay(pdMS_TO_TICKS(150)); // piccolo delay per non saturare la CPU
   }
 }
@@ -934,10 +942,10 @@ int SerialWireless_::availableForWriteBin() {
 // al sistema operativo (FreeRTOS) permettendo al task radio di trasmettere e liberare spazio, 
 // prevenendo così i Watchdog Timeout e mantenendo il sistema responsivo.
 void SerialWireless_::flush() {
-  // 1. Il flush deve attendere finché ci sono dati nel buffer di scrittura seriale
+  // Il flush deve attendere finché ci sono dati nel buffer di scrittura seriale
   while (availableBufferSerialWrite() > 0) {
     
-    // 2. Chiamiamo flush_sem(). 
+    // Chiamiamo flush_sem(). 
     // Non serve prendere il Mutex qui perché flush_sem() al suo interno 
     // usa già lo Spinlock (portENTER_CRITICAL) per proteggere i puntatori.
     if (!flush_sem()) {
@@ -1017,21 +1025,21 @@ bool SerialWireless_::flush_sem() {
 
 // Fase di lancio: Questa funzione "spinge" fisicamente i bit nell'hardware radio ESP-NOW.
 void SerialWireless_::SendData_sem() {
-  // 1. Snapshot locale degli indici
+  // Snapshot locale degli indici
   const uint16_t r = readIndex;
   const uint16_t w = writeIndex; // Guardiamo dove è arrivato il produttore in questo istante
   const uint16_t MASK = BUFFER_SIZE - 1;
 
-  // 2. Calcolo Lock-Free dei dati disponibili
+  // Calcolo Lock-Free dei dati disponibili
   // Questa formula gestisce il wrap-around automaticamente
   const uint16_t available_data = (w - r) & MASK;
 
-  // 3. Uscita rapida se non c'è nulla da spedire
+  // Uscita rapida se non c'è nulla da spedire
   if (available_data == 0) return;
 
   uint16_t len_tx = available_data;
 
-  // 4. ALLINEAMENTO PACCHETTI (Prevenzione "taglio")
+  // ALLINEAMENTO PACCHETTI (Prevenzione "taglio")
   // ESP-NOW ha un limite hardware rigido di 250 byte per payload.
   // Se tronchiamo un frame a metà distruggiamo il protocollo COBS in ricezione.
   // Pertanto, analizziamo il buffer a ritroso cercando un byte terminatore (0xFF) 
@@ -1050,7 +1058,7 @@ void SerialWireless_::SendData_sem() {
     len_tx = (aligned_len > 0) ? aligned_len : ESP_NOW_MAX_DATA_LEN;
   }
 
-  // 5. COPIA BATCH
+  // COPIA BATCH
   const uint16_t firstChunk = BUFFER_SIZE - r;
   
   if (firstChunk < len_tx) {
@@ -1061,7 +1069,7 @@ void SerialWireless_::SendData_sem() {
     memcpy(buffer_espnow, &buffer[r], len_tx);
   }
 
-// 6. INVIO E AGGIORNAMENTO
+// INVIO E AGGIORNAMENTO
   esp_err_t result = esp_now_send(peerAddress, buffer_espnow, len_tx);
   
   if (result == ESP_OK) {
@@ -1142,7 +1150,7 @@ size_t SerialWireless_::write(const uint8_t *data, size_t len) {
 }
 
 size_t SerialWireless_::writeBin(const uint8_t *data, size_t len) {
-  // 1. Usa lo stesso lucchetto di SendPacket per coerenza e velocità
+  // Usa lo stesso lucchetto di SendPacket per coerenza e velocità
   // Un mutex hardware disabilita gli interrupt momentaneamente: usiamolo
   // per il minimo tempo indispensabile.
   portENTER_CRITICAL(&mux_radio_tx);
@@ -1151,7 +1159,7 @@ size_t SerialWireless_::writeBin(const uint8_t *data, size_t len) {
   uint16_t r = readIndex;
   const uint16_t MASK = BUFFER_SIZE - 1;
 
-  // 2. Calcolo dello spazio (Regola del Meno Uno) - PERFETTO
+  // Calcolo dello spazio (Regola del Meno Uno)
   uint16_t free_space = (r - w - 1) & MASK;
 
   if (free_space < len) {
@@ -1160,7 +1168,7 @@ size_t SerialWireless_::writeBin(const uint8_t *data, size_t len) {
     return 0; 
   }
 
-  // 3. COPIA BATCH (Wrap-around logic) - PERFETTA
+  // COPIA BATCH (Wrap-around logic)
   uint16_t firstChunk = BUFFER_SIZE - w;
 
   if (firstChunk < len) {
@@ -1170,10 +1178,10 @@ size_t SerialWireless_::writeBin(const uint8_t *data, size_t len) {
     memcpy(&buffer[w], data, len);
   }
 
-  // 4. BARRIERA DI MEMORIA - Fondamentale per ESP32/Xtensa
+  // BARRIERA DI MEMORIA - Fondamentale per ESP32/Xtensa
   asm volatile ("memw" : : : "memory");
 
-  // 5. Aggiornamento dell'indice - Atomico
+  // Aggiornamento dell'indice - Atomico
   writeIndex = (w + len) & MASK; 
 
   portEXIT_CRITICAL(&mux_radio_tx);
@@ -1184,17 +1192,17 @@ size_t SerialWireless_::writeBin(const uint8_t *data, size_t len) {
 void SerialWireless_::SendPacket(const uint8_t *data, uint8_t len, uint8_t packetID) { 
   const uint16_t totalLen = len + PREAMBLE_SIZE + POSTAMBLE_SIZE;
 
-  // 1. Entriamo in sezione critica (Spinlock hardware)
+  // Entriamo in sezione critica (Spinlock hardware)
   // Velocissimo, protegge il "tavolo da lavoro" packet.txBuff da altri Core o Task
   portENTER_CRITICAL(&mux_radio_tx);
 
-  // 2. Snapshot Lock-Free dello spazio disponibile
+  // Snapshot Lock-Free dello spazio disponibile
   uint16_t w = writeIndex;
   uint16_t r = readIndex;
   const uint16_t MASK = BUFFER_SIZE - 1;
   uint16_t free_space = (r - w - 1) & MASK; 
 
-  // 3. Se c'è spazio, costruiamo e scriviamo subito
+  // Se c'è spazio, costruiamo e scriviamo subito
   if (free_space >= totalLen) {
     uint8_t* pDest = packet.txBuff;
 
@@ -1209,7 +1217,7 @@ void SerialWireless_::SendPacket(const uint8_t *data, uint8_t len, uint8_t packe
     // Usciamo dalla sezione critica prima di notificare
     portEXIT_CRITICAL(&mux_radio_tx);
 
-    // 4. Svegliamo il radioTask
+    // Svegliamo il radioTask
     xTaskNotifyGive(xRadioTaskHandle);
   } 
   else {
@@ -1426,14 +1434,14 @@ bool SerialWireless_::connection_dongle() {
   }
   #endif // USES_DISPLAY
 
-  #define TIMEOUT_DONGLE_DIALOGUE 2000 //  1000 // in millisecondi   ?????????????????????????
+  #define TIMEOUT_DONGLE_DIALOGUE 2000 // in millisecondi
   unsigned long lastMillis_start_dialogue = millis ();
   
   stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION;
     
   // ====================================================
 
-  // FASE 1: ATTESA DEL FARO
+  // ATTESA DEL FARO
   // Il Dongle apre le porte per accettare i pacchetti Broadcast della Gun
   broadcast_receiver = true;
 
@@ -1448,7 +1456,7 @@ bool SerialWireless_::connection_dongle() {
     taskYIELD();
   }
   
-  // FASE 2: UNICAST LOCK-IN
+  // UNICAST LOCK-IN
   // Connessione stabilita. Chiudiamo le porte al broadcast per sicurezza e per 
   // alleggerire il carico CPU sulla ricezione di pacchetti vaganti.
   broadcast_receiver = false;
@@ -1633,10 +1641,9 @@ bool SerialWireless_::connection_gun() {
   uint8_t aux_buffer_tx[14]; // aggiunto un byte per trasmettere anche il canale di trasmissione
                              // durante tx pacchetto pubblicazione presenza, mette anche il canale
   
-  
-  
+ 
 
-  // ===== IMPOSTARE IL PEER BOARCAST QUI ====================== SERVE SE SI RIPARTE DA CERCA ULTIMO DONGLE, o forse no, non ricordo .... ????????? verificare  ????
+  // ===== IMPOSTARE IL PEER BOARCAST ===============
   if (esp_now_del_peer(peerAddress) != ESP_OK) {  // cancella il broadcast dai peer
     //Serial.println("Errore nella cancellazione del peer");
   }
@@ -1742,12 +1749,21 @@ bool SerialWireless_::connection_gun() {
 }
 #endif // GUN
 // ======================= FINE NUOVA IMPLEMENTAZIONE DOVE LA GUN FA IL FARO ===============
-
+// ============ INVIO PACCHETTO AL DONGLE DI CONNESSIONE AL PEDAL COMPLETATA =============================
+#ifdef GUN
+void SerialWireless_::tx_gun_at_dongle_pedal_ready() {
+  for (uint8_t i=0; i<3; i++) {
+    SerialWireless.SendPacket((const uint8_t *)&TinyUSBDevices.is_pedal_wireless, 1, PACKET_TX::PEDAL_TX);
+    vTaskDelay(pdMS_TO_TICKS(69));
+  }
+}
+#endif // GUN
+// ============ INVIO PACCHETTO AL DONGLE DI CONNESSIONE AL PEDAL COMPLETATA =============================
 // ======================= NUOVA IMPLEMENTAZIONE DOVE LA GUN FA IL FARO per connetersi al pedal ===============
 #ifdef GUN
 bool SerialWireless_::connection_gun_at_pedal() {
   
-  uint8_t seconds = 10; 
+  uint8_t seconds = MAX_SECONDI_CONNESSIONE_PEDAL;  //10; 
   seconds_display = seconds;
 
   channel_display = espnow_wifi_channel;
@@ -1772,7 +1788,7 @@ bool SerialWireless_::connection_gun_at_pedal() {
   
   
   #define TIMEOUT_GUN_AT_PEDAL_TX_PACKET 50 //500 // in millisecondi
-  #define TIMEOUT_GUN_AT_PEDAL_CHANGE_SECONDS 1000 // in millisecondi - cambia canale ogni
+  #define TIMEOUT_GUN_AT_PEDAL_CHANGE_SECONDS 1000 // in millisecondi =  1 secondo
   #define TIMEOUT_GUN_AT_PEDAL_DIALOGUE 3000 //6000 // in millisecondi - tempo massimo per completare operazione accoppiamento
   unsigned long lastMillis_tx_packet = millis ();
   unsigned long lastMillis_change_seconds = millis ();
@@ -1814,7 +1830,7 @@ bool SerialWireless_::connection_gun_at_pedal() {
       }
       if ((millis() - lastMillis_tx_packet) > TIMEOUT_GUN_AT_PEDAL_TX_PACKET) {
         SerialWireless.SendPacket((const uint8_t *)aux_buffer_tx, 14, PACKET_TX::CONNECTION_PEDAL); // aggiunto un byte per trasmettere anche il canale di trasmissione
-        //Serial.print("DONGLE - inviato pacchetto broadcast sul canale: ");
+        //Serial.print("GUN -> PEDAL - inviato pacchetto broadcast sul canale: ");
         //Serial.println(channel);
         lastMillis_tx_packet = millis (); 
       }
@@ -1823,7 +1839,7 @@ bool SerialWireless_::connection_gun_at_pedal() {
     else {
       if (((millis() - lastMillis_start_dialogue) > TIMEOUT_GUN_AT_PEDAL_DIALOGUE) && stato_connessione_wireless != CONNECTION_STATE::DEVICES_CONNECTED) {
         stato_connessione_wireless = CONNECTION_STATE::NONE_CONNECTION;
-        //Serial.println("DONGLE - Non si è conclusa la negoziazione tra DONGLE/GUN e si riparte da capo");
+        //Serial.println("GUN - Non si è conclusa la negoziazione tra GUN/PEDAL e si riparte da capo");
         lastMillis_change_seconds = millis ();
       }  
     }
@@ -1833,16 +1849,21 @@ bool SerialWireless_::connection_gun_at_pedal() {
   broadcast_receiver = false;
 
   if (esp_now_del_peer(peerAddress) != ESP_OK) {  // cancella il broadcast dai peer
-      //Serial.println("DONGLE - Errore nella cancellazione del peer broadcast");
+      //Serial.println("GUN - Errore nella cancellazione del peer broadcast");
   }
 
   memcpy(peerAddress, peerAddress_copy, 6);
 
+  // ================================
   // Forza al pedale lo stato "vivo" inviando un segnale fasullo
+  SerialWireless.tx_gun_at_dongle_pedal_ready();
+  /*
   for (uint8_t i=0; i<3; i++) {
     SerialWireless.SendPacket((const uint8_t *)&TinyUSBDevices.is_pedal_wireless, 1, PACKET_TX::PEDAL_TX);
     vTaskDelay(pdMS_TO_TICKS(69));
   }
+  */
+  // ================================
 
   if (stato_connessione_wireless == CONNECTION_STATE::DEVICES_CONNECTED) {
     //Serial.println("DONGLE - Negosazione completata - associazione dei dispositivi GUN/DONGLE");
@@ -2005,15 +2026,15 @@ void packet_callback_read_dongle() {
       }
       break;
     }
-    // ====== poi va tolto ================
+    // ====== valutare se cambiare nome o cambiare implementazione ================
     case PACKET_TX::PEDAL_TX:
       {
         SerialWireless.is_pedal_wireless_comunication = true;
       }
       break;
-    // ====== fine poi va tolto  
+    // ============================================================================= 
     #ifdef OPENFIRE_USE_ESPNOW_UNIFIED_PACKET
-    case PACKET_TX::MOUSE_KEY_PAD_TX: { // ATTENZIONE: Le parentesi graffe qui sono OBBLIGATORIE in C++ per dichiarare variabili dentro un 'case'
+    case PACKET_TX::MOUSE_KEY_PAD_TX: {
       
       // Calcoliamo l'indirizzo base UNA sola volta e lo mettiamo nel puntatore 'ptr'
       uint8_t* ptr = &SerialWireless.packet.rxBuff[PREAMBLE_SIZE];
@@ -2365,21 +2386,21 @@ void packet_callback_read_pedal() {
 // CALLBACK RICEZIONE ESP-NOW
 static void _esp_now_rx_cb(const esp_now_recv_info_t *info, const uint8_t *data, int len) {
   
-  // 1. Filtro broadcast (invariato)
+  // Filtro broadcast
   if ((info->des_addr[0] == 0xFF) && (broadcast_receiver == false)) return;
 
-  // 2. Cache locale degli indici (Il cuore del Lock-Free)
+  // Cache locale degli indici (Il cuore del Lock-Free)
   uint16_t w = SerialWireless._writer;
   uint16_t r = SerialWireless._reader; // Leggiamo dove si trova il task in questo istante
   const uint16_t MASK = FIFO_SIZE_READ - 1; 
 
-  // 3. Calcolo matematico dello spazio disponibile (Regola del Meno Uno)
+  // Calcolo matematico dello spazio disponibile (Regola del Meno Uno)
   // Questa formula magica gestisce il wrap-around da sola e garantisce che il 
   // buffer non diventi mai pieno al 100%, lasciando sempre 1 byte di cuscinetto
   // per distinguere lo stato "vuoto" da quello "pieno".
   uint16_t free_space = (r - w - 1) & MASK;
 
-  // 4. Controllo capienza
+  // Controllo capienza
   if (free_space >= len) {
     uint16_t firstChunk = FIFO_SIZE_READ - w;
 
@@ -2400,19 +2421,18 @@ static void _esp_now_rx_cb(const esp_now_recv_info_t *info, const uint8_t *data,
     // PRIMA di segnalare al task che ci sono nuovi dati disponibili.
     asm volatile ("memw" : : : "memory");
 
-    // 5. Aggiornamento ATOMICO del solo indice _writer
+    // Aggiornamento ATOMICO del solo indice _writer
     // Nessun lock necessario! Appena questa riga viene eseguita, 
     // il task (che sta guardando _writer) vede magicamente apparire i nuovi dati.
-    SerialWireless._writer = (w + len) & MASK;
+    SerialWireless._writer = (w + len) & MASK;   
     
-    // ADDIO SerialWireless._readLen!
   } 
   else {
     // Spazio insufficiente (o pacchetto scartato per evitare l'incrocio dei puntatori)
     SerialWireless._overflow_read = true;
   }
 
-  // 6. Notifica Task (Campanello invariato)
+  // Notifica Task (Campanello invariato)
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
   vTaskNotifyGiveFromISR(xRadioTaskHandle, &xHigherPriorityTaskWoken);
   if (xHigherPriorityTaskWoken) {
@@ -2422,13 +2442,13 @@ static void _esp_now_rx_cb(const esp_now_recv_info_t *info, const uint8_t *data,
 
 // CALLBACK SPEDIZIONE ESP-NOW
 static void _esp_now_tx_cb(const esp_now_send_info_t *tx_info, esp_now_send_status_t status) { 
-  // 1. Liberiamo la radio per il prossimo pacchetto
+  // Liberiamo la radio per il prossimo pacchetto
   radioFree = true;
 
-  // 2. Controllo Lock-Free: Il buffer TX ha ancora dati da spedire?
+  // Controllo Lock-Free: Il buffer TX ha ancora dati da spedire?
   if (SerialWireless.writeIndex != SerialWireless.readIndex) {   
     
-    // 3. Svegliamo il radioTask per fargli svuotare il resto
+    // Svegliamo il radioTask per fargli svuotare il resto
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     vTaskNotifyGiveFromISR(xRadioTaskHandle, &xHigherPriorityTaskWoken);
     

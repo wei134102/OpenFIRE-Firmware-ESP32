@@ -65,6 +65,13 @@ jobs:
             flash_mode: 'dio'
             flash_freq: '80m'
             address_littleFS: '0xc90000'
+          - name: 'ESP32_S3_WROOM1_DevKitC_1_N8R2' 
+            boards: 'ESP32_S3_WROOM1_DevKitC_1_N8R2'
+            chip: 'esp32s3'
+            flash_size: '8MB'
+            flash_mode: 'dio'
+            flash_freq: '80m'
+            address_littleFS: '0x670000'
           - name: 'WAVESHARE_ESP32_S3_PICO' 
             boards: 'WAVESHARE_ESP32_S3_PICO'
             chip: 'esp32s3'
@@ -72,6 +79,20 @@ jobs:
             flash_mode: 'dio'
             flash_freq: '80m'       
             address_littleFS: '0xc90000'
+          - name: 'WAVESHARE_ESP32_S3_ZERO_N8R8' 
+            boards: 'WAVESHARE_ESP32_S3_ZERO_N8R8'
+            chip: 'esp32s3'
+            flash_size: '8MB'
+            flash_mode: 'dio'
+            flash_freq: '80m'
+            address_littleFS: '0x670000'       
+          - name: 'WAVESHARE_ESP32_S3_ZERO_N4R2' 
+            boards: 'WAVESHARE_ESP32_S3_ZERO_N4R2'
+            chip: 'esp32s3'
+            flash_size: '4MB'
+            flash_mode: 'dio'
+            flash_freq: '80m'
+            address_littleFS: '0x290000'                                 
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -118,18 +139,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - name: 'ESP32_S3_WROOM1_DevKitC_1_N16R8' 
-            boards: 'ESP32_S3_WROOM1_DevKitC_1_N16R8'
-            chip: 'esp32s3'
-            flash_size: '16MB'
-            flash_mode: 'dio'
-            flash_freq: '80m'
-          - name: 'WAVESHARE_ESP32_S3_PICO' 
-            boards: 'WAVESHARE_ESP32_S3_PICO'
-            chip: 'esp32s3'
-            flash_size: '16MB'
-            flash_mode: 'dio'
-            flash_freq: '80m'       
           - name: 'LILYGO_T_DONGLE_S3' 
             boards: 'LILYGO_T_DONGLE_S3'
             chip: 'esp32s3'
@@ -142,6 +151,36 @@ jobs:
             flash_size: '16MB'
             flash_mode: 'dio'
             flash_freq: '80m'
+          - name: 'ESP32_S3_WROOM1_DevKitC_1_N16R8' 
+            boards: 'ESP32_S3_WROOM1_DevKitC_1_N16R8'
+            chip: 'esp32s3'
+            flash_size: '16MB'
+            flash_mode: 'dio'
+            flash_freq: '80m'
+          - name: 'ESP32_S3_WROOM1_DevKitC_1_N8R2' 
+            boards: 'ESP32_S3_WROOM1_DevKitC_1_N8R2'
+            chip: 'esp32s3'
+            flash_size: '8MB'
+            flash_mode: 'dio'
+            flash_freq: '80m'
+          - name: 'WAVESHARE_ESP32_S3_PICO' 
+            boards: 'WAVESHARE_ESP32_S3_PICO'
+            chip: 'esp32s3'
+            flash_size: '16MB'
+            flash_mode: 'dio'
+            flash_freq: '80m'    
+          - name: 'WAVESHARE_ESP32_S3_ZERO_N8R8' 
+            boards: 'WAVESHARE_ESP32_S3_ZERO_N8R8'
+            chip: 'esp32s3'
+            flash_size: '8MB'
+            flash_mode: 'dio'
+            flash_freq: '80m'       
+          - name: 'WAVESHARE_ESP32_S3_ZERO_N4R2' 
+            boards: 'WAVESHARE_ESP32_S3_ZERO_N4R2'
+            chip: 'esp32s3'
+            flash_size: '4MB'
+            flash_mode: 'dio'
+            flash_freq: '80m'                      
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -182,10 +221,22 @@ jobs:
             flash_size: '16MB'
             flash_mode: 'dio'
             flash_freq: '80m'
+          - name: 'ESP32_S3_WROOM1_DevKitC_1_N8R2' 
+            boards: 'ESP32_S3_WROOM1_DevKitC_1_N8R2'
+            chip: 'esp32s3'
+            flash_size: '8MB'
+            flash_mode: 'dio'
+            flash_freq: '80m'
           - name: 'WAVESHARE_ESP32_S3_PICO' 
             boards: 'WAVESHARE_ESP32_S3_PICO'
             chip: 'esp32s3'
             flash_size: '16MB'
+            flash_mode: 'dio'
+            flash_freq: '80m'       
+          - name: 'WAVESHARE_ESP32_S3_ZERO_N8R8' 
+            boards: 'WAVESHARE_ESP32_S3_ZERO_N8R8'
+            chip: 'esp32s3'
+            flash_size: '8MB'
             flash_mode: 'dio'
             flash_freq: '80m'       
           - name: 'WAVESHARE_ESP32_S3_ZERO_N4R2' 
@@ -232,7 +283,10 @@ jobs:
       matrix:
         boards:
           - { name: 'ESP32_S3_WROOM1_DevKitC_1_N16R8', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
+          - { name: 'ESP32_S3_WROOM1_DevKitC_1_N8R2', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
           - { name: 'WAVESHARE_ESP32_S3_PICO', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
+          - { name: 'WAVESHARE_ESP32_S3_ZERO_N8R8', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
+          - { name: 'WAVESHARE_ESP32_S3_ZERO_N4R2', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
         os_config:
           - { name: windows-64bit, runner: windows-latest, esptool_url: 'https://github.com/espressif/esptool/releases/download/v5.1.0/esptool-v5.1.0-windows-amd64.zip', esptool_tipo_file: zip, esptool_path_in_zip: 'esptool-windows-amd64/', esptool_filename_in_zip: 'esptool.exe', script_name: 'flash_firmware.bat' }
           - { name: linux-amd-64bit, runner: ubuntu-latest, esptool_url: 'https://github.com/espressif/esptool/releases/download/v5.1.0/esptool-v5.1.0-linux-amd64.tar.gz', esptool_tipo_file: tar.gz, esptool_path_in_zip: 'esptool-linux-amd64/', esptool_filename_in_zip: 'esptool', script_name: 'flash_firmware.sh' }
@@ -300,10 +354,13 @@ jobs:
     strategy:
       matrix:
         boards:
-          - { name: 'ESP32_S3_WROOM1_DevKitC_1_N16R8', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
-          - { name: 'WAVESHARE_ESP32_S3_PICO', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
           - { name: 'LILYGO_T_DONGLE_S3', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
-          - { name: 'GNPE_POCKET_DONGLE_S3_N16R8', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
+          - { name: 'GNPE_POCKET_DONGLE_S3_N16R8', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }          
+          - { name: 'ESP32_S3_WROOM1_DevKitC_1_N16R8', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
+          - { name: 'ESP32_S3_WROOM1_DevKitC_1_N8R2', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
+          - { name: 'WAVESHARE_ESP32_S3_PICO', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
+          - { name: 'WAVESHARE_ESP32_S3_ZERO_N8R8', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
+          - { name: 'WAVESHARE_ESP32_S3_ZERO_N4R2', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
         os_config:
           - { name: windows-64bit, runner: windows-latest, esptool_url: 'https://github.com/espressif/esptool/releases/download/v5.1.0/esptool-v5.1.0-windows-amd64.zip', esptool_tipo_file: zip, esptool_path_in_zip: 'esptool-windows-amd64/', esptool_filename_in_zip: 'esptool.exe', script_name: 'flash_firmware.bat' }
           - { name: linux-amd-64bit, runner: ubuntu-latest, esptool_url: 'https://github.com/espressif/esptool/releases/download/v5.1.0/esptool-v5.1.0-linux-amd64.tar.gz', esptool_tipo_file: tar.gz, esptool_path_in_zip: 'esptool-linux-amd64/', esptool_filename_in_zip: 'esptool', script_name: 'flash_firmware.sh' }
@@ -360,7 +417,9 @@ jobs:
       matrix:
         boards:
           - { name: 'ESP32_S3_WROOM1_DevKitC_1_N16R8', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
+          - { name: 'ESP32_S3_WROOM1_DevKitC_1_N8R2', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
           - { name: 'WAVESHARE_ESP32_S3_PICO', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
+          - { name: 'WAVESHARE_ESP32_S3_ZERO_N8R8', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
           - { name: 'WAVESHARE_ESP32_S3_ZERO_N4R2', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
         os_config:
           - { name: windows-64bit, runner: windows-latest, esptool_url: 'https://github.com/espressif/esptool/releases/download/v5.1.0/esptool-v5.1.0-windows-amd64.zip', esptool_tipo_file: zip, esptool_path_in_zip: 'esptool-windows-amd64/', esptool_filename_in_zip: 'esptool.exe', script_name: 'flash_firmware.bat' }
@@ -393,11 +452,161 @@ jobs:
           name: OpenFIRE-PEDAL-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip
           path: ${{ github.workspace }}/OpenFIRE-PEDAL-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip
 
+# ==========================================
+  # 3. SYNC FIRMWARE TO WEB FLASHER REPOSITORY
   # ==========================================
-  # 3. CREAZIONE DELLA RELEASE GLOBALE
+  sync_web_firmware:
+    #needs: [build_lightgun, build_dongle, build_pedal]
+    needs: [package_lightgun, package_dongle, package_pedal]
+    runs-on: ubuntu-latest
+    
+    concurrency:
+      group: sync-flasher-${{ github.ref }}
+      cancel-in-progress: false
+      
+    if: ${{ github.event.inputs.release == 'yes' && github.event.inputs.tag_name != '' }}
+    
+    env:
+      TAG_NAME: ${{ github.event.inputs.tag_name }}
+      # URL FISSO DEL TUO SECONDO REPOSITORY
+      TARGET_REPO: "alessandro-satanassi/OpenFIRE-ESP32-WebFlasher"
+      
+    steps:
+      - name: 🛡️ Verify Execution Branch
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "❌ ERRORE FATALE: Stai eseguendo la Action da un Tag Storico."
+            exit 1
+          fi
+
+      # 1. SCARICA IL REPOSITORY WEB (Usando il Token Segreto)
+      - name: Checkout Web Flasher Repository
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ env.TARGET_REPO }}
+          token: ${{ secrets.WEBFLASHER_TOKEN }}
+          path: web_repo # Salva il repo web in una cartella temporanea
+
+      # 2. SCARICA I BINARI APPENA COMPILATI DAL REPO 1
+      - name: Download ALL compiled binaries
+        uses: actions/download-artifact@v8
+        with:
+          path: ./all_binaries
+
+# 3. COPIA I FILE E GENERA IL MANIFEST.JSON
+      - name: Copy .bin files and Generate manifest.json
+        run: |
+          export TARGET_DIR="web_repo/firmware/${TAG_NAME}"
+          export TAG_NAME
+          
+          mkdir -p -- "$TARGET_DIR"
+          find ./all_binaries -name "*.bin" -type f -exec cp -- "{}" "$TARGET_DIR/" \;
+          
+          # Script Python integrato per generare il manifest.json analizzando i nomi dei file
+          python3 -c "
+          import os, json
+          
+          target_dir = os.environ.get('TARGET_DIR')
+          tag_name = os.environ.get('TAG_NAME')
+          
+          files = sorted([f for f in os.listdir(target_dir) if f.endswith('.bin')])
+          
+          manifest = {
+              'version': tag_name,
+              'files': files,
+              'supported_boards': {
+                  'LIGHTGUN': [],
+                  'DONGLE': [],
+                  'PEDAL': []
+              }
+          }
+          
+          for f in files:
+              name = f.replace('.bin', '')
+              parts = name.split('-')
+              
+              if len(parts) >= 3:
+                  device = parts[1] # Estrae LIGHTGUN, DONGLE o PEDAL
+                  
+                  # Gestisce l'eccezione del file NoFS per le Lightgun
+                  if device == 'LIGHTGUN' and parts[2] == 'NoFS':
+                      board = '-'.join(parts[3:])
+                  else:
+                      board = '-'.join(parts[2:])
+                  
+                  # Aggiunge la board alla lista se non è già presente
+                  if device in manifest['supported_boards'] and board not in manifest['supported_boards'][device]:
+                      manifest['supported_boards'][device].append(board)
+                      
+          with open(os.path.join(target_dir, 'manifest.json'), 'w') as out:
+              json.dump(manifest, out, indent=2)
+          "
+          
+          echo "File binari e manifest.json pronti per il trasferimento:"
+          ls -lh -- "$TARGET_DIR"
+          cat "$TARGET_DIR/manifest.json"
+
+      # 4. TRASFERIMENTO SUL SERVER (SISTEMA BLINDATO)
+      - name: Commit and Push to Web Flasher Repo
+        run: |
+          # Entriamo fisicamente nella cartella del Repo 2
+          cd web_repo
+          
+          export GIT_TERMINAL_PROMPT=0
+          
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          git config core.autocrlf false
+          git config http.lowSpeedLimit 1000
+          git config http.lowSpeedTime 20
+          git config http.postBuffer 524288000
+          
+          git add -f -- "firmware/${TAG_NAME}"
+          
+          if ! git diff --staged --quiet; then
+            echo "Modifiche rilevate nel Repo Web. Preparazione del commit..."
+            
+            printf "Auto-sync firmware binaries for Web Flasher (%s)\n" "$TAG_NAME" | git commit -F -
+            
+            echo "Avvio Sincronizzazione Cross-Repo (Sistema Anti-Glitch con Recovery)..."
+            
+            SYNC_SUCCESS="false"
+            for i in 1 2 3; do
+              echo "--- Tentativo $i di 3 ---"
+              
+              if ! git pull origin main --rebase -X theirs; then
+                echo "⚠️ Rete instabile o conflitto durante il pull."
+                git rebase --abort >/dev/null 2>&1 || true
+                [ $i -lt 3 ] && sleep 5
+                continue
+              fi
+              
+              if git push origin main; then
+                echo "✅ Sincronizzazione completata! I file sono online su OpenFIRE-ESP32-WebFlasher."
+                SYNC_SUCCESS="true"
+                break
+              fi
+              
+              echo "⚠️ Rete instabile durante il push."
+              [ $i -lt 3 ] && sleep 5
+            done
+            
+            if [ "$SYNC_SUCCESS" = "false" ]; then
+              echo "❌ ERRORE FATALE: Impossibile trasferire i file nel Web Flasher dopo 3 tentativi."
+              exit 1
+            fi
+            
+          else
+            echo "Nessuna modifica rilevata nei file binari. Push ignorato per mantenere pulita la history."
+          fi
+          
+  # ==========================================
+  # 4. CREAZIONE DELLA RELEASE GLOBALE (Eseguita DOPO il Web Flasher)
   # ==========================================
   create_global_release:
-    needs: [package_lightgun, package_dongle, package_pedal]
+    # BLOCCO DI SICUREZZA: Questa release si avvia SOLO se sync_web_firmware ha finito con successo (spunta verde)
+    needs: [package_lightgun, package_dongle, package_pedal, sync_web_firmware]
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.release == 'yes' && github.event.inputs.sistemi_operativi == 'yes' }}
     steps:
@@ -440,4 +649,4 @@ jobs:
             gh release upload ${{ github.event.inputs.tag_name }} "$file" --clobber --repo ${{ github.repository }}
           done
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  

@@ -41,7 +41,7 @@
 // Sostituendo la funzione nativa bloccante con vTaskDelay, garantiamo che 
 // lo scheduler di FreeRTOS possa cedere il controllo ad altri task (es. radio o display) 
 // durante le attese, prevenendo lo stallo dell'intero sistema operativo.
-#ifdef ARDUINO_ARCH_ESP32  // 696969
+#ifdef ARDUINO_ARCH_ESP32  // [ESP32_PORT]
     #define delay(ms) vTaskDelay(pdMS_TO_TICKS(ms))                    
 #endif //ARDUINO_ARCH_ESP32
 
@@ -54,10 +54,8 @@
 // ========== serve per usare display da parte wireless =============
 #ifdef USES_DISPLAY
     #ifdef USE_LOVYAN_GFX
-        //LGFX_SSD1306 *display_OLED  = nullptr;   
         LGFX_SSD1306 *&display_OLED  = FW_Common::OLED.display;   //aggiunto inline per condividerla
     #else
-        //Adafruit_SSD1306 *display_OLED  = nullptr; 
         Adafruit_SSD1306 *&display_OLED  = FW_Common::OLED.display; //aggiunto inline per condividerla
     #endif
 #endif // USES_DISPLAY
@@ -72,7 +70,7 @@
 // al task Idle nascosto di FreeRTOS di girare. Senza questo respiro, il Core si 
 // bloccherebbe e l'Hardware Watchdog riavvierebbe la scheda in panic.
 
-// =======696969===== GESTIONE DUAL CORE PER ESP32 CHE USA FREERTOS ===  INIZIALIZZAZIONE ========
+// =======[ESP32_PORT]===== GESTIONE DUAL CORE PER ESP32 CHE USA FREERTOS ===  INIZIALIZZAZIONE ========
 #if defined(ARDUINO_ARCH_ESP32) && defined(DUAL_CORE)
     void setup1();
     void loop1();
@@ -88,33 +86,33 @@
         }
     }
 #endif
-// ======696969============= FINE GESTIONE DUAL CORE ESP32 ==== FINE INIZIALIZZAZIONE ============
+// ======[ESP32_PORT]============= FINE GESTIONE DUAL CORE ESP32 ==== FINE INIZIALIZZAZIONE ============
 
 
 // Sets up the environment
 void setup() {
 
-// ======== 696969 =========== X AVVIO DUAL CORE ESP32 =================================== 
-#if defined(ARDUINO_ARCH_ESP32) && defined(DUAL_CORE)
-    #define STACK_SIZE_SECOND_CORE 4096 // 10000  // basta 4096 ???
-    #define PRIORITY_SECOND_CORE 1   //   0  // tra 1 e 24 ?
-    xTaskCreatePinnedToCore(
-    esploop1,               /* Task function. */
-    "loop1",                /* name of task. */
-    STACK_SIZE_SECOND_CORE, /* Stack size of task */
-    NULL,                   /* parameter of the task */
-    PRIORITY_SECOND_CORE,   /* priority of the task */ 
-    &task_loop1,            /* Task handle to keep track of created task */
-    !ARDUINO_RUNNING_CORE); /* pin task to core 0 */
-#endif
-// ======= 696969 ========= FINE X AVVIO DUAL CORE ESP32 =================================
+    // ======== [ESP32_PORT] =========== X AVVIO DUAL CORE ESP32 =================================== 
+    #if defined(ARDUINO_ARCH_ESP32) && defined(DUAL_CORE)
+        #define STACK_SIZE_SECOND_CORE 4096 // stack size
+        #define PRIORITY_SECOND_CORE 1      // priority task
+        xTaskCreatePinnedToCore(
+        esploop1,                           // Task function
+        "loop1",                            // name of task
+        STACK_SIZE_SECOND_CORE,             // Stack size of task
+        NULL,                               // parameter of the task
+        PRIORITY_SECOND_CORE,               // priority of the task
+        &task_loop1,                        // Task handle to keep track of created task
+        !ARDUINO_RUNNING_CORE);             // pin task to core 0
+    #endif
+    // ======= [ESP32_PORT] ========= FINE X AVVIO DUAL CORE ESP32 =================================
 
-// ===================================================================================
-// HARDWARE FAILSAFES (I2C & ADC)
-// ===================================================================================
-// La stabilità fisica dell'hardware vario (cloni Arduino, cablaggi lunghi) è imprevedibile.
-// I timeout I2C prevengono blocchi infiniti del bus. I pin GPIO tenuti alti 
-// compensano quirk noti di board specifiche (es. stabilizzare l'LDO del Pico).
+    // ===================================================================================
+    // HARDWARE FAILSAFES (I2C & ADC)
+    // ===================================================================================
+    // La stabilità fisica dell'hardware vario (cloni Arduino, cablaggi lunghi) è imprevedibile.
+    // I timeout I2C prevengono blocchi infiniti del bus. I pin GPIO tenuti alti 
+    // compensano quirk noti di board specifiche (es. stabilizzare l'LDO del Pico).
 
     // In case some I2C devices deadlock the program
     // (can happen due to bad pin mappings)
@@ -132,12 +130,29 @@ void setup() {
         digitalWrite(23, HIGH);
     #endif
 
-// ===================================================================================
-// DATA INTEGRITY & PROFILAZIONE
-// ===================================================================================
-// Una EEPROM (o File System) corrotta può caricare valori di offset impossibili, 
-// distruggendo la matematica del tracking IR. Questo blocco agisce come "Sanitizer", 
-// forzando il fallback a valori sicuri prima che il software possa crashare.
+    // ===================================================================================
+    // FORZATURA HARDWARE ADC (Previene futuri bug se cambiano i default di libreria)
+    // ===================================================================================
+    #if defined(ARDUINO_ARCH_ESP32) && defined(USES_ANALOG)
+        
+        // Fissa l'ADC a 12-bit (scala 0-4095). 
+        // Vitale: tutte le costanti (es. centro a 2048) e le formule dipendono da questo.
+        analogReadResolution(12); 
+    
+        // Fissa l'attenuazione a 11dB (misura fino a ~3.1V).
+        // Vitale: impedisce che l'ADC saturi a tensioni basse, garantendo
+        // l'escursione totale del joystick e la corretta lettura del TMP36.
+        analogSetAttenuation(ADC_11db);
+        
+    #endif // defined(ARDUINO_ARCH_ESP32) && defined(USES_ANALOG)
+
+
+    // ===================================================================================
+    // DATA INTEGRITY & PROFILAZIONE
+    // ===================================================================================
+    // Una EEPROM (o File System) corrotta può caricare valori di offset impossibili, 
+    // distruggendo la matematica del tracking IR. Questo blocco agisce come "Sanitizer", 
+    // forzando il fallback a valori sicuri prima che il software possa crashare.
 
     // Init pins array, and OFPresets for later load ops
     OF_Prefs::LoadPresets();
@@ -177,18 +192,6 @@ void setup() {
         OF_Prefs::Load();
         
         #if defined(OPENFIRE_WIRELESS_ENABLE) && defined(ARDUINO_ARCH_ESP32)
-           ////////////////// MAI USATO //////////////////////////////
-            uint8_t aux_espnow_wifi_channel, aux_espnow_wifi_power;
-            if (OF_Prefs::LoadWireless(&aux_espnow_wifi_channel, &aux_espnow_wifi_power) == OF_Prefs::Error_Success) {
-                espnow_wifi_channel = aux_espnow_wifi_channel;
-                espnow_wifi_power = aux_espnow_wifi_power;
-            }
-            /*
-            else {
-                OF_Prefs::SaveWireless(&espnow_wifi_channel, &espnow_wifi_power)
-            }
-            */
-            //////////////////////////////// FINE MAI USATO //////////////////////////////////////
             
             if (OF_Prefs::LoadLastDongleWireless(lastDongleAddress, &lastDongleChannel) == OF_Prefs::Error_Success) lastDongleSave = true;
                 else lastDongleSave = false;
@@ -209,13 +212,18 @@ void setup() {
 // dati verranno inviati al Dongle affinché possa fingersi questa specifica pistola. 
 // Se siamo via Cavo, configureremo il nostro TinyUSB locale con questi stessi parametri.
 
-    // ===== 696969 per trasmettere i dati wireless al dongle ========
+    // ===== [ESP32_PORT] per trasmettere i dati wireless al dongle ========
     #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
         strncpy(usb_data_wireless.deviceManufacturer,MANUFACTURER_NAME,sizeof(usb_data_wireless.deviceManufacturer));
         strncpy(usb_data_wireless.deviceName,DEVICE_NAME, sizeof(usb_data_wireless.deviceName)); // cambia
         usb_data_wireless.deviceVID = DEVICE_VID;
-        usb_data_wireless.devicePID = PLAYER_NUMBER; // cambia
-        usb_data_wireless.devicePlayer = PLAYER_NUMBER;
+        #ifdef PLAYER_NUMBER
+            usb_data_wireless.devicePID = PLAYER_NUMBER; // cambia
+            usb_data_wireless.devicePlayer = PLAYER_NUMBER;
+        #else
+            usb_data_wireless.devicePID = 1; //PLAYER 1 DEFAULT
+            usb_data_wireless.devicePlayer = 1; // PLAYER 1 DEFAULT
+        #endif // PLAYER_NUMBER
         usb_data_wireless.channel = espnow_wifi_channel;
     #endif // defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
     // ===============================================================
@@ -224,7 +232,7 @@ void setup() {
     // We're setting our custom USB identifiers, as defined in the configuration area!
     #ifdef USE_TINYUSB
         // Initializes TinyUSB identifier
-        if (!TinyUSBDevice.isInitialized()) { // 696969 aggiunto ..funzionava lo stesso, ma così è più sicuro .. sicuramente serve per Esp32 con libreria non integrfata nel core
+        if (!TinyUSBDevice.isInitialized()) { // [ESP32_PORT] aggiunto ..funzionava lo stesso, ma così è più sicuro .. sicuramente serve per Esp32 con libreria non integrfata nel core
             TinyUSBDevice.begin(0);
         }
         // Values are pulled from EEPROM values that were loaded earlier in setup()
@@ -257,10 +265,7 @@ void setup() {
 
 #endif //USE_TINYUSB
 
-
-// ===================================================================================================================
-// ===================================================================================================================
-// ====== 696969 ============ spostato sopra prima della connessione =================================================
+// ====== [ESP32_PORT] ==== questo blocco per opportunità è spostato sopra prima della connessione =======
 
     // this is needed for both customs and builtins, as defaults are all uninitialized
     FW_Common::UpdateBindings(true);
@@ -275,7 +280,7 @@ void setup() {
     #ifdef LED_ENABLE
         OF_RGB::LedInit();
     #endif // LED_ENABLE
-
+// ====== [ESP32_PORT] ==== fine del blocco che per opportunità è spostato sopra prima della connessione =======
 
 // ===================================================================================
 // CALIBRAZIONE EMPIRICA HARDWARE DEGLI STICK ANALOGICI
@@ -286,7 +291,7 @@ void setup() {
 // a riposo per stabilire un centro e limiti di sicurezza personalizzati dinamicamente.
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // 696969 == CODICE PER CALIBRARE LEVETTA STICK IN POSIZIONE CENTRALE =============
+    // [ESP32_PORT] == CODICE PER CALIBRARE LEVETTA STICK IN POSIZIONE CENTRALE =============
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     #if defined(ARDUINO_ARCH_ESP32) && defined(USES_ANALOG)   // la facciamo solo per ESP32 e lasciamo RP2040 come gestione originale
         
@@ -314,7 +319,6 @@ void setup() {
     uint16_t analogValueX;
     uint16_t analogValueY;
        
-    //unsigned long startTime = 0;
     unsigned long startTime = millis();
     while ((millis()-startTime) < 2000) // 2000
     {
@@ -348,17 +352,27 @@ void setup() {
         FW_Common::OLED.TopPanelUpdate(" CALIBRATION READY "); 
     #endif //USES_DISPLAY
 
+    // ===================================================================================
+    // CALCOLO DEL CENTRO MECCANICO PURO
+    // ===================================================================================
+    // Il centro va calcolato ORA, basandosi solo sul rumore grezzo della molla.
+
     ANALOG_STICK_DEADZONE_X_CENTER = (ANALOG_STICK_DEADZONE_X_MIN + ANALOG_STICK_DEADZONE_X_MAX) / 2; 
     ANALOG_STICK_DEADZONE_Y_CENTER = (ANALOG_STICK_DEADZONE_Y_MIN + ANALOG_STICK_DEADZONE_Y_MAX) / 2; 
     
-    // Espansione di tolleranza (buffer zona morta) per assorbire piccoli rimbalzi meccanici
-    ANALOG_STICK_DEADZONE_X_MIN -= 400;
-    ANALOG_STICK_DEADZONE_X_MAX += 400;
-    ANALOG_STICK_DEADZONE_Y_MIN -= 400;
-    ANALOG_STICK_DEADZONE_Y_MAX += 400;
+    // Espansione di tolleranza (buffer zona morta) per assorbire piccoli rimbalzi meccanici   
+    // Espansione di tolleranza con PROTEZIONE (Clamping)
+    // Sottraiamo/Aggiungiamo 400 ma forziamo il risultato a rimanere nel recinto 0-4095
+    int buffer = 400; 
+    ANALOG_STICK_DEADZONE_X_MIN = constrain((int)ANALOG_STICK_DEADZONE_X_MIN - buffer, 0, 4095);
+    ANALOG_STICK_DEADZONE_X_MAX = constrain((int)ANALOG_STICK_DEADZONE_X_MAX + buffer, 0, 4095);
+    ANALOG_STICK_DEADZONE_Y_MIN = constrain((int)ANALOG_STICK_DEADZONE_Y_MIN - buffer, 0, 4095);
+    ANALOG_STICK_DEADZONE_Y_MAX = constrain((int)ANALOG_STICK_DEADZONE_Y_MAX + buffer, 0, 4095);
+
+
     #endif
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // 696969 == FINE CODICE CALIBRAZIONE STICK ========================================
+    // [ESP32_PORT] == FINE CODICE CALIBRAZIONE STICK ========================================
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // ===================================================================================================================
@@ -374,43 +388,43 @@ void setup() {
 #ifdef USE_TINYUSB
     #if defined(ARDUINO_RASPBERRY_PI_PICO_W) && defined(ENABLE_CLASSIC)
         // is VBUS (USB voltage) detected?
-        if(digitalRead(34) || true) { // digitalRead(34) non funziona e non è il metodo corretto
+        if(digitalRead(34) || true) { // [ESP32_PORT] digitalRead(34) non funziona bene ed a mio parere non è un metodo corretto
             // If so, we're connected via USB, so initializing the USB devices chunk.
-            TinyUSBDevices.begin(POLL_RATE); // 696969 inserito questo al posto di quello sotto
-            // TUSBDeviceSetup.begin(1); // 696969 tolto ancora non fatta completa transizione
+            TinyUSBDevices.begin(POLL_RATE); // [ESP32_PORT] inserito questo al posto di quello sotto
+            // TUSBDeviceSetup.begin(1); // [ESP32_PORT] tolto ancora non fatta completa transizione
             // wait until device mounted
             while(!USBDevice.mounted()) { yield(); }
             Serial.begin(9600);
             Serial.setTimeout(0);
-            Serial_OpenFIRE_Stream = &Serial; // 696969 inserito da me
+            Serial_OpenFIRE_Stream = &Serial; // [ESP32_PORT] inserito da me
         } else {
             // Else, we're on batt, so init the Bluetooth chunks.
             if(OF_Prefs::usb.deviceName[0] == '\0')
                 TinyUSBDevices.beginBT(DEVICE_NAME, DEVICE_NAME);
             else TinyUSBDevices.beginBT(OF_Prefs::usb.deviceName, OF_Prefs::usb.deviceName);
         }   
-    #elif defined(ARDUINO_ARCH_RP2040) // 696969 messo per mantenere vecchio codice
+    #elif defined(ARDUINO_ARCH_RP2040) // [ESP32_PORT] inserito per mantenere vecchio codice
         // Initializing the USB devices chunk.
         TinyUSBDevices.begin(POLL_RATE);
         // wait until device mounted
         while(!USBDevice.mounted()) { yield(); }
         Serial.begin(9600);   // 9600 = 1ms data transfer rates, default for MAMEHOOKER COM devices.
         Serial.setTimeout(0);
-        Serial_OpenFIRE_Stream = &Serial; // 696969 inserito da me
-    #else // 696969 inserito da me // ARDUINO_ARCH_ESP32
+        Serial_OpenFIRE_Stream = &Serial; // [ESP32_PORT] inserito da me
+    #else // [ESP32_PORT] inserito da me // ARDUINO_ARCH_ESP32
     
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // === 696969 === NUOVA GESTIONE INIZIALIZZAIZONE USB O CONNESSIONE WIRELESS =============================
+    // === [ESP32_PORT] === NUOVA GESTIONE INIZIALIZZAIZONE USB O CONNESSIONE WIRELESS ==================== //
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     TinyUSBDevices.begin(POLL_RATE);
-    #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)// SE WIRELESS
+    #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)   // SE WIRELESS
         #define MILLIS_TIMEOUT  1000 //1 secondi
         unsigned long lastMillis = millis ();
         while ((millis () - lastMillis <= MILLIS_TIMEOUT) && (!TinyUSBDevice.mounted())) { yield(); }
         if (!TinyUSBDevice.mounted()) {
             SerialWireless.init_wireless();
-            SerialWireless.begin(); // fare una sorta di prebegin, senza impostare peer e altro
+            SerialWireless.begin();
             if (lastDongleSave) {
                 // PROVA A CONNETTERTI AL PRECEDENTE DONGLE INVIANDO IL PACCHETTO CHECK_CONNECTION
                 if (SerialWireless.connection_gun_at_last_dongle()) {
@@ -459,23 +473,29 @@ void setup() {
         TinyUSBDevice.detach();
         
         Serial_OpenFIRE_Stream = &SerialWireless;
-        // ======================== PEDAL   //696969
-        if (lastPedalSave && (lastPedalChannel == espnow_wifi_channel)) {
-            if (!SerialWireless.connection_gun_at_last_pedal()) SerialWireless.connection_gun_at_pedal();
-        } else SerialWireless.connection_gun_at_pedal();
-        // ======================== FINE PEDAL
 
+        // GESTIONE DEL PEDALE WIRELESS
+        if((OF_Prefs::pins[OF_Const::btnPedal] == -1) && (OF_Prefs::pins[OF_Const::btnPedal2] == -1)) {
+            if (lastPedalSave && (lastPedalChannel == espnow_wifi_channel)) {
+                if (!SerialWireless.connection_gun_at_last_pedal()) SerialWireless.connection_gun_at_pedal();
+            } else SerialWireless.connection_gun_at_pedal();
+        }
+        else {
+            // invia segnale al dongle che la procedura del PEDAL è completa
+              SerialWireless.tx_gun_at_dongle_pedal_ready();
+        }
         
+        // salva l'ultimo pedale connesso
         if (TinyUSBDevices.is_pedal_wireless && (!lastPedalSave || 
             (lastPedalSave && (!(memcmp(lastPedalAddress, peerAddress_pedal,6) == 0) || !(lastPedalChannel == espnow_wifi_channel))))) OF_Prefs::SaveLastPedalWireless(peerAddress_pedal, &espnow_wifi_channel);
   
-        // ===== PEDAL FIEN POI SPOSTARLO ================
+        // ===== FINE GESTIONE DEL PEDALE ================
 
     }
     #endif
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // === 696969 === FINE NUOVA GESTIONE INIZIALIZZAIZONE USB O CONNESSIONE WIRELESS ========================
+    // === [ESP32_PORT] === FINE NUOVA GESTIONE INIZIALIZZAIZONE USB O CONNESSIONE WIRELESS =============== //
     ////////////////////////////////////////////////////////////////////////////////////////////////////////// 
     #endif
 #endif //USE_TINYUSB
@@ -490,40 +510,37 @@ void setup() {
 // ===================================================================================
 // POLYMORPHIC I/O: IL TRUCCO DELLA SERIALE VIRTUALE
 // ===================================================================================
-// Architettura geniale per retrocompatibilità. Ridefinendo la macro `Serial` per 
+// Architettura per retrocompatibilità. Ridefinendo la macro `Serial` per 
 // puntare al nostro stream dereferenziato (*Serial_OpenFIRE_Stream), l'intera codebase 
 // legacy (nata per USB wired) può usare `Serial.print` e `Serial.write` come sempre. 
-// I dati verranno instradati magicamente via Cavo o via Rete (ESP-NOW) a seconda 
+// I dati verranno instradati via Cavo o via Rete (ESP-NOW) a seconda 
 // dell'esito della negoziazione precedente.
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////// 696969 ////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////// [ESP32_PORT] ////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////
     
     #ifdef OPENFIRE_WIRELESS_ENABLE
-        //extern Stream* Serial_OpenFIRE_Stream;
         #ifdef Serial
-            //#define AUX_SERIAL Serial
             #undef Serial
         #endif
         #define Serial (*Serial_OpenFIRE_Stream)
     #endif // OPENFIRE_WIRELESS_ENABLE
     
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////// 696969 ////////////////////////////////////////////////
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////// [ESP32_PORT] ////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////
 
 
-
-
-    /////////////////// AbsMouse5.init(true); // 696969 rimosso per il mio nuovo OpenFire_TinyDevice
+    // AbsMouse5.init(true); // [ESP32_PORT] rimosso per il mio nuovo OpenFire_TinyDevice
 
     // IR camera maxes out motion detection at ~300Hz, and millis() isn't good enough
     // L'esecuzione wireless introduce overhead. Ridurre il tick rate della telecamera IR 
-    // su batteria (da 5ms a ~15ms) offre più CPU all'ESP-NOW limitando lag di sistema.
-    // funziona comunque bene alla stessa frequenza usata con connessione via cavo, ma volendo si può abbassare
-    if (TinyUSBDevices.onBattery) startIrCamTimer(209);  // 120 ---- 100->10ms 66 -> 15ms per connessione wireless
-      else startIrCamTimer(209); // 5ms per connessione via seriale
+    // su batteria (da 5ms a ~15ms) offre più CPU all'ESP-NOW limitando possibili lag di sistema, ma
+    // ho riscontrato che funziona comunque bene alla stessa frequenza usata con connessione via cavo,
+    // quindi l'ho impostata uguale ovvero 209Hz che corrisponde a circa 5ms
+    if (TinyUSBDevices.onBattery) startIrCamTimer(209);  // impostato a 5ms anche per wireless ... es. 100->10ms 66 -> 15ms per connessione wireless
+      else startIrCamTimer(209); // 5ms per connessione via cavo
     
     FW_Common::OpenFIREper.source(OF_Prefs::profiles[OF_Prefs::currentProfile].adjX,
                                   OF_Prefs::profiles[OF_Prefs::currentProfile].adjY);
@@ -650,7 +667,7 @@ void rp2040pwmIrq(void)
     pwm_hw->intr = 0xff;
     FW_Common::irPosUpdateTick = 1;
 }
-#endif // ARDUINO_ARCH_RP2040 // 696969 messo qui
+#endif // ARDUINO_ARCH_RP2040 // [ESP32_PORT] messo qui
 
 #ifdef DUAL_CORE
 // Second core setup
@@ -761,7 +778,7 @@ void loop1()
     }
 }
 #endif // DUAL_CORE
-// #endif // ARDUINO_ARCH_RP2040 // 696969 tolto messo sopra
+// #endif // ARDUINO_ARCH_RP2040 // [ESP32_PORT] tolto messo sopra
 
 // Main core events hub
 // splits off into subsequent ExecModes depending on circumstances
@@ -777,7 +794,7 @@ void loop()
                 analogWrite(OF_Prefs::pins[OF_Const::rumblePin], OF_Prefs::settings[OF_Const::rumbleStrength]);
                 delay(300);
                 #ifdef ARDUINO_ARCH_ESP32
-                    analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0); // 696969 per ESP32
+                    analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0); // [ESP32_PORT] per ESP32
                 #else //rp2040
                 digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);
                 #endif
@@ -974,7 +991,7 @@ void loop()
                                 analogWrite(OF_Prefs::pins[OF_Const::rumblePin], OF_Prefs::settings[OF_Const::rumbleStrength]);
                                 delay(80);
                                 #ifdef ARDUINO_ARCH_ESP32
-                                    analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0);  // 696969 per ESP32
+                                    analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0);  // [ESP32_PORT] per ESP32
                                 #else // rp2040
                                 digitalWrite(OF_Prefs::pins[OF_Const::rumblePin], LOW);
                                 #endif
@@ -1146,7 +1163,7 @@ void ExecRunMode()
         #endif // USES_DISPLAY
 
         // If using RP2040, we offload the button processing to the second core.
-        #if /*!defined(ARDUINO_ARCH_RP2040) ||*/ !defined(DUAL_CORE)  // 696969 per ESP32     
+        #if /*!defined(ARDUINO_ARCH_RP2040) ||*/ !defined(DUAL_CORE)  // [ESP32_PORT] per ESP32     
 
         #ifdef USES_TEMP
             if(OF_Prefs::pins[OF_Const::tempPin] > -1)
@@ -1340,9 +1357,35 @@ void ExecGunModeDocked()
                 if(FW_Common::analogIsValid && currentMillis - aStickChecked >= 100) {
                     aStickChecked = currentMillis;
 
+                    #ifdef ARDUINO_ARCH_ESP32
+                    // LETTURA HARDWARE (uint16_t per coerenza ADC 12-bit)
+                    uint16_t rawX = (uint16_t)analogRead(OF_Prefs::pins[OF_Const::analogX]);
+                    uint16_t rawY = (uint16_t)analogRead(OF_Prefs::pins[OF_Const::analogY]);
+
+                    // NORMALIZZAZIONE (Identica alla funzione AnalogStickPoll)
+                    uint16_t analogValueX, analogValueY;
+
+                    // Normalizzazione Asse X
+                    if (rawX < ANALOG_STICK_DEADZONE_X_MIN) 
+                        analogValueX = (uint16_t)map(rawX, 0, ANALOG_STICK_DEADZONE_X_MIN, 0, ANALOG_STICK_CENTER_X);
+                    else if (rawX > ANALOG_STICK_DEADZONE_X_MAX) 
+                        analogValueX = (uint16_t)map(rawX, ANALOG_STICK_DEADZONE_X_MAX, 4095, ANALOG_STICK_CENTER_X, 4095);
+                    else 
+                        analogValueX = ANALOG_STICK_CENTER_X;
+
+                    // Normalizzazione Asse Y
+                    if (rawY < ANALOG_STICK_DEADZONE_Y_MIN) 
+                        analogValueY = (uint16_t)map(rawY, 0, ANALOG_STICK_DEADZONE_Y_MIN, 0, ANALOG_STICK_CENTER_Y);
+                    else if (rawY > ANALOG_STICK_DEADZONE_Y_MAX) 
+                        analogValueY = (uint16_t)map(rawY, ANALOG_STICK_DEADZONE_Y_MAX, 4095, ANALOG_STICK_CENTER_Y, 4095);
+                    else 
+                        analogValueY = ANALOG_STICK_CENTER_Y;
+                    #else                  
+                    // Leggiamo il valore puro dall'ADC (0-4095)
                     uint16_t analogValueX = analogRead(OF_Prefs::pins[OF_Const::analogX]);
                     uint16_t analogValueY = analogRead(OF_Prefs::pins[OF_Const::analogY]);
-
+                    #endif // COMMENTO
+                    
                     buf[0] = OF_Const::sAnalogPosUpd;
                     memcpy(&buf[1], (uint8_t*)&analogValueX, sizeof(uint16_t));
                     memcpy(&buf[3], (uint8_t*)&analogValueY, sizeof(uint16_t));
@@ -1441,6 +1484,82 @@ void TriggerNotFire()
 }
 
 #ifdef USES_ANALOG
+
+
+#ifdef ARDUINO_ARCH_ESP32 
+// =================== [ESP32_PORT] ========== funzione ottimizzata con calibrazione
+void AnalogStickPoll()
+{
+    // 1. LETTURA HARDWARE
+    uint16_t rawX = (uint16_t)analogRead(OF_Prefs::pins[OF_Const::analogX]);
+    uint16_t rawY = (uint16_t)analogRead(OF_Prefs::pins[OF_Const::analogY]);
+    
+    uint16_t analogValueX, analogValueY;
+
+    // 2. NORMALIZZAZIONE PROPORZIONALE
+    // Il "filtro" che cura i difetti fisici e crea un asse 0-2048-4095 perfetto
+    if (rawX < ANALOG_STICK_DEADZONE_X_MIN) {
+        analogValueX = (uint16_t)map(rawX, 0, ANALOG_STICK_DEADZONE_X_MIN, 0, ANALOG_STICK_CENTER_X);
+    } else if (rawX > ANALOG_STICK_DEADZONE_X_MAX) {
+        analogValueX = (uint16_t)map(rawX, ANALOG_STICK_DEADZONE_X_MAX, 4095, ANALOG_STICK_CENTER_X, 4095);
+    } else {
+        analogValueX = ANALOG_STICK_CENTER_X; 
+    }
+
+    if (rawY < ANALOG_STICK_DEADZONE_Y_MIN) {
+        analogValueY = (uint16_t)map(rawY, 0, ANALOG_STICK_DEADZONE_Y_MIN, 0, ANALOG_STICK_CENTER_Y);
+    } else if (rawY > ANALOG_STICK_DEADZONE_Y_MAX) {
+        analogValueY = (uint16_t)map(rawY, ANALOG_STICK_DEADZONE_Y_MAX, 4095, ANALOG_STICK_CENTER_Y, 4095);
+    } else {
+        analogValueY = ANALOG_STICK_CENTER_Y;
+    }
+
+    // 3. GESTIONE OUTPUT
+    if(OF_Prefs::settings[OF_Const::analogMode] == OF_Const::analogModeStick) {
+        Gamepad16.moveStick(analogValueX, analogValueY);
+    } 
+    else {
+        uint32_t newPos = 0;
+        
+        // Modalità Digitale (D-Pad / Tastiera)
+        // Usando analogValueX/Y le soglie sono fisse, sicure e simmetriche.
+        // Niente cast, niente underflow, nessun tasto bloccato.
+
+        // TODO: need to consider inverted axis toggle, currently assumes axises are inverted by default
+        // would this also benefit from custom Analog->Digital deadzone?
+
+        if(analogValueY < 1200)      newPos = 2; // down
+        else if(analogValueY > 2900) newPos = 1; // up
+
+        if(analogValueX < 1200)      newPos |= 8; // right
+        else if(analogValueX > 2900) newPos |= 4; // left
+
+        switch(OF_Prefs::settings[OF_Const::analogMode]) {
+            case OF_Const::analogModeDpad: 
+                Gamepad16.padUpdate(FW_Common::buttons.PadMaskConvert(newPos)); 
+                break;
+
+            case OF_Const::analogModeKeys:
+                if(FW_Common::aStickADCLastPos != newPos) {
+                    for(int i = 0; i < 4; ++i) {
+                        uint8_t bit = 1 << i;
+                        // Release
+                        if((FW_Common::aStickADCLastPos & bit) && !(newPos & bit)) {
+                            Keyboard.release(KEY_UP_ARROW - i);
+                        }
+                        // Press
+                        if(!(FW_Common::aStickADCLastPos & bit) && (newPos & bit)) {
+                            Keyboard.press(KEY_UP_ARROW - i);
+                        }
+                    }
+                }
+                break;
+        }
+        FW_Common::aStickADCLastPos = newPos;
+    }
+}
+// =========== [ESP32_PORT] fine funzione ottimizzata con calibrazione =======================
+#else // rp2040
 void AnalogStickPoll()
 {
     int analogValueX = analogRead(OF_Prefs::pins[OF_Const::analogX]);
@@ -1448,26 +1567,26 @@ void AnalogStickPoll()
     
     if(OF_Prefs::settings[OF_Const::analogMode] == OF_Const::analogModeStick) {
         // Analog stick deadzone should help mitigate overwriting USB commands for the other input channels.
-        if((analogValueX < ANALOG_STICK_DEADZONE_X_MIN || analogValueX > ANALOG_STICK_DEADZONE_X_MAX) ||
-        (analogValueY < ANALOG_STICK_DEADZONE_Y_MIN || analogValueY > ANALOG_STICK_DEADZONE_Y_MAX)) {
+        if((analogValueX < 1900 || analogValueX > 2200) ||
+        (analogValueY < 1900 || analogValueY > 2200)) {
             Gamepad16.moveStick(analogValueX, analogValueY);
         } else {
             // Duplicate coords won't be reported, so no worries.
-            Gamepad16.moveStick(ANALOG_STICK_CENTER_X, ANALOG_STICK_CENTER_Y);
+            Gamepad16.moveStick(2048, 2048);
         }
     } else {
         uint32_t newPos = 0;
 
         // TODO: need to consider inverted axis toggle, currently assumes axises are inverted by default
         // would this also benefit from custom Analog->Digital deadzone?
-        if(analogValueY < (ANALOG_STICK_DEADZONE_Y_MIN-700))
+        if(analogValueY < 1200)
             newPos = 2; // down
-        else if(analogValueY > (ANALOG_STICK_DEADZONE_Y_MAX+700))
+        else if(analogValueY > 2900)
             newPos = 1; // up
 
-        if(analogValueX < (ANALOG_STICK_DEADZONE_X_MIN-700))
+        if(analogValueX < 1200)
             newPos |= 8; // right
-        else if(analogValueX > (ANALOG_STICK_DEADZONE_X_MAX+700))
+        else if(analogValueX > 2900)
             newPos |= 4; // left
 
         switch(OF_Prefs::settings[OF_Const::analogMode]) {
@@ -1489,14 +1608,16 @@ void AnalogStickPoll()
     }
         
 }
+#endif //ARDUINO_ARCH_ESP32 
+
 #endif // USES_ANALOG
 
 void SendEscapeKey()
 {
-    Keyboard.press(KEY_ESC);  // 696969 non corrisponde a HID_KEY_ESCAPE, ma lasciamo come impostato, boh ?
+    Keyboard.press(KEY_ESC);  // [ESP32_PORT] non corrisponde a HID_KEY_ESCAPE, ma lasciato come impostato
     Keyboard.report();
     delay(20);  // wait a bit so it registers on the PC.
-    Keyboard.release(KEY_ESC); // 696969 non corrisponde a HID_KEY_ESCAPE, ma lasciamo come impostato, boh ?
+    Keyboard.release(KEY_ESC); // [ESP32_PORT] non corrisponde a HID_KEY_ESCAPE, ma lasciato come impostato
     Keyboard.report();
     lastUSBpoll = millis();
 }
@@ -1779,7 +1900,7 @@ void RumbleToggle()
         #endif // LED_ENABLE
 
         
-        #ifdef ARDUINO_ARCH_ESP32  // 696969 per ESP32
+        #ifdef ARDUINO_ARCH_ESP32  // [ESP32_PORT] per ESP32
             analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 255);       // Pulse the motor on to notify the user,
             delay(300);                                               // Hold that,
             analogWrite(OF_Prefs::pins[OF_Const::rumblePin], 0);        // Then turn off,

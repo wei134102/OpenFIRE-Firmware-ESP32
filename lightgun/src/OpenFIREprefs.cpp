@@ -203,30 +203,6 @@ void OF_Prefs::LoadPresets()
 
 #if defined(OPENFIRE_WIRELESS_ENABLE) && defined(ARDUINO_ARCH_ESP32)
 
-int OF_Prefs::LoadWireless(uint8_t *channel, uint8_t *power)
-{
-    File wirelessFile = LittleFS.open("/wireless.conf", "r");
-    if(wirelessFile) {
-      //if (wirelessFile.available()) {
-        int bWritten = wirelessFile.read(channel, sizeof(uint8_t));
-        bWritten += wirelessFile.read(power, sizeof(uint8_t));
-        wirelessFile.close();
-        if (bWritten == 2) return Error_Success; else return Error_NoData;
-      //}
-    } else return Error_NoData;
-}
-
-int OF_Prefs::SaveWireless(uint8_t *channel, uint8_t *power)
-{
-    File wirelessFile = LittleFS.open("/wireless.conf", "w");
-    if(wirelessFile) {
-        int bWritten = wirelessFile.write(channel, sizeof(int8_t));
-        bWritten += wirelessFile.write(power, sizeof(int8_t));
-        wirelessFile.close();
-        if (bWritten == 2) return Error_Success; else return Error_NoData;
-    } else return Error_NoData;
-}
-
 int OF_Prefs::LoadLastDongleWireless(uint8_t *address, uint8_t *channel)
 {
     File lastDongleFile = LittleFS.open("/lastDONGLE.conf", "r");

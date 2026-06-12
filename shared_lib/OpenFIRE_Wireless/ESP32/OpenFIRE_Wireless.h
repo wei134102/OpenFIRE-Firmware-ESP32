@@ -43,6 +43,8 @@
   // vediamo
 #endif
 
+// numero di secondi massimi a disposizione per la connessione del Pedal
+#define MAX_SECONDI_CONNESSIONE_PEDAL 10
 
 /*****************************
  *   ESP_NOW E VARIABILI DI STATO GLOBALI
@@ -107,7 +109,7 @@ enum PACKET_TX {
   RESET_DATA_USB,
   REBOOT,      // REBOOT DEL DONGLE
   TX_DATA_USB, // TRASMISSIONE DATI DELL'USB DA GUN A DONGLE
-  CHANGE_DATA_USB, // CAMBIO DEI DATI DELL'USB, QUINDI ?????
+  CHANGE_DATA_USB, // CAMBIO DEI DATI DELL'USB
   CONN_REQ_TO_GUN,      // RICHIESTA INVIATA DA DONGLE VERSO GUN (INVIA MAC ADDRESS DEL DONGLE ed il MAC ADDRES A CUI E' STATA INVIATA LA RICHIESTA (PUO' ESSERE BROADCAST))
   CONN_REQ_TO_DONGLE,   // RICHIESTA INVIATA DA GUN A DONGLE, PER ACCETTARE RICHIESTA DI CONNESSIONE (INVIA MAC ADDRESS DEL GUN E MAC ADDRES A CUI E' STATA INVIATA RICHIESTA)
   CONN_ACCEPT,          // IL DONGLE HA ACCETTATO CONNESSIONE (INVIA ANCHE MAC ADDRES DEL DONGLE E DELLA GUN A CUI E' STATA ACCETTATA LA RICHIESTA)
@@ -287,6 +289,7 @@ class SerialWireless_ : public Stream
   bool connection_gun_at_last_dongle();
   bool connection_gun_at_pedal();
   bool connection_gun_at_last_pedal();
+  void tx_gun_at_dongle_pedal_ready();
 
   // ===============================
   // ===== per i timer ================

@@ -86,6 +86,8 @@ private:
     
     uint8_t prev_num_points_seen = 0; 
     
+
+
     // Usiamo maschere di bit (bitmask) per lo storico visivo perché permettono di
     // verificare stati complessi e fare confronti incrociati in un singolo ciclo di clock
     // usando operatori bit a bit (&, |), risultando enormemente più veloci degli array.

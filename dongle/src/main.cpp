@@ -67,46 +67,14 @@
 
 #include "OpenFIRE-DONGLE-version.h"
 
-// ===================================================================================
-// MULTITHREADING (DEPRECATO/SPERIMENTALE)
-// ===================================================================================
-// Questa sezione era un test per scaricare la logica su Core paralleli usando FreeRTOS nativo. 
-// Attualmente disabilitato (&& false) a favore dell'approccio a Task asincroni 
-// ("radioTask" e "usbTask") delegati direttamente al layer di astrazione `SerialWireless`.
-
-// ================== GESTIONE DUAL CORE ============================
-#if defined(DUAL_CORE) && defined(ESP_PLATFORM) && false
-        void setup1();
-        void loop1();
-        TaskHandle_t task_loop1;
-        void esploop1(void* pvParameters) {
-            setup1();
-            for (;;) loop1();
-        }
-#endif //DUAL_CORE
-// ========================= FINE GESTIONE DUAL CORE ======================================
-
 bool display_init = false;
-
 
 // ===================================================================================
 // MAIN SETUP
 // ===================================================================================
 
 // The main show!
-void setup() {
-  // =========================== X GESTIONE DUAL CORE =============================== 
-  #if defined(DUAL_CORE) && defined(ESP_PLATFORM) && false
-    xTaskCreatePinnedToCore(
-    esploop1,               /* Task function. */
-    "loop1",                /* name of task. */
-    10000,                  /* Stack size of task */
-    NULL,                   /* parameter of the task */
-    1,                      /* priority of the task */
-    &task_loop1,            /* Task handle to keep track of created task */
-    !ARDUINO_RUNNING_CORE); /* pin task to core 0 */
-  #endif
-  // ======================== FINE X GESTIONE DUAL CORE =================================       
+void setup() { 
 
   // 1. INIZIALIZZAZIONE HARDWARE (Video Feedback)
   #ifdef USES_DISPLAY
@@ -117,7 +85,8 @@ void setup() {
       tft.setColorDepth(16);
       }
     #else
-      display_init = tft.initR(INITR_MINI160x80_PLUGIN);
+      tft.initR(INITR_MINI160x80_PLUGIN); // non riporta alcun valore, quindi display_init va inizializzato da solo
+      display_init = true;
       if(display_init) {  // Init ST7735S mini display
       pinMode(TFT_PIN_BL, OUTPUT);
       digitalWrite(TFT_PIN_BL, 0); // accende retroilluminazione del display
@@ -148,16 +117,16 @@ void setup() {
   #endif //USES_DISPLAY
 
   // ===================================================================================
-  // FASE CRITICA 1: ASSOCIAZIONE WIRELESS (Bloccante)
+  // GESTIONE CONNESSIONE WIRELESS E ASSOCIAZIONE DISPOSITIVO (Bloccante)
   // ===================================================================================
-  // Il Dongle attende di stabilire il link ESP-NOW con la Lightgun. Finché non ottiene
+  // Il Dongle cerca il canale migliore su cui sintonizzarsi  e poi attende 
+  // di stabilire il link ESP-NOW con la Lightgun. Finché non ottiene
   // il MAC Address corretto e i parametri identificativi, NON può procedere.
-  // ====== gestione connessione wireless ====================
+  
   SerialWireless.init_wireless();
   SerialWireless.begin();
   SerialWireless.connection_dongle();
 
-  // =========== attesa segnale del pedale da parte della lightgun .. POI TOGLIERE ==================
   #ifdef USES_DISPLAY   
   if(display_init) {
     tft.fillScreen(BLACK);
@@ -165,32 +134,26 @@ void setup() {
     tft.setTextSize(2);
     tft.setTextColor(RED);
     tft.setCursor(0, 40);
-    tft.printf("Attesa PEDAL");
+    tft.printf("AWAIT PEDAL");
   }
   #endif // USES_DISPLAY
 
-  // ATTENZIONE ARCHITETTURALE: Bloccare qui l'avanzamento rallenta l'handshake USB.
-  // In futuro, il pedale dovrebbe essere "Hot-Pluggable" (collegabile a runtime).
+  // =========== attesa segnale del pedale da parte della lightgun
+  const unsigned long start_millis = millis();
+  const unsigned long timeout_ms = (MAX_SECONDI_CONNESSIONE_PEDAL + 2) * 1000;
   SerialWireless.is_pedal_wireless_comunication = false;
-  while (!SerialWireless.is_pedal_wireless_comunication) {
-
-    vTaskDelay(pdMS_TO_TICKS(500));
+  while (!SerialWireless.is_pedal_wireless_comunication && (millis() - start_millis < timeout_ms)) {
+    vTaskDelay(pdMS_TO_TICKS(100));
   }
 
-
-
-
-  // ====================================================================
-  // ====== fine gestione wireless .. va avanti solo dopo che si è accoppiato il dispositivo =======
-
   // ===================================================================================
-  // FASE CRITICA 2: USB DEVICE SPOOFING
+  // CONNESSIONE USB - imposta VID e PID come quello che gli passa la pistola
   // ===================================================================================
   // Per garantire compatibilità totale con i front-end (MAME, Batocera, Windows),
   // il Dongle assume dinamicamente l'identità (VID, PID e Manufacturer) inviata 
   // precedentemente dalla Lightgun, comportandosi come un proxy hardware invisibile.
-  // ====== connessione USB ====== imposta VID e PID come quello che gli passa la pistola ===============
-  if (!TinyUSBDevice.isInitialized()) { // aggiunto ..funzionava lo stesso, ma così è più sicuro .. sicuramente serve per Esp32 con libreria non integrfata nel core
+  
+  if (!TinyUSBDevice.isInitialized()) { 
     TinyUSBDevice.begin(0);
   }
       
@@ -202,11 +165,13 @@ void setup() {
   TinyUSBDevices.begin(1);
   Serial.begin(9600);
   Serial.setTimeout(0);
-  
-  // ====== fine connessione USB ==========================================================================
-
+    
+  // ===================================================================================
+  // VISUALIZZAZIONE DATI DELLA LIGHTGUN SUL DISPLAY
+  // ===================================================================================
   // Feedback visivo finale che conferma l'avvenuta clonazione dell'identità.
-  #ifdef USES_DISPLAY   
+ 
+   #ifdef USES_DISPLAY   
     if(display_init) {
     tft.fillScreen(BLACK);
     tft.drawBitmap(40, 0, customSplashBanner, CUSTSPLASHBANN_WIDTH, CUSTSPLASHBANN_HEIGHT, BLUE);
@@ -228,11 +193,11 @@ void setup() {
 // ===================================================================================
 // PARAMETRI BUFFERIZZAZIONE SERIALE -> RADIO
 // ===================================================================================
-// Impostare FIFO_SIZE a 200 (invece di 32) garantisce l'assorbimento di rapidi
+// FIFO_SIZE a 200 garantisce l'assorbimento di rapidi
 // treni di dati dal Mamehooker (es. force feedback multipli come Rumble + Solenoide) 
-// senza causare colli di bottiglia o desincronizzazione della porta COM di Windows.
+// senza causare colli di bottiglia o desincronizzazione della porta COM
 
-#define FIFO_SIZE_READ_SER 200  // l'originale era 32
+#define FIFO_SIZE_READ_SER 200
 #define TIME_OUT_AVALAIBLE 2
 #define TIME_OUT_SERIAL_MICRO 1000 // 1000 microsecondi = 1 millisecondo
 
@@ -249,25 +214,21 @@ uint8_t buffer_aux[FIFO_SIZE_READ_SER];
 // Questo loop si occupa SOLTANTO della direzione PC -> DONGLE -> LIGHTGUN
 // I dati in ingresso dall'host (comandi force feedback via seriale) vengono "pescati" 
 // in blocchi, inseriti nel Ring Buffer radio e notificati ai task asincroni tramite
-// `SerialWireless.flush()`.
+// las librei `SerialWireless`.
 // La ricezione radio inversa (Lightgun -> Dongle -> USB HID PC) è gestita in modo 
-// asincrono invisibile e indipendente dai Task delegati su Core 0/1.
+// asincrono invisibile e indipendente dai Task delegati.
 
 void loop()
 {
-  
-
-vTaskDelay(pdMS_TO_TICKS(1));
-rx_avalaible = Serial.available();
-if (rx_avalaible > FIFO_SIZE_READ_SER) rx_avalaible = FIFO_SIZE_READ_SER;
-if (rx_avalaible)
-{
+  vTaskDelay(pdMS_TO_TICKS(1)); // diamo un po' di respiro al micro per non incorrere in reset dal Task Watchdog
+  rx_avalaible = Serial.available();
+  if (rx_avalaible > FIFO_SIZE_READ_SER) rx_avalaible = FIFO_SIZE_READ_SER;
+  if (rx_avalaible)
+  {
     Serial.readBytes(buffer_aux, rx_avalaible);
     SerialWireless.write(buffer_aux, rx_avalaible);
     
-    // Il flush qui avvia la catena Producer-Consumer. Prende i dati e sveglia 
-    // il task radio asincrono per spedirli fisicamente in aria senza bloccare il loop.
+    // Il flush sveglia il task radio asincrono per spedirli fisicamente in aria senza bloccare il loop.
     SerialWireless.flush(); 
-}
-
+  }
 }
