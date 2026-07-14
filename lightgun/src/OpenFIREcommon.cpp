@@ -32,7 +32,8 @@
 #include "OpenFIREdisplay_i18n.h"
 #endif
 
-// ============ [ESP32_PORT] ========== redifinizione di Serial per gestire le connessione wireless seriali ========
+// ============ [ESP32_PORT] ============
+// Definition of Serial for managing wireless serial connections / redifinizione di Serial per gestire le connessione wireless seriali
 #ifdef OPENFIRE_WIRELESS_ENABLE
     extern Stream* Serial_OpenFIRE_Stream;
     #ifdef Serial
@@ -41,7 +42,8 @@
     #endif
     #define Serial (*Serial_OpenFIRE_Stream)
 #endif // OPENFIRE_WIRELESS_ENABLE
-// ============ [ESP32_PORT] ===== fine redifinizione di Serial per gestire le connessione wireless seriali ========
+// ============ [ESP32_PORT] ============
+// End definition of Serial for managing wireless serial connections / fine redifinizione di Serial per gestire le connessione wireless seriali
 
 #ifdef ARDUINO_ARCH_ESP32  // [ESP32_PORT]
     #define delay(ms) vTaskDelay(pdMS_TO_TICKS(ms))                    
@@ -1283,7 +1285,8 @@ void FW_Common::UpdateStartSelect()
 }
 
 
-// ============ [ESP32_PORT] ========== ripristino di Serial dopo definizione per connessione seriali ==============
+// ============ [ESP32_PORT] ============
+// Restoration of Serial after definition for serial connections / ripristino di Serial dopo definizione per connessione seriali
 #ifdef OPENFIRE_WIRELESS_ENABLE
     #undef Serial
     #ifdef AUX_SERIAL
@@ -1291,4 +1294,5 @@ void FW_Common::UpdateStartSelect()
         #undef AuxSerial
     #endif
 #endif // OPENFIRE_WIRELESS_ENABLE
-// ============ [ESP32_PORT] ===== fine ripristino di Serial dopo definizione per connessione seriali ==============
+// ============ [ESP32_PORT] ============
+// End restoration of Serial after definition for serial connections / fine ripristino di Serial dopo definizione per connessione seriali

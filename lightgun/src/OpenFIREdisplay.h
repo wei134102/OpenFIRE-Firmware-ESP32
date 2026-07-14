@@ -159,9 +159,9 @@ public:
     };
 
     #ifdef USE_LOVYAN_GFX
-        LGFX_SSD1306 *display = nullptr;   //aggiunto inline per condividerla
+        LGFX_SSD1306 *display = nullptr;   // added inline so it can be shared / aggiunto inline per condividerla
     #else
-        Adafruit_SSD1306 *display = nullptr; //aggiunto inline per condividerla
+        Adafruit_SSD1306 *display = nullptr; // added inline so it can be shared / aggiunto inline per condividerla
     #endif
 
     /// @brief 在顶部状态栏右侧显示三位秒数倒计时（0 清空倒计时区域）
