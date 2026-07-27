@@ -19,7 +19,14 @@
 #define _OPENFIRECOMMON_H_
 
 #include <stdint.h>
-#include <DFRobotIRPositionEx.h>
+
+// = [ESP32_PORT] ===========================================================================================
+#ifdef PAJ7025_CAM
+    #include <DFRobotIRPositionEx_Wrapper.h>
+#else
+    #include <DFRobotIRPositionEx.h>
+#endif // PAJ7025_CAM
+// = [ESP32_PORT] ===========================================================================================
 
 #ifdef USE_SQUARE_ADVANCED
     #include <OpenFIRE_Square_Advanced.h>
@@ -238,9 +245,9 @@ static inline LightgunButtonsStatic<ButtonCount> lgbData;
 
 #ifdef ARDUINO_ARCH_ESP32
 
-//#include <Arduino.h>
-//#include <freertos/FreeRTOS.h>
-//#include <freertos/queue.h>
+// #include <Arduino.h>
+// #include <freertos/FreeRTOS.h>
+// #include <freertos/queue.h>
 
 // funzione per esp32 per emulare il comportamento di rp2040.fifo per la comunicazione multicore
 

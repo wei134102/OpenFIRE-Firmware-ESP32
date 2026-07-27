@@ -28,7 +28,16 @@
   </a>  
 </p>
 
+<br>
 
+<p align="center">
+  <b>🎬 WATCH THE VIDEO SHOWCASE & GAMEPLAY:</b><br><br>
+  <a href="https://youtu.be/dccmurhZ-y4"><img src="https://img.youtube.com/vi/dccmurhZ-y4/maxresdefault.jpg" alt="OpenFIRE ESP32 Video Showcase 1" width="260"></a>
+  &nbsp;&nbsp;&nbsp;
+  <a href="https://youtu.be/D_I9fdZGsl4"><img src="https://img.youtube.com/vi/D_I9fdZGsl4/maxresdefault.jpg" alt="OpenFIRE ESP32 Video Showcase 2" width="260"></a>
+  &nbsp;&nbsp;&nbsp;
+  <a href="https://youtu.be/Lfmg6ow8PW4"><img src="https://img.youtube.com/vi/Lfmg6ow8PW4/maxresdefault.jpg" alt="OpenFIRE ESP32 Video Showcase 3" width="260"></a>
+</p>
 
 ---
 > 🛠️ **Hardware sponsored by [PCBWay](https://www.pcbway.com)**
@@ -189,6 +198,7 @@ A special thanks to the original authors and the OpenFIRE community, without who
 ### ESP32 Port Contributors
 A massive thank you to those who personally supported the development and testing of this specific ESP32 port:
 * **Reverse Cosmos**: For his invaluable help and time spent testing the OpenFIRE ESP32 firmware.
+* **VINNY!**: For designing the mechanical parts and providing the .stl files for the wireless pedal.
 
 ## ⚖️ License, Commercial Use, and Forks
 
@@ -238,6 +248,17 @@ In full compliance with the original license and the vision of the OpenFIRE crea
   <a href="https://alessandro-satanassi.github.io/OpenFIRE-ESP32-Tools/?lang=it">
     <img src="https://img.shields.io/badge/🛠️_OPENFIRE_ESP32_TOOLS-Download_semplificato_dell'App_OpenFIRE-007ec6?style=for-the-badge" alt="OpenFIRE ESP32 Tools">
   </a>  
+</p>
+
+<br>
+
+<p align="center">
+  <b>🎬 GUARDA IL VIDEO SHOWCASE & GAMEPLAY:</b><br><br>
+  <a href="https://youtu.be/dccmurhZ-y4"><img src="https://img.youtube.com/vi/dccmurhZ-y4/maxresdefault.jpg" alt="OpenFIRE ESP32 Video Showcase 1" width="260"></a>
+  &nbsp;&nbsp;&nbsp;
+  <a href="https://youtu.be/D_I9fdZGsl4"><img src="https://img.youtube.com/vi/D_I9fdZGsl4/maxresdefault.jpg" alt="OpenFIRE ESP32 Video Showcase 2" width="260"></a>
+  &nbsp;&nbsp;&nbsp;
+  <a href="https://youtu.be/Lfmg6ow8PW4"><img src="https://img.youtube.com/vi/Lfmg6ow8PW4/maxresdefault.jpg" alt="OpenFIRE ESP32 Video Showcase 3" width="260"></a>
 </p>
 
 ---
@@ -400,6 +421,7 @@ Un ringraziamento speciale agli autori originali e alla community del progetto O
 ### Contributori al Porting per ESP32
 Un enorme grazie a chi ha supportato personalmente lo sviluppo e i test di questo specifico porting per ESP32:
 * **Reverse Cosmos**: Per il prezioso aiuto e il tempo dedicato ai test del firmware OpenFIRE ESP32.
+* **VINNY!**: Per aver progettato la parte meccanica e i file .stl del pedale wireless.
 
 ## ⚖️ Licenza, Uso Commerciale e Fork
 
