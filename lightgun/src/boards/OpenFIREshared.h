@@ -83,9 +83,9 @@ public:
         btnTrigger = 0,
         btnGunA,
         btnGunB,
+        btnGunC,
         btnStart,
         btnSelect,
-        btnGunC,
         btnGunUp,
         btnGunDown,
         btnGunLeft,
@@ -512,8 +512,8 @@ public:
                                      /*20*/ btnUnmapped,    btnGunC,        unavailable,    unavailable,    unavailable,
                                      /*25*/ unavailable,    unavailable,    unavailable,    unavailable,    unavailable,
                                      /*30*/ unavailable,    unavailable,    unavailable,    unavailable,    unavailable,
-                                     /*35*/ btnHome,        btnGunA,        btnGunB,        btnSelect,      btnStart,
-                                     /*40*/ btnGunUp,       btnGunDown,     btnGunLeft,     unavailable,    unavailable,
+                                     /*35*/ btnHome,        btnGunA,        btnGunB,        btnGunC,        btnStart,
+                                     /*40*/ btnSelect,      btnGunUp,       btnGunDown,     btnGunLeft,     unavailable,    unavailable,
                                      /*45*/ btnPump,        btnUnmapped,    btnUnmapped,    unavailable                        }},
         //=====================================================================================================================
         // ESP32-S3 N8R8 (LC@SC / Super Mini form factor, 8 MB Flash + 8 MB OPI PSRAM)
@@ -525,8 +525,8 @@ public:
                                      /*20*/ btnUnmapped,    btnGunC,        unavailable,    unavailable,    unavailable,
                                      /*25*/ unavailable,    unavailable,    unavailable,    unavailable,    unavailable,
                                      /*30*/ unavailable,    unavailable,    unavailable,    unavailable,    unavailable,
-                                     /*35*/ btnHome,        btnGunA,        btnGunB,        btnSelect,      btnStart,
-                                     /*40*/ btnGunUp,       btnGunDown,     btnGunLeft,     unavailable,    unavailable,
+                                     /*35*/ btnHome,        btnGunA,        btnGunB,        btnGunC,        btnStart,
+                                     /*40*/ btnSelect,      btnGunUp,       btnGunDown,     btnGunLeft,     unavailable,    unavailable,
                                      /*45*/ btnPump,        btnUnmapped,    btnUnmapped,    unavailable                        }},
         //=====================================================================================================================
         // Waveshare ESP32 S3 Pico
