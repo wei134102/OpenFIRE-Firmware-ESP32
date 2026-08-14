@@ -179,7 +179,9 @@ void OF_FFB::TemperatureUpdate()
         
         #ifdef ARDUINO_ARCH_ESP32  // [ESP32_PORT]
         uint32_t millivolts = analogReadMilliVolts(OF_Prefs::pins[OF_Const::tempPin]);
-        if (millivolts < 80 || millivolts > 2000) {
+        // GX36: -40°C to +125°C, 10mV/°C, 750mV at 25°C
+        // Range: 100mV (-40°C) to 1750mV (+125°C)
+        if (millivolts < 90 || millivolts > 1800) {
         #else
         unsigned int analogValue = analogRead(OF_Prefs::pins[OF_Const::tempPin]);
         if (analogValue < 100 || analogValue > 2500) {
