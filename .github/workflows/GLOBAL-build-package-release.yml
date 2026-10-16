@@ -55,6 +55,14 @@ permissions:
   contents: write
 
 jobs:
+  set_build_date:
+    runs-on: ubuntu-latest
+    outputs:
+      build_date: ${{ steps.date.outputs.build_date }}
+    steps:
+      - id: date
+        run: echo "build_date=$(date -u +%Y%m%d)" >> $GITHUB_OUTPUT
+
   # ==========================================
   # 0. LA VERSIONE, LETTA UNA VOLTA SOLA
   # ==========================================
@@ -146,6 +154,30 @@ jobs:
             name: 'WAVESHARE_ESP32_S3_ZERO_N4R2'
             chip: 'esp32s3'
             flash_size: '4MB'
+            flash_mode: 'dio'
+            flash_freq: '80m'
+          - boards: 'ESP32_S3_super_mini'
+            name: 'ESP32_S3_super_mini'
+            chip: 'esp32s3'
+            flash_size: '4MB'
+            flash_mode: 'dio'
+            flash_freq: '80m'
+          - boards: 'ESP32_S3_super_mini_OLED091'
+            name: 'ESP32_S3_super_mini_OLED091'
+            chip: 'esp32s3'
+            flash_size: '4MB'
+            flash_mode: 'dio'
+            flash_freq: '80m'
+          - boards: 'ESP32_S3_N8R8'
+            name: 'ESP32_S3_N8R8'
+            chip: 'esp32s3'
+            flash_size: '8MB'
+            flash_mode: 'dio'
+            flash_freq: '80m'
+          - boards: 'ESP32_S3_N8R8_OLED091'
+            name: 'ESP32_S3_N8R8_OLED091'
+            chip: 'esp32s3'
+            flash_size: '8MB'
             flash_mode: 'dio'
             flash_freq: '80m'
     steps:
@@ -355,9 +387,11 @@ jobs:
   # 2. PACKAGE ASSETS (PARALLELO)
   # ==========================================
   package_lightgun:
-    needs: build_lightgun
+    needs: [build_lightgun, set_build_date]
     if: ${{ github.event.inputs.sistemi_operativi == 'yes' }}
     runs-on: ${{ matrix.os_config.runner }}
+    env:
+      BUILD_DATE: ${{ needs.set_build_date.outputs.build_date }}
     strategy:
       matrix:
         boards:
@@ -366,6 +400,10 @@ jobs:
           - { name: 'WAVESHARE_ESP32_S3_PICO', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
           - { name: 'WAVESHARE_ESP32_S3_ZERO_N8R8', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
           - { name: 'WAVESHARE_ESP32_S3_ZERO_N4R2', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
+          - { name: 'ESP32_S3_super_mini', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
+          - { name: 'ESP32_S3_super_mini_OLED091', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
+          - { name: 'ESP32_S3_N8R8', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
+          - { name: 'ESP32_S3_N8R8_OLED091', chip: 'esp32s3', flash_mode: 'dio', flash_freq: '80m' }
         os_config:
           - { name: windows-64bit, runner: windows-latest, esptool_url: 'https://github.com/espressif/esptool/releases/download/v5.1.0/esptool-v5.1.0-windows-amd64.zip', esptool_tipo_file: zip, esptool_path_in_zip: 'esptool-windows-amd64/', esptool_filename_in_zip: 'esptool.exe', script_name: 'flash_firmware.bat' }
           - { name: linux-amd-64bit, runner: ubuntu-latest, esptool_url: 'https://github.com/espressif/esptool/releases/download/v5.1.0/esptool-v5.1.0-linux-amd64.tar.gz', esptool_tipo_file: tar.gz, esptool_path_in_zip: 'esptool-linux-amd64/', esptool_filename_in_zip: 'esptool', script_name: 'flash_firmware.sh' }
@@ -415,7 +453,7 @@ jobs:
           fi
       - shell: bash
         run: |
-          ARCHIVE_FILENAME="OpenFIRE-LIGHTGUN-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip"
+          ARCHIVE_FILENAME="OpenFIRE-LIGHTGUN-${{ matrix.boards.name }}-${{ matrix.os_config.name }}-${BUILD_DATE}.zip"
           if [[ "${{ matrix.os_config.name }}" == "windows-64bit" ]]; then
             powershell -Command "Compress-Archive -Path staging_dir\* -DestinationPath ${{ github.workspace }}/$ARCHIVE_FILENAME -Force"
           else
@@ -423,13 +461,15 @@ jobs:
           fi
       - uses: actions/upload-artifact@v7
         with:
-          name: OpenFIRE-LIGHTGUN-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip
-          path: ${{ github.workspace }}/OpenFIRE-LIGHTGUN-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip
+          name: OpenFIRE-LIGHTGUN-${{ matrix.boards.name }}-${{ matrix.os_config.name }}-${{ needs.set_build_date.outputs.build_date }}.zip
+          path: ${{ github.workspace }}/OpenFIRE-LIGHTGUN-${{ matrix.boards.name }}-${{ matrix.os_config.name }}-${{ needs.set_build_date.outputs.build_date }}.zip
 
   package_dongle:
-    needs: build_dongle
+    needs: [build_dongle, set_build_date]
     if: ${{ github.event.inputs.sistemi_operativi == 'yes' }}
     runs-on: ${{ matrix.os_config.runner }}
+    env:
+      BUILD_DATE: ${{ needs.set_build_date.outputs.build_date }}
     strategy:
       matrix:
         boards:
@@ -477,7 +517,7 @@ jobs:
           fi
       - shell: bash
         run: |
-          ARCHIVE_FILENAME="OpenFIRE-DONGLE-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip"
+          ARCHIVE_FILENAME="OpenFIRE-DONGLE-${{ matrix.boards.name }}-${{ matrix.os_config.name }}-${BUILD_DATE}.zip"
           if [[ "${{ matrix.os_config.name }}" == "windows-64bit" ]]; then
             powershell -Command "Compress-Archive -Path staging_dir\* -DestinationPath ${{ github.workspace }}/$ARCHIVE_FILENAME -Force"
           else
@@ -485,13 +525,15 @@ jobs:
           fi
       - uses: actions/upload-artifact@v7
         with:
-          name: OpenFIRE-DONGLE-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip
-          path: ${{ github.workspace }}/OpenFIRE-DONGLE-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip
+          name: OpenFIRE-DONGLE-${{ matrix.boards.name }}-${{ matrix.os_config.name }}-${{ needs.set_build_date.outputs.build_date }}.zip
+          path: ${{ github.workspace }}/OpenFIRE-DONGLE-${{ matrix.boards.name }}-${{ matrix.os_config.name }}-${{ needs.set_build_date.outputs.build_date }}.zip
 
   package_pedal:
-    needs: build_pedal
+    needs: [build_pedal, set_build_date]
     if: ${{ github.event.inputs.sistemi_operativi == 'yes' }}
     runs-on: ${{ matrix.os_config.runner }}
+    env:
+      BUILD_DATE: ${{ needs.set_build_date.outputs.build_date }}
     strategy:
       matrix:
         boards:
@@ -537,7 +579,7 @@ jobs:
           fi
       - shell: bash
         run: |
-          ARCHIVE_FILENAME="OpenFIRE-PEDAL-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip"
+          ARCHIVE_FILENAME="OpenFIRE-PEDAL-${{ matrix.boards.name }}-${{ matrix.os_config.name }}-${BUILD_DATE}.zip"
           if [[ "${{ matrix.os_config.name }}" == "windows-64bit" ]]; then
             powershell -Command "Compress-Archive -Path staging_dir\* -DestinationPath ${{ github.workspace }}/$ARCHIVE_FILENAME -Force"
           else
@@ -545,8 +587,8 @@ jobs:
           fi
       - uses: actions/upload-artifact@v7
         with:
-          name: OpenFIRE-PEDAL-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip
-          path: ${{ github.workspace }}/OpenFIRE-PEDAL-${{ matrix.boards.name }}-${{ matrix.os_config.name }}.zip
+          name: OpenFIRE-PEDAL-${{ matrix.boards.name }}-${{ matrix.os_config.name }}-${{ needs.set_build_date.outputs.build_date }}.zip
+          path: ${{ github.workspace }}/OpenFIRE-PEDAL-${{ matrix.boards.name }}-${{ matrix.os_config.name }}-${{ needs.set_build_date.outputs.build_date }}.zip
 
 # ==========================================
   # 3. SYNC FIRMWARE TO WEB FLASHER REPOSITORY
@@ -920,16 +962,18 @@ jobs:
   # ==========================================
   create_global_release:
     # A disabled sync may be skipped; every requested sync must explicitly succeed.
-    needs: [version, package_lightgun, package_dongle, package_pedal, sync_web_firmware, sync_webapp]
+    needs: [version, set_build_date, package_lightgun, package_dongle, package_pedal, sync_web_firmware, sync_webapp]
     runs-on: ubuntu-latest
     env:
       # Tag, titolo e flag di pre-release della versione compilata: vedi il job "version".
       TAG_NAME: ${{ needs.version.outputs.tag }}
+      BUILD_DATE: ${{ needs.set_build_date.outputs.build_date }}
     if: >-
       ${{ !failure() && !cancelled() &&
           github.event.inputs.release == 'yes' &&
           github.event.inputs.sistemi_operativi == 'yes' &&
           needs.version.result == 'success' &&
+          needs.set_build_date.result == 'success' &&
           needs.package_lightgun.result == 'success' &&
           needs.package_dongle.result == 'success' &&
           needs.package_pedal.result == 'success' &&
@@ -944,12 +988,13 @@ jobs:
         run: |
           TEMPLATE_PATH=".github/release_templates/GLOBAL_template.md"
 
-          # Sostituisce <TAG> con il tag ricavato dalla versione del firmware. Passa per
-          # una variabile d'ambiente e per python invece che per sed, cosi' il valore non
-          # finisce mai dentro il testo del comando.
-          TAG_NAME="$TAG_NAME" python3 - "$TEMPLATE_PATH" > final_body.md <<'PY'
+          # Sostituisce <TAG> e <DATE> con i valori ricavati dalla versione e data di compilazione.
+          TAG_NAME="$TAG_NAME" BUILD_DATE="$BUILD_DATE" python3 - "$TEMPLATE_PATH" > final_body.md <<'PY'
           import os, sys
-          sys.stdout.write(open(sys.argv[1], encoding='utf-8').read().replace('<TAG>', os.environ['TAG_NAME']))
+          content = open(sys.argv[1], encoding='utf-8').read()
+          content = content.replace('<TAG>', os.environ['TAG_NAME'])
+          content = content.replace('<DATE>', os.environ.get('BUILD_DATE', ''))
+          sys.stdout.write(content)
           PY
 
           # Carica il contenuto in GITHUB_ENV gestendo correttamente i ritorni a capo
