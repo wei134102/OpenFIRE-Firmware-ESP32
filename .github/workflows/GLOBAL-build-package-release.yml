@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       sistemi_operativi:
-        description: "Vuoi Creare anche i file per i sistemi operativi ? (necessario per creare release)"
+        description: "是否同时生成各操作系统刷机包？（创建 Release 发布时必须选择 yes）"
         required: true
         default: "no"
         type: choice
@@ -12,22 +12,22 @@ on:
           - "no"
           - "yes"
       release:
-        description: "Vuoi creare una release globale ?"
+        description: "是否创建全局 Release 发布？"
         required: true
         default: "no"
         type: choice
         options:
           - "no"
           - "yes"
-      # Il tag non si chiede piu': e' "v" seguito dalla versione dichiarata in
-      # lightgun/src/OpenFIREversion.h (v7.0.0, v7.0.0-beta1...), cosi' non puo'
-      # discordare dal firmware che viene compilato. Lo calcola il job "version".
+      # 版本标签不再需要手动输入：系统会自动读取 lightgun/src/OpenFIREversion.h
+      # 中声明的版本号（如 v7.0.0, v7.0.0-beta1...）并加上 "v" 前缀，避免与编译出的
+      # 固件版本不一致。由 "version" job 自动计算。
       release_name:
-        description: "Nome leggibile della release (vuoto = 'v7.0.0 OpenFIRE Firmware ESP32 - GLOBAL Release')"
+        description: "Release 显示名称（留空默认使用：'v7.0.0 OpenFIRE Firmware ESP32 - GLOBAL Release'）"
         required: false
         default: ""
       draft:
-        description: "Vuoi impostare la release come DRAFT? (false = NO, pubblica subito  - true = SI, lascialo in draft mode)"
+        description: "是否将 Release 发布设为草稿？（false = 否，立即发布；true = 是，保持草稿状态）"
         required: true
         default: "true"
         type: choice
@@ -35,18 +35,18 @@ on:
           - "true"
           - "false"  
       force_prerelease:
-        description: "Forza il flag pre-release anche per una versione senza suffisso (un suffisso come beta1 o rc1 la imposta gia' da sola)"
+        description: "强制标记为预发布 Pre-release（若版本号包含 beta1 或 rc1 等后缀则会自动标记）"
         required: true
         type: boolean
         default: false
 
       update_webflasher:
-        description: "Vuoi aggiornare anche il repository del Web Flasher?"
+        description: "是否同时更新 Web Flasher 网页刷机仓储？"
         required: true
         type: boolean
         default: false
       update_webapp:
-        description: "Vuoi aggiornare anche il repository della WebApp?"
+        description: "是否同时更新 WebApp 仓储？"
         required: true
         type: boolean
         default: false
@@ -64,12 +64,10 @@ jobs:
         run: echo "build_date=$(date -u +%Y%m%d)" >> $GITHUB_OUTPUT
 
   # ==========================================
-  # 0. LA VERSIONE, LETTA UNA VOLTA SOLA
+  # 0. 获取固件版本号（仅读取一次）
   # ==========================================
-  # Tag, flag di pre-release e titolo della release vengono tutti da
-  # lightgun/src/OpenFIREversion.h: chi li usa li legge da qui, e nessuno li riscrive
-  # a mano. Se l'header si contraddice (per esempio OPENFIRE_VERSION non corrisponde a
-  # MAJOR.MINOR) read_version() solleva e questo job fallisce prima di ogni altra cosa.
+  # 版本 Tag、Pre-release 标记以及 Release 标题全部统一从
+  # lightgun/src/OpenFIREversion.h 读取，由该 job 统筹输出，避免手动输入产生冲突。
   version:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -84,7 +82,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
-      - name: Read the version of the firmware
+      - name: 读取固件版本号
         id: read
         env:
           FORCE_PRERELEASE: ${{ github.event.inputs.force_prerelease }}
@@ -117,7 +115,7 @@ jobs:
           PY
 
   # ==========================================
-  # 1. BUILD FIRMWARE (PARALLELO)
+  # 1. 编译固件（并行）
   # ==========================================
   build_lightgun:
     runs-on: ubuntu-latest
@@ -384,7 +382,7 @@ jobs:
           if-no-files-found: error
 
   # ==========================================
-  # 2. PACKAGE ASSETS (PARALLELO)
+  # 2. 打包操作系统刷机包（并行）
   # ==========================================
   package_lightgun:
     needs: [build_lightgun, set_build_date]
@@ -591,7 +589,7 @@ jobs:
           path: ${{ github.workspace }}/OpenFIRE-PEDAL-${{ matrix.boards.name }}-${{ matrix.os_config.name }}-${{ needs.set_build_date.outputs.build_date }}.zip
 
 # ==========================================
-  # 3. SYNC FIRMWARE TO WEB FLASHER REPOSITORY
+  # 3. 同步固件至 Web Flasher 仓储
   # ==========================================
   sync_web_firmware:
     #needs: [build_lightgun, build_dongle, build_pedal]
@@ -606,30 +604,26 @@ jobs:
     if: ${{ github.event.inputs.update_webflasher == 'true' && github.event.inputs.release == 'yes' }}
 
     env:
-      # Il tag e il flag di pre-release vengono dalla versione del firmware, non dalla
-      # maschera: la cartella firmware/<tag>/ del Web Flasher non puo' piu' portare un
-      # nome che il firmware dentro non riconosce.
       TAG_NAME: ${{ needs.version.outputs.tag }}
       PRERELEASE: ${{ needs.version.outputs.prerelease }}
-      # URL FISSO DEL TUO SECONDO REPOSITORY
       TARGET_REPO: "alessandro-satanassi/OpenFIRE-ESP32-WebFlasher"
       
     steps:
       - name: Verify Execution Branch
         run: |
           if [[ "${{ github.ref }}" == refs/tags/* ]]; then
-            echo "ERRORE FATALE: Stai eseguendo la Action da un Tag Storico."
+            echo "致命错误：正在从历史 Tag 执行 Action。"
             exit 1
           fi
 
-      # 1. SCARICA IL REPOSITORY WEB (Usando il Token Segreto)
+      # 1. 下载 Web 仓储（使用 Secret Token）
       - name: Checkout Web Flasher Repository
         uses: actions/checkout@v6
         with:
           repository: ${{ env.TARGET_REPO }}
           token: ${{ secrets.WEBFLASHER_TOKEN }}
           ref: main
-          path: web_repo # Salva il repo web in una cartella temporanea
+          path: web_repo # 保存到临时目录
 
       # 2. SCARICA I BINARI APPENA COMPILATI DAL REPO 1
       - name: Download ALL compiled binaries
@@ -768,10 +762,9 @@ jobs:
           print(f'Prepared {tag_name}: {len(binaries)} binaries, {len(pictures)} board illustrations; other versions preserved.')
           PY
 
-      # 4. TRASFERIMENTO SUL SERVER (SISTEMA BLINDATO)
+      # 4. 提交并推送至 Web Flasher 仓储
       - name: Commit and Push to Web Flasher Repo
         run: |
-          # Entriamo fisicamente nella cartella del Repo 2
           cd web_repo
           
           export GIT_TERMINAL_PROMPT=0
@@ -788,45 +781,45 @@ jobs:
           git add -A -f -- "firmware/${TAG_NAME}" firmware/versions.json
           
           if ! git diff --staged --quiet; then
-            echo "Modifiche rilevate nel Repo Web. Preparazione del commit..."
+            echo "检测到 Web 仓储有更新，准备提交 commit..."
             
             printf "Auto-sync firmware binaries for Web Flasher (%s)\n" "$TAG_NAME" | git commit -F -
             
-            echo "Avvio Sincronizzazione Cross-Repo (Sistema Anti-Glitch con Recovery)..."
+            echo "开始跨仓储同步..."
             
             SYNC_SUCCESS="false"
             for i in 1 2 3; do
-              echo "--- Tentativo $i di 3 ---"
+              echo "--- 第 $i 次尝试（共3次）---"
               
               # Do not silently overwrite a concurrent manual catalog edit.
               if ! git pull origin main --rebase; then
-                echo "Errore di rete o conflitto con modifiche concorrenti. Nessuna sovrascrittura forzata."
+                echo "网络错误或存在并发修改冲突，取消变基。"
                 git rebase --abort >/dev/null 2>&1 || true
                 [ $i -lt 3 ] && sleep 5
                 continue
               fi
               
               if git push origin main; then
-                echo "Sincronizzazione completata! I file sono online su OpenFIRE-ESP32-WebFlasher."
+                echo "同步完成！文件已成功推送至 OpenFIRE-ESP32-WebFlasher。"
                 SYNC_SUCCESS="true"
                 break
               fi
               
-              echo "Rete instabile durante il push."
+              echo "推送期间网络不稳定，重试中..."
               [ $i -lt 3 ] && sleep 5
             done
             
             if [ "$SYNC_SUCCESS" = "false" ]; then
-              echo "ERRORE FATALE: Impossibile trasferire i file nel Web Flasher dopo 3 tentativi."
+              echo "致命错误：尝试3次后仍无法推送至 Web Flasher。"
               exit 1
             fi
             
           else
-            echo "Nessuna modifica rilevata nei file binari. Push ignorato per mantenere pulita la history."
+            echo "二进制文件无变动，跳过 push 以保持历史整洁。"
           fi
           
   # ==========================================
-  # 4. SYNC WEBAPP TO GITHUB PAGES REPOSITORY
+  # 4. 同步 WEBAPP 至 GITHUB PAGES 仓储
   # ==========================================
   sync_webapp:
     needs: [version, package_lightgun, package_dongle, package_pedal]
@@ -843,7 +836,7 @@ jobs:
       - name: Verify Execution Branch
         run: |
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then
-            echo "ERRORE FATALE: Stai eseguendo la Action da un Tag Storico."
+            echo "致命错误：正在从历史 Tag 执行 Action。"
             exit 1
           fi
 
@@ -940,7 +933,7 @@ jobs:
 
           git add -f -- "v/${WEBAPP_VERSION}" index.html launcher.js .nojekyll versions.json
           if git diff --staged --quiet; then
-            echo "WebApp gia' aggiornata: nessun commit necessario."
+            echo "WebApp 已是最新：无需提交。"
             exit 0
           fi
           printf 'Auto-sync WebApp %s (%s)\n' "$WEBAPP_VERSION" "$TAG_NAME" | git commit -F -
@@ -949,23 +942,23 @@ jobs:
           # A conflicting remote update must fail the sync and block this release.
           for attempt in 1 2 3; do
             if git push origin HEAD:main; then
-              echo "Repository WebApp sincronizzato; GitHub Pages pubblichera' il sito."
+              echo "WebApp 仓储已同步；GitHub Pages 将自动发布页面。"
               exit 0
             fi
             if [ "$attempt" -lt 3 ]; then sleep 5; fi
           done
-          echo "ERRORE FATALE: Sincronizzazione WebApp non riuscita. Release bloccata."
+          echo "致命错误：WebApp 同步失败，Release 发布已终止。"
           exit 1
 
   # ==========================================
-  # 5. CREAZIONE DELLA RELEASE GLOBALE (DOPO le sincronizzazioni richieste)
+  # 5. 创建全局 RELEASE 发布（在所有同步任务完成后）
   # ==========================================
   create_global_release:
     # A disabled sync may be skipped; every requested sync must explicitly succeed.
     needs: [version, set_build_date, package_lightgun, package_dongle, package_pedal, sync_web_firmware, sync_webapp]
     runs-on: ubuntu-latest
     env:
-      # Tag, titolo e flag di pre-release della versione compilata: vedi il job "version".
+      # 固件版本号、Tag 和 pre-release 标志均由 "version" job 统筹获取
       TAG_NAME: ${{ needs.version.outputs.tag }}
       BUILD_DATE: ${{ needs.set_build_date.outputs.build_date }}
     if: >-
@@ -981,14 +974,14 @@ jobs:
           (github.event.inputs.update_webapp != 'true' || needs.sync_webapp.result == 'success') }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6 # Fondamentale per leggere GLOBAL_template.md
+        uses: actions/checkout@v6 # 用于读取 GLOBAL_template.md 模板
 
       - name: Prepare GLOBAL Release Body
         id: prepare_body
         run: |
           TEMPLATE_PATH=".github/release_templates/GLOBAL_template.md"
 
-          # Sostituisce <TAG> e <DATE> con i valori ricavati dalla versione e data di compilazione.
+          # 替换模板中的 <TAG> 与 <DATE>
           TAG_NAME="$TAG_NAME" BUILD_DATE="$BUILD_DATE" python3 - "$TEMPLATE_PATH" > final_body.md <<'PY'
           import os, sys
           content = open(sys.argv[1], encoding='utf-8').read()
@@ -997,7 +990,7 @@ jobs:
           sys.stdout.write(content)
           PY
 
-          # Carica il contenuto in GITHUB_ENV gestendo correttamente i ritorni a capo
+          # 将 Release 描述内容存入 GITHUB_ENV（支持多行格式）
           echo "RELEASE_BODY<<EOF" >> $GITHUB_ENV
           cat final_body.md >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
@@ -1014,7 +1007,7 @@ jobs:
           tag_name: ${{ needs.version.outputs.tag }}
           target_commitish: ${{ github.sha }} # New tags must identify the commit actually built.
           name: ${{ needs.version.outputs.release_name }}
-          body: ${{ env.RELEASE_BODY }} # <--- Usa il corpo generato dal template globale
+          body: ${{ env.RELEASE_BODY }} # <--- 使用全局模板生成的 Release 正文
           draft: ${{ github.event.inputs.draft }}
           prerelease: ${{ needs.version.outputs.prerelease }}
         env:
