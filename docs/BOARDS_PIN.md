@@ -1,6 +1,7 @@
 # Supported Boards Layouts:
  - [Waveshare esp32-s3-pico](#waveshare-esp32-s3-pico)
  - [ESP32_S3_WROOM1_DevKitC_1_N16R8](#esp32_s3_wroom1_devkitc_1_n16r8)
+ - [ESP32-S3 N8R8 (Super Mini / LC@SC)](#esp32-s3-n8r8)
  - [Waveshare esp32-s3-zero](#waveshare-esp32-s3-zero)
 
 
@@ -69,6 +70,37 @@
 ;                                      |_________________|  
 ;                                          | ANTENNA |
 ;                                          |_________|
+
+```
+
+## esp32-s3-n8r8
+```
+
+;                                     ______(*USB*)______     
+;                               (GND) |x)  1  PIN  18 (-| (GPIO 01)
+;                               (3V3) |p)  2       17 (-| (GPIO 02)
+;                               (RST) |x)  3       16 (-| (GPIO 03)
+;                           (GPIO 14) |-)  4       15 (-| (GPIO 04)
+;                           (GPIO 13) |-)  5       14 (-| (GPIO 05)
+;                           (GPIO 12) |-)  6       13 (-| (GPIO 06)
+;                           (GPIO 11) |-)  7       12 (x| (GND)
+;                           (GPIO 10) |-)  8       11 (-| (GPIO 07)
+;                            (GPIO 09) |-)  9       10 (-| (GPIO 08)
+;                            (GPIO 08) |-) 10  PIN   9 (-| (GPIO 46)
+;                                     |_________________|
+;                               (GND) |x)  1  PIN  18 (-| (GPIO 45)
+;                                (5V) |p)  2       17 (-| (GPIO 42)
+;                           (BOOT/GPIO 0) |-)  3       16 (-| (GPIO 41)
+;                           (GPIO 48/LED) |-)  4       15 (-| (GPIO 15)
+;                           (GPIO 47) |-)  5       14 (-| (GPIO 16)
+;                           (GPIO 38) |-)  6       13 (-| (GPIO 17)
+;                           (GPIO 39) |-)  7       12 (-| (GPIO 18)
+;                           (GPIO 40) |-)  8       11 (x| (GND)
+;                           (GPIO 21) |-)  9  PIN  10 (-| (GPIO 46)
+;                                     |_________________|
+
+; Notes: 8 MB Flash (QIO) + 8 MB PSRAM (OPI). Onboard NeoPixel/LED on GPIO 48.
+;        Do not add external pull-ups on GPIO 45 / GPIO 46.
 
 ```
 
