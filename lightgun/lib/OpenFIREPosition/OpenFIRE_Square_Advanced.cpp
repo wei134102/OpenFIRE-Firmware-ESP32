@@ -61,6 +61,72 @@ inline int fast_roundf(float val) {
 #define C 2
 #define D 3
 
+// Numerical limit, not the camera field of view: predicted LEDs may be off-screen.
+// With |coordinate| <= 16383, every squared 2-D distance used by the ordering
+// fits int32_t: 2 * (2 * 16383)^2 < INT32_MAX. Nonnegative costs use uint32_t
+// with bounded additions; no 64-bit arithmetic is needed.
+static constexpr int SQUARE_COORD_LIMIT = 16383;
+
+static bool SquareCoordinatesValid(const int *x, const int *y) {
+    for (uint8_t i = 0; i < 4; ++i) {
+        if (x[i] < -SQUARE_COORD_LIMIT || x[i] > SQUARE_COORD_LIMIT ||
+            y[i] < -SQUARE_COORD_LIMIT || y[i] > SQUARE_COORD_LIMIT)
+            return false;
+    }
+    return true;
+}
+
+// A projected rectangle must remain strictly convex. Also rejects duplicate
+// vertices and any three collinear vertices, without imposing a minimum angle
+// or aspect ratio that would unnecessarily limit oblique views.
+static bool SquareGeometryValid(const int *x, const int *y) {
+    if (!SquareCoordinatesValid(x, y))
+        return false;
+
+    const uint8_t perimeter[4] = {A, B, D, C};
+    int32_t first_turn = 0;
+    for (uint8_t i = 0; i < 4; ++i) {
+        const uint8_t p = perimeter[i];
+        const uint8_t q = perimeter[(i + 1) & 3];
+        const uint8_t r = perimeter[(i + 2) & 3];
+        const int32_t turn = (x[q] - x[p]) * (y[r] - y[q]) -
+                             (y[q] - y[p]) * (x[r] - x[q]);
+        if (turn == 0 || (i != 0 && (turn > 0) != (first_turn > 0)))
+            return false;
+        first_turn = turn;
+    }
+    return true;
+}
+
+void OpenFIRE_Square::configure(const CameraProfile& profile) {
+    for (uint8_t i = 0; i < 4; ++i)
+        motion_X[i] = motion_Y[i] = 0;
+
+    camMaxX = profile.camMaxX;
+    camToMouseShift = profile.camToMouseShift;
+    camToMouseMult = profile.camToMouseMult;
+    mouseResX = profile.mouseResX;
+    mouseResY = profile.mouseResY;
+    FPS_NORMALIZATION = 209.0f / (float)profile.fps;
+
+    FinalX[0] = profile.squareTLX * camToMouseMult;
+    FinalX[1] = profile.squareTRX * camToMouseMult;
+    FinalX[2] = profile.squareBLX * camToMouseMult;
+    FinalX[3] = profile.squareBRX * camToMouseMult;
+    FinalY[0] = profile.squareTLY * camToMouseMult;
+    FinalY[1] = profile.squareTRY * camToMouseMult;
+    FinalY[2] = profile.squareBLY * camToMouseMult;
+    FinalY[3] = profile.squareBRY * camToMouseMult;
+
+    medianX = profile.mouseMaxX / 2;
+    medianY = profile.mouseMaxY / 2;
+    height = (float)(FinalY[2] - FinalY[0]);
+    width = (float)(FinalX[1] - FinalX[0]);
+    height_left = height;
+    height_right = height;
+    width_top = width;
+    width_bottom = width;
+}
 
 void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
 
@@ -77,9 +143,7 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
     // su dati reali e non su approssimazioni di partenza.
 
     // Il sistema richiede di vedere tutti e 4 i sensori almeno una volta per inizializzarsi.
-    if (seenFlags == 0x0F) { // 0x0F in binario è 1111, tutti i sensori visti.
-        start = 0xFF;
-    } else if (!start) {
+    if (seenFlags != 0x0F && !start) {
         return; // Esci se non siamo ancora stati inizializzati.
     }
 
@@ -99,8 +163,16 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
     // Estrae i punti visibili, li mette negli array di lavoro e applica la trasformazione.
     for (uint8_t i = 0; i < 4; ++i) {
         if ((seenFlags >> i) & 0x01) {
-            int calc_x = (CamMaxX - px[i]) << CamToMouseShift;
-            int calc_y = py[i] << CamToMouseShift;
+            // Validate visible camera coordinates before the signed left shifts.
+            if (px[i] < 0 || px[i] > camMaxX || py[i] < 0 ||
+                py[i] > ((mouseResY - 1) >> camToMouseShift)) {
+                return;
+            }
+            int calc_x = (camMaxX - px[i]) << camToMouseShift;
+            int calc_y = py[i] << camToMouseShift;
+            if (calc_x > SQUARE_COORD_LIMIT || calc_y > SQUARE_COORD_LIMIT) {
+                return;
+            }
             
             positionXX[num_points_seen] = calc_x;
             positionYY[num_points_seen] = calc_y;
@@ -154,8 +226,10 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
 
                 // Meccanismo anti-teletrasporto: se la distanza del punto trovato dal frame 
                 // precedente è fisicamente irrealistica, invalidiamo il tracking.
-                const int max_jump_distance = ((int)width * 3) / 4; 
-                const int32_t MAX_ALLOWED_DISTANCE_SQ = (int32_t)max_jump_distance * max_jump_distance;
+                const float jump_distance = ((((int)(wideLayout ? height : width) * 3) / 4) * FPS_NORMALIZATION);
+                const int max_jump_distance = jump_distance < 46340.0f ? (int)jump_distance : 46340;
+                const int32_t MAX_ALLOWED_DISTANCE_SQ = jump_distance < 46340.0f ?
+                    (int32_t)max_jump_distance * max_jump_distance : INT32_MAX;
 
                 if (min_dist_sq > MAX_ALLOWED_DISTANCE_SQ) {
                     prev_num_points_seen = 0;
@@ -180,49 +254,74 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
         // =========================================================================//
         // Risolviamo l'ambiguità ottica (Quale lato del rettangolo sto guardando?).
         else if (num_points_seen == 2) {
+            if (!(ideal_aspect_ratio > 0.0f && ideal_aspect_ratio < FLT_MAX)) {
+                return;
+            }
             const int x1 = positionXX[0], y1 = positionYY[0];
             const int x2 = positionXX[1], y2 = positionYY[1];
 
             uint8_t best_idx1 = 0, best_idx2 = 1;
-            int32_t min_total_cost = INT32_MAX;
-            
+            uint32_t min_total_cost = UINT32_MAX;
+
             // Le 6 possibili combinazioni geometriche dei lati del rettangolo.
-            //                            (   BASI   )  ( ALTEZZE  )  (DIAGONALI )
-            //                             A,B    C,D    A,C    B,D    A,D    B,C            
-            const uint8_t pairs[6][2] = { {0,1}, {2,3}, {0,2}, {1,3}, {0,3}, {1,2} };         
+            //                             A,B    C,D    A,C    B,D    A,D    B,C
+            const uint8_t pairs[6][2] = { {0,1}, {2,3}, {0,2}, {1,3}, {0,3}, {1,2} };
 
-            int32_t read_dx = x2 - x1;
-            int32_t read_dy = y2 - y1;
-            int32_t read_dist_sq = read_dx * read_dx + read_dy * read_dy;
+            const int32_t read_dx = x2 - x1;
+            const int32_t read_dy = y2 - y1;
+            const uint32_t read_dist_sq = read_dx * read_dx + read_dy * read_dy;
 
-            // OTTIMIZZAZIONE 2: Pre-calcolo fuori dal ciclo per alleggerire la ALU.
-            const int32_t w_sq = (int32_t)(width * width);
-            const int32_t h_sq = (int32_t)(height * height);
-            const int32_t expected_dist_arr[6] = {w_sq, w_sq, h_sq, h_sq, w_sq + h_sq, w_sq + h_sq};
+            // Keep the original float-to-integer rounding of the side lengths.
+            const uint32_t w_sq = (int32_t)(width * width);
+            const uint32_t h_sq = (int32_t)(height * height);
+            const uint32_t diagonal_sq = w_sq + h_sq;
+            const uint32_t expected_dist_arr[6] = {w_sq, w_sq, h_sq, h_sq, diagonal_sq, diagonal_sq};
 
-            // Il calcolo dei costi è un sistema a punteggio che confronta l'ipotesi corrente
-            // contro lo stato geometrico e storico noto, premiando le deduzioni conservative.
-            for (uint8_t i = 0; i < 6; i++) {
+            // Each observed/previous vertex distance is reused by three pairs.
+            // A single squared 2-D distance fits int32_t; two fit uint32_t.
+            uint32_t distance1[4], distance2[4], history_penalty[4];
+            const bool use_history = prev_num_points_seen >= 1 && prev_point_seen_mask != 0;
+            for (uint8_t i = 0; i < 4; ++i) {
+                const int32_t dx1 = x1 - FinalX[i], dy1 = y1 - FinalY[i];
+                const int32_t dx2 = x2 - FinalX[i], dy2 = y2 - FinalY[i];
+                distance1[i] = dx1 * dx1 + dy1 * dy1;
+                distance2[i] = dx2 * dx2 + dy2 * dy2;
+                history_penalty[i] = use_history && !(prev_point_seen_mask & (1 << (3 - i))) ?
+                                     PENALITA_STORICA : 0;
+            }
+
+            for (uint8_t i = 0; i < 6; ++i) {
                 const uint8_t v1 = pairs[i][0], v2 = pairs[i][1];
-                int32_t penalty = 0;
-                
-                if (prev_num_points_seen >= 1 && prev_point_seen_mask != 0) {
-                    if (!(prev_point_seen_mask & (1 << (3 - v1)))) penalty += PENALITA_STORICA;
-                    if (!(prev_point_seen_mask & (1 << (3 - v2)))) penalty += PENALITA_STORICA;
+                uint32_t penalty = history_penalty[v1] + history_penalty[v2];
+                const uint32_t expected = expected_dist_arr[i];
+                const uint32_t distance_error = read_dist_sq >= expected ?
+                                               read_dist_sq - expected : expected - read_dist_sq;
+
+                // All terms are nonnegative. Test the remaining budget BEFORE
+                // adding, so an overflowing cost can never become a false winner.
+                if (distance_error >= min_total_cost || penalty >= min_total_cost - distance_error)
+                    continue;
+                penalty += distance_error;
+
+                const uint32_t costA = distance1[v1] + distance2[v2];
+                if (costA < min_total_cost - penalty) {
+                    min_total_cost = costA + penalty;
+                    best_idx1 = v1;
+                    best_idx2 = v2;
                 }
 
-                penalty += abs(read_dist_sq - expected_dist_arr[i]);
-
-                int32_t dx1a=x1-FinalX[v1], dy1a=y1-FinalY[v1];
-                int32_t dx2a=x2-FinalX[v2], dy2a=y2-FinalY[v2];
-                int32_t costA = dx1a*dx1a + dy1a*dy1a + dx2a*dx2a + dy2a*dy2a + penalty;
-                if (costA < min_total_cost) { min_total_cost = costA; best_idx1 = v1; best_idx2 = v2; }
-
-                int32_t dx1b=x1-FinalX[v2], dy1b=y1-FinalY[v2];
-                int32_t dx2b=x2-FinalX[v1], dy2b=y2-FinalY[v1];
-                int32_t costB = dx1b*dx1b + dy1b*dy1b + dx2b*dx2b + dy2b*dy2b + penalty;
-                if (costB < min_total_cost) { min_total_cost = costB; best_idx1 = v2; best_idx2 = v1; }
+                const uint32_t costB = distance1[v2] + distance2[v1];
+                if (costB < min_total_cost - penalty) {
+                    min_total_cost = costB + penalty;
+                    best_idx1 = v2;
+                    best_idx2 = v1;
+                }
             }
+
+            // Current camera profiles guarantee at least one representable cost.
+            // Keep the last valid geometry if a future profile exceeds that range.
+            if (min_total_cost == UINT32_MAX)
+                return;
 
             float Vx[4], Vy[4];
             for (uint8_t i = 0; i < 4; i++) { Vx[i] = (float)FinalX[i]; Vy[i] = (float)FinalY[i]; }
@@ -293,7 +392,15 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
                 }
             }
 
-            for (uint8_t i = 0; i < 4; i++) { positionXX[i] = fast_roundf(Vx[i]); positionYY[i] = fast_roundf(Vy[i]); }
+            for (uint8_t i = 0; i < 4; i++) {
+                // Ordered comparisons reject NaN/Inf too, before conversion to int.
+                if (!(Vx[i] >= -SQUARE_COORD_LIMIT && Vx[i] <= SQUARE_COORD_LIMIT &&
+                      Vy[i] >= -SQUARE_COORD_LIMIT && Vy[i] <= SQUARE_COORD_LIMIT)) {
+                    return;
+                }
+                positionXX[i] = fast_roundf(Vx[i]);
+                positionYY[i] = fast_roundf(Vy[i]);
+            }
         }
         
         // =========================================================================//
@@ -351,6 +458,10 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
         // Questa sezione viene eseguita sempre, per garantire che FinalX/Y
         // abbiano sempre un ordine coerente A,B,C,D.
 
+        if (!SquareCoordinatesValid(positionXX, positionYY)) {
+            return;
+        }
+
         uint8_t orderX[4] = {0, 1, 2, 3}, orderY[4] = {0, 1, 2, 3}, a, b, c, d;
 
         // Implementazione di un "Sorting Network" statico a 5 confronti. 
@@ -377,41 +488,149 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
             if (positionYY[orderY[1]] > positionYY[orderY[2]]) { tmp = orderY[1]; orderY[1] = orderY[2]; orderY[2] = tmp; }
         }
 
-        // Assegnazione dei vertici A,B,C,D tramite euristiche
-        dx = positionXX[orderY[0]] - positionXX[orderX[0]]; dy = positionYY[orderY[0]] - positionYY[orderX[0]];
-        int32_t dist_sq1 = (dx * dx) + (dy * dy);
+        // ===========================================================================================
+        // ===========================================================================================
+        // ===========================================================================================
 
-        dx = positionXX[orderY[3]] - positionXX[orderX[0]]; dy = positionYY[orderY[3]] - positionYY[orderX[0]];
-        int32_t dist_sq2 = (dx * dx) + (dy * dy);
-        
-        const int CRITICAL_ZONE = (30 * CamToMouseMult); // 30 è un valore provato in tante situazioni e pare andare bene
+        // =========================================================================//
+        // ============================ CALIBRAZIONE ===============================//
+        // =========================================================================//
 
-        // Se l'arma è inclinata severamente (oltre ~45 gradi, superando la CRITICAL_ZONE), 
-        // l'ordinamento ingenuo Y non basta. Valutiamo le distanze relative per mantenere coerenti
-        // le etichette A, B, C, D e impedire l'incrocio letale degli assi.
-        if ((positionYY[orderY[1]] - positionYY[orderY[0]]) > CRITICAL_ZONE) {
-            // Caso Normale
-            if (dist_sq1 < dist_sq2) {
-                a = orderX[0]; d = orderX[3];
-                if (orderX[1] == orderY[3]) { c = orderX[1]; b = orderX[2]; } else { b = orderX[1]; c = orderX[2]; }
-            } else {
-                c = orderX[0]; b = orderX[3];
-                if (orderX[1] == orderY[3]) { d = orderX[1]; a = orderX[2]; } else { a = orderX[1]; d = orderX[2]; }
-            }
-        } else { 
-            // Caso Zona Critica (rettangolo quasi verticale)
-            a = orderY[0]; b = orderY[1]; c = orderY[2]; d = orderY[3]; 
+        if (calibrationMode) {
+            // In calibrazione la lightgun è frontale e con rotazione prossima a zero.
+            a = orderY[0]; b = orderY[1]; c = orderY[2]; d = orderY[3];
         }
 
+        // =========================================================================//
+        // ============================ LAYOUT WIDE ================================//
+        // =========================================================================//
+
+        else if (wideLayout) {
+            // Keep the existing upper threshold, but scale it down for small targets.
+            const int camera_zone = (mouseResX * 5) / 128;
+            const int geometry_zone = (positionXX[orderX[3]] - positionXX[orderX[0]]) / 8;
+            const int CRITICAL_ZONE_WIDE = geometry_zone < camera_zone ? geometry_zone : camera_zone;
+
+            // distanza del punto più alto dall'estremo destro
+            dx = positionXX[orderX[3]] - positionXX[orderY[0]];
+            dy = positionYY[orderX[3]] - positionYY[orderY[0]];
+            int32_t dist_sq1_wide = (dx * dx) + (dy * dy);
+
+            // distanza del punto più alto dall'estremo sinistro
+            dx = positionXX[orderX[0]] - positionXX[orderY[0]];
+            dy = positionYY[orderX[0]] - positionYY[orderY[0]];
+            int32_t dist_sq2_wide = (dx * dx) + (dy * dy);
+
+            if ((positionXX[orderX[3]] - positionXX[orderX[2]]) > CRITICAL_ZONE_WIDE) {
+
+                if (dist_sq1_wide < dist_sq2_wide) {
+                    b = orderY[0];
+                    c = orderY[3];
+
+                    if (orderY[1] == orderX[0]) {
+                        a = orderY[1];
+                        d = orderY[2];
+                    } else {
+                        d = orderY[1];
+                        a = orderY[2];
+                    }
+
+                } else {
+                    a = orderY[0];
+                    d = orderY[3];
+
+                    if (orderY[1] == orderX[0]) {
+                        c = orderY[1];
+                        b = orderY[2];
+                    } else {
+                        b = orderY[1];
+                        c = orderY[2];
+                    }
+                }
+
+            } else {
+                // Caso Zona Critica
+                a = orderX[1];
+                b = orderX[3];
+                c = orderX[0];
+                d = orderX[2];
+            }
+        }
+
+        // =========================================================================//
+        // ============================ LAYOUT NORMALE =============================//
+        // =========================================================================//
+
+        else {
+
+            // Assegnazione dei vertici A,B,C,D tramite euristiche
+            dx = positionXX[orderY[0]] - positionXX[orderX[0]];
+            dy = positionYY[orderY[0]] - positionYY[orderX[0]];
+            int32_t dist_sq1 = (dx * dx) + (dy * dy);
+
+            dx = positionXX[orderY[3]] - positionXX[orderX[0]];
+            dy = positionYY[orderY[3]] - positionYY[orderX[0]];
+            int32_t dist_sq2 = (dx * dx) + (dy * dy);
+
+            /*
+            const int CRITICAL_ZONE = (30 * camToMouseMult); // 30 è un valore provato in tante situazioni e pare andare bene
+            */
+
+            // Percentuale storica testata sulla DFRobot (30 pixel su una altezza di 768)
+            // Calcoliamo il valore dinamico sulla risoluzione della CAM e lo portiamo nello spazio unificato
+            const int camera_zone = (mouseResY * 5) / 128;
+            const int geometry_zone = (positionYY[orderY[3]] - positionYY[orderY[0]]) / 8;
+            const int CRITICAL_ZONE = geometry_zone < camera_zone ? geometry_zone : camera_zone;
+
+            if ((positionYY[orderY[1]] - positionYY[orderY[0]]) > CRITICAL_ZONE) {
+
+                if (dist_sq1 < dist_sq2) {
+                    a = orderX[0];
+                    d = orderX[3];
+
+                    if (orderX[1] == orderY[3]) {
+                        c = orderX[1];
+                        b = orderX[2];
+                    } else {
+                        b = orderX[1];
+                        c = orderX[2];
+                    }
+
+                } else {
+                    c = orderX[0];
+                    b = orderX[3];
+
+                    if (orderX[1] == orderY[3]) {
+                        d = orderX[1];
+                        a = orderX[2];
+                    } else {
+                        a = orderX[1];
+                        d = orderX[2];
+                    }
+                }
+
+            } else {
+                // Caso Zona Critica (rettangolo quasi verticale)
+                a = orderY[0];
+                b = orderY[1];
+                c = orderY[2];
+                d = orderY[3];
+            }
+        }
+
+        // ===========================================================================================
+        // ===========================================================================================
+        // ===========================================================================================
+
         // sarebbe sufficiente per la zona critica questo ulteriore controllo, ma poichè ha
-        // un piccolo peso computazionale, lo facciamo sempre per casi limiti e come maggiore robustezza 
-        // Correzione finale per garantire la convenzione (A=TL, B=TR, C=BL, D=BR)        
+        // un piccolo peso computazionale, lo facciamo sempre per casi limiti e come maggiore robustezza
+        // Correzione finale per garantire la convenzione (A=TL, B=TR, C=BL, D=BR)
         { uint8_t aux_swap;
             if (positionYY[a] > positionYY[c]) { aux_swap = a; a = c; c = aux_swap; }
             if (positionYY[b] > positionYY[d]) { aux_swap = b; b = d; d = aux_swap; }
             if (positionXX[a] > positionXX[b]) { aux_swap = a; a = b; b = aux_swap; }
             if (positionXX[c] > positionXX[d]) { aux_swap = c; c = d; d = aux_swap; }
-        }
+        }     
 
         // =========================================================================//
         // ======== COSTRUZIONE MASCHERA: QUALI PUNTI ORDINATI SONO VERI? ==========//
@@ -421,49 +640,67 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
         // sono veri punti fisici e quali sono il risultato delle predizioni matematiche 
         // calcolate sopra. Essenziale per pilotare la molla cinematica.
 
-        if (num_points_seen == 4) current_point_seen_mask = 0b1111;
+        uint8_t next_point_seen_mask;
+        if (num_points_seen == 4) next_point_seen_mask = 0b1111;
         else {
-            current_point_seen_mask = 0;
+            next_point_seen_mask = 0;
 
             for (uint8_t i = 0; i < num_points_seen; i++) {
                 const int rx = real_x[i];
                 const int ry = real_y[i];
 
-                if (positionXX[a] == rx && positionYY[a] == ry) current_point_seen_mask |= 0b1000;
-                else if (positionXX[b] == rx && positionYY[b] == ry) current_point_seen_mask |= 0b0100;
-                else if (positionXX[c] == rx && positionYY[c] == ry) current_point_seen_mask |= 0b0010;
-                else if (positionXX[d] == rx && positionYY[d] == ry) current_point_seen_mask |= 0b0001;
+                if (positionXX[a] == rx && positionYY[a] == ry) next_point_seen_mask |= 0b1000;
+                else if (positionXX[b] == rx && positionYY[b] == ry) next_point_seen_mask |= 0b0100;
+                else if (positionXX[c] == rx && positionYY[c] == ry) next_point_seen_mask |= 0b0010;
+                else if (positionXX[d] == rx && positionYY[d] == ry) next_point_seen_mask |= 0b0001;
             }
         }
-        /*
-        current_point_seen_mask = 0;
-        
-        // Lambda in-place (Il Setaccio Universale): confronta i punti ordinati finali
-        // con il backup "real_x/y". Segnala alla logica quali di questi 
-        // sono veri punti fisici e quali sono il risultato delle predizioni matematiche 
-        // calcolate sopra. Essenziale per pilotare la molla cinematica.
-        auto is_real_point = [&](int px, int py) {
-            for(uint8_t i=0; i<num_points_seen; i++) {
-                if (px == real_x[i] && py == real_y[i]) return true;
+
+        // MIGLIORAMENTO DELL POSIZIONE DEL QUARTO PUNTO QUANTO SI VEDONO SOLO 3 PUNTI
+        // =========================================================================//
+        // === (3 PUNTI): INIEZIONE PROSPETTICA STORICA (Zero-Cost Math) ====//
+        // =========================================================================//
+        if (num_points_seen == 3 && prev_num_points_seen >= 3) {
+            uint8_t missing_mask = (~next_point_seen_mask) & 0x0F;
+
+            // Manca D (BR). I punti certi sono A, B, C.
+            if (missing_mask == 0b0001) { 
+                int affine_dx = positionXX[b] + positionXX[c] - positionXX[a];
+                int affine_dy = positionYY[b] + positionYY[c] - positionYY[a];
+                int prev_affine_dx = prev_GeomX[B] + prev_GeomX[C] - prev_GeomX[A];
+                int prev_affine_dy = prev_GeomY[B] + prev_GeomY[C] - prev_GeomY[A];
+                positionXX[d] = affine_dx + (prev_GeomX[D] - prev_affine_dx);
+                positionYY[d] = affine_dy + (prev_GeomY[D] - prev_affine_dy);
             }
-            return false;
-        };
-
-        if (is_real_point(positionXX[a], positionYY[a])) current_point_seen_mask |= 0b1000;
-        if (is_real_point(positionXX[b], positionYY[b])) current_point_seen_mask |= 0b0100;
-        if (is_real_point(positionXX[c], positionYY[c])) current_point_seen_mask |= 0b0010;
-        if (is_real_point(positionXX[d], positionYY[d])) current_point_seen_mask |= 0b0001;
-        */
-
-
-        // OTTIMIZZAZIONE: Unrolling Booleano puro per l'emulatore Shift-Register.
-        // Mantiene intatta l'interfaccia verso le API originali Samco che si aspettavano 
-        // di leggere cicli progressivi, ma qui lo eseguiamo senza i salti condizionali di un ciclo for.
-        see[0] = (see[0] << 1) | ((current_point_seen_mask >> 3) & 1);
-        see[1] = (see[1] << 1) | ((current_point_seen_mask >> 2) & 1);
-        see[2] = (see[2] << 1) | ((current_point_seen_mask >> 1) & 1);
-        see[3] = (see[3] << 1) | (current_point_seen_mask & 1);
-
+            // Manca C (BL). I punti certi sono A, B, D.
+            else if (missing_mask == 0b0010) {
+                int affine_cx = positionXX[a] + positionXX[d] - positionXX[b];
+                int affine_cy = positionYY[a] + positionYY[d] - positionYY[b];
+                int prev_affine_cx = prev_GeomX[A] + prev_GeomX[D] - prev_GeomX[B];
+                int prev_affine_cy = prev_GeomY[A] + prev_GeomY[D] - prev_GeomY[B];
+                positionXX[c] = affine_cx + (prev_GeomX[C] - prev_affine_cx);
+                positionYY[c] = affine_cy + (prev_GeomY[C] - prev_affine_cy);
+            }
+            // Manca B (TR). I punti certi sono A, C, D.
+            else if (missing_mask == 0b0100) {
+                int affine_bx = positionXX[a] + positionXX[d] - positionXX[c];
+                int affine_by = positionYY[a] + positionYY[d] - positionYY[c]; 
+                int prev_affine_bx = prev_GeomX[A] + prev_GeomX[D] - prev_GeomX[C];
+                int prev_affine_by = prev_GeomY[A] + prev_GeomY[D] - prev_GeomY[C];
+                positionXX[b] = affine_bx + (prev_GeomX[B] - prev_affine_bx);
+                positionYY[b] = affine_by + (prev_GeomY[B] - prev_affine_by);
+            }
+            // Manca A (TL). I punti certi sono B, C, D.
+            else if (missing_mask == 0b1000) {
+                int affine_ax = positionXX[b] + positionXX[c] - positionXX[d];
+                int affine_ay = positionYY[b] + positionYY[c] - positionYY[d];
+                int prev_affine_ax = prev_GeomX[B] + prev_GeomX[C] - prev_GeomX[D];
+                int prev_affine_ay = prev_GeomY[B] + prev_GeomY[C] - prev_GeomY[D];
+                positionXX[a] = affine_ax + (prev_GeomX[A] - prev_affine_ax);
+                positionYY[a] = affine_ay + (prev_GeomY[A] - prev_affine_ay);
+            }
+        }
+        
         // =========================================================================//
         // ======== MOTORE UNIVERSALE DELLA MOLLA KINEMATICA =======================//
         // =========================================================================//
@@ -476,11 +713,45 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
         GeomX[C] = positionXX[c]; GeomY[C] = positionYY[c];
         GeomX[D] = positionXX[d]; GeomY[D] = positionYY[d];
 
+        if (!SquareGeometryValid(GeomX, GeomY)) {
+            // Retry only four measured vertices. Partial tracking and calibration
+            // keep their existing rejection behavior.
+            if (num_points_seen != 4 || calibrationMode)
+                return;
+
+            // Reuse the existing Y sort, ordering left/right inside each pair.
+            // Accept this fallback only when its axes agree with the layout.
+            a = orderY[0]; b = orderY[1]; c = orderY[2]; d = orderY[3];
+            if (positionXX[a] > positionXX[b]) { uint8_t t = a; a = b; b = t; }
+            if (positionXX[c] > positionXX[d]) { uint8_t t = c; c = d; d = t; }
+
+            // Sign of (AB² + CD²) - (AC² + BD²), without computing
+            // four lengths: half of that difference is (B-C) dot (D-A).
+            // The coordinate limit keeps this signed 32-bit dot product safe.
+            const int32_t dx_bc = positionXX[b] - positionXX[c];
+            const int32_t dy_bc = positionYY[b] - positionYY[c];
+            const int32_t dx_da = positionXX[d] - positionXX[a];
+            const int32_t dy_da = positionYY[d] - positionYY[a];
+            const int32_t axis_score = dx_bc * dx_da + dy_bc * dy_da;
+            if (axis_score == 0 || (axis_score > 0) != wideLayout)
+                return;
+
+            GeomX[A] = positionXX[a]; GeomY[A] = positionYY[a];
+            GeomX[B] = positionXX[b]; GeomY[B] = positionYY[b];
+            GeomX[C] = positionXX[c]; GeomY[C] = positionYY[c];
+            GeomX[D] = positionXX[d]; GeomY[D] = positionYY[d];
+            if (!SquareGeometryValid(GeomX, GeomY))
+                return;
+        }
+
+        // From here every path commits either smoothed or pure valid geometry.
+        // No later rejection may leave partly updated smoothing state behind.
+
         if (num_points_seen >= 2 && prev_num_points_seen >= 1) {     
             int move_x = 0, move_y = 0;
             uint8_t stable_count = 0;
             for (uint8_t i = 0; i < 4; i++) {
-                if ((prev_point_seen_mask & (1 << (3 - i))) && (current_point_seen_mask & (1 << (3 - i)))) {
+                if ((prev_point_seen_mask & (1 << (3 - i))) && (next_point_seen_mask & (1 << (3 - i)))) {
                     move_x += (GeomX[i] - prev_GeomX[i]); 
                     move_y += (GeomY[i] - prev_GeomY[i]);
                     stable_count++;
@@ -499,7 +770,7 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
             bool model_changed = (num_points_seen != prev_num_points_seen);
             for (uint8_t i = 0; i < 4; i++) {
                 bool was_seen = (prev_point_seen_mask & (1 << (3 - i))) != 0;
-                bool is_seen = (current_point_seen_mask & (1 << (3 - i))) != 0;
+                bool is_seen = (next_point_seen_mask & (1 << (3 - i))) != 0;
 
                 if (is_seen != was_seen || (!is_seen && model_changed)) {
                     int predicted_x = FinalX[i] + avg_move_x;
@@ -511,10 +782,63 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
             }
 
             int spostamento = abs(avg_move_x) + abs(avg_move_y);
-            // FORZIAMO UN DEBITO MINIMO DI 1.0f per evitare il congelamento dell'offset
-            //float consumo = (float)spostamento * COSTANTE_MOLLA; 
-            float consumo = fmaxf(1.0f, (float)spostamento * COSTANTE_MOLLA);
-            
+            // Default consumption for partial visibility; four-LED recovery
+            // below uses its filtered motion estimate instead.
+            float consumo = fmaxf(FPS_NORMALIZATION, (float)spostamento * COSTANTE_MOLLA);
+
+            // With four measured LEDs, blend smoothly at low motion and
+            // converge quickly at high motion. Partial tracking is unchanged.
+            if (num_points_seen == 4) {
+                float largest_offset = 0.0f;
+                for (uint8_t i = 0; i < 4; ++i) {
+                    if (offset_X[i] != 0.0f)
+                        largest_offset = fmaxf(largest_offset, fabsf(offset_X[i]));
+                    if (offset_Y[i] != 0.0f)
+                        largest_offset = fmaxf(largest_offset, fabsf(offset_Y[i]));
+                }
+
+                if (largest_offset > 0.0f) {
+                    // Estimate motion only while recovering four measured LEDs.
+                    // Reset on reacquisition: old velocity must not speed up a
+                    // new, slow return. Newly visible LEDs start from zero.
+                    int32_t motion_sum = 0;
+                    for (uint8_t i = 0; i < 4; ++i) {
+                        if (prev_num_points_seen != 4)
+                            motion_X[i] = motion_Y[i] = 0;
+                        if (prev_point_seen_mask & (1 << (3 - i))) {
+                            const int32_t dx = GeomX[i] - prev_GeomX[i];
+                            const int32_t dy = GeomY[i] - prev_GeomY[i];
+                            motion_X[i] = (motion_X[i] + dx) / 2;
+                            motion_Y[i] = (motion_Y[i] + dy) / 2;
+                            motion_sum += abs(motion_X[i]) + abs(motion_Y[i]);
+                        }
+                    }
+
+                    // Average each LED's signed motion over time BEFORE taking magnitudes:
+                    // suppress jitter without cancelling rotation or zoom.
+                    // Integer rounding here affects only the motion estimate,
+                    // not the measured geometry or the fractional spring offsets.
+                    const float movement = stable_count ?
+                        (float)motion_sum / (float)stable_count : (float)spostamento;
+                    const float MIN_RETURN = 0.03125f;
+                    const float MAX_RETURN = 0.5f;
+                    const float MOTION_GAIN = 32.0f;
+                    const float motion = MOTION_GAIN * movement;
+                    const float scale = fmaxf(height, 1.0f) * FPS_NORMALIZATION;
+
+                    float return_rate;
+                    if (motion <= scale * MIN_RETURN)
+                        return_rate = MIN_RETURN;
+                    else if (motion >= scale * MAX_RETURN)
+                        return_rate = MAX_RETURN;
+                    else
+                        return_rate = motion / scale;
+
+                    consumo = fmaxf(0.5f * FPS_NORMALIZATION,
+                        fmaxf(movement * COSTANTE_MOLLA, largest_offset * return_rate));
+                }
+            }
+
             // OTTIMIZZAZIONE: Branchless Math per la Molla. 
             // Usa le istruzioni hardware min/max per non far spezzare la pipeline della CPU 
             // all'indovinare i salti logici negativi/positivi del debito.
@@ -538,17 +862,48 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
         
         // --- Assegnazione Finale e Calcoli Derivati ---
         
-        uint8_t assign_map[4] = {a, b, c, d};
+        int nextFinalX[4], nextFinalY[4];
+        bool geometry_changed = false;
         for (uint8_t i = 0; i < 4; i++) {
-            FinalX[i] = GeomX[i] + fast_roundf(offset_X[i]);
-            FinalY[i] = GeomY[i] + fast_roundf(offset_Y[i]);
-            
-            positionXX[assign_map[i]] = FinalX[i];
-            positionYY[assign_map[i]] = FinalY[i];
+            // Offsets are bounded combinations of validated integer coordinates.
+            const int offset_x = fast_roundf(offset_X[i]);
+            const int offset_y = fast_roundf(offset_Y[i]);
+            nextFinalX[i] = GeomX[i] + offset_x;
+            nextFinalY[i] = GeomY[i] + offset_y;
+            geometry_changed |= offset_x != 0 || offset_y != 0;
+        }
+        // GeomX/Y already passed validation. Recheck only if smoothing changed them.
+        if (geometry_changed && !SquareGeometryValid(nextFinalX, nextFinalY)) {
+            // The measured/reconstructed geometry is valid; only the smoothing
+            // offsets made it unsafe. Use that geometry without smoothing for
+            // this update. Holding the old offsets here could reject the same
+            // valid four-LED frame forever after reacquisition.
+            for (uint8_t i = 0; i < 4; ++i) {
+                offset_X[i] = 0.0f;
+                offset_Y[i] = 0.0f;
+                nextFinalX[i] = GeomX[i];
+                nextFinalY[i] = GeomY[i];
+            }
+        }
+
+        // Publish only after the entire candidate geometry passed validation.
+        for (uint8_t i = 0; i < 4; i++) {
+            FinalX[i] = nextFinalX[i];
+            FinalY[i] = nextFinalY[i];
             
             prev_GeomX[i] = GeomX[i];
             prev_GeomY[i] = GeomY[i];
         }
+
+        current_point_seen_mask = next_point_seen_mask;
+        // Update visibility history only when accepting the new geometry.
+        see[0] = (see[0] << 1) | ((next_point_seen_mask >> 3) & 1);
+        see[1] = (see[1] << 1) | ((next_point_seen_mask >> 2) & 1);
+        see[2] = (see[2] << 1) | ((next_point_seen_mask >> 1) & 1);
+        see[3] = (see[3] << 1) | (next_point_seen_mask & 1);
+
+        if (num_points_seen == 4)
+            start = 0xFF;
 
         prev2_medianX = medianX;
         prev2_medianY = medianY;
@@ -586,7 +941,7 @@ void OpenFIRE_Square::begin(const int* px, const int* py, unsigned int seen) {
                  atan2f((float)(FinalY[C] - FinalY[D]), (float)(FinalX[D] - FinalX[C]))) * 0.5f;      
 
         is_tracking_stable = true;
-        prev_point_seen_mask = current_point_seen_mask; 
+        prev_point_seen_mask = next_point_seen_mask; 
     }
     else {
         is_tracking_stable = false;

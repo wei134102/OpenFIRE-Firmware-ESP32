@@ -108,10 +108,10 @@ public:
         analogX,
         analogY,
         tempPin,
-        cam_PAJ7025_MISO,
-        cam_PAJ7025_MOSI,
-        cam_PAJ7025_SCK,
-        cam_PAJ7025_CS,
+        cam_SPI_MISO,
+        cam_SPI_MOSI,
+        cam_SPI_SCK,
+        cam_SPI_CS,
         // Add non-button inputs here
         boardInputsCount
     } boardInputs_e;
@@ -144,18 +144,31 @@ public:
         {"RGB LED Green",       ledG            },
         {"RGB LED Blue",        ledB            },
         {"Wii Cam Clock",       wiiClockGen     },
-        {"Camera Wii Cam SDA",  camSDA          },
-        {"Camera Wii Cam SCL",  camSCL          },
+        {"Camera SDA",          camSDA          },
+        {"Camera SCL",          camSCL          },
         {"Peripherals SDA",     periphSDA       },
         {"Peripherals SCL",     periphSCL       },
         {"Analog Stick X",      analogX         },
         {"Analog Stick Y",      analogY         },
         {"Temperature Sensor",  tempPin         },
-        {"Camera PAJ7025 MISO", cam_PAJ7025_MISO},
-        {"Camera PAJ7025 MOSI", cam_PAJ7025_MOSI},
-        {"Camera PAJ7025 SCK",  cam_PAJ7025_SCK },
-        {"Camera PAJ7025 CS",   cam_PAJ7025_CS  },
+        {"Camera SPI MISO",     cam_SPI_MISO    },
+        {"Camera SPI MOSI",     cam_SPI_MOSI    },
+        {"Camera SPI SCK",      cam_SPI_SCK     },
+        {"Camera SPI CS",       cam_SPI_CS      },
     };
+
+    // Digital inputs whose logic can be inverted (normally closed contacts, e.g. NC switches),
+    // only in custom pins mode: bit N of settings[inputInvertMask] inverts input function N.
+    // Apps show the inversion checkbox only for these functions.
+    // /
+    // Ingressi digitali la cui logica puo' essere invertita (contatti normalmente chiusi, NC),
+    // solo con i pin custom: il bit N di settings[inputInvertMask] inverte la funzione N.
+    // Le App mostrano la spunta di inversione solo per queste funzioni.
+    static constexpr int8_t invertibleInputs[] = {
+        btnTrigger, btnGunA, btnGunB, btnStart, btnSelect, btnGunC,
+        btnGunUp, btnGunDown, btnGunLeft, btnGunRight,
+        btnPedal, btnPedal2, btnPump, btnHome,
+        rumbleSwitch, solenoidSwitch, autofireSwitch };
 
     // For Apps to use for lists of pin functions
     char* boardInputs_sortedStr[boardInputsCount+1];
@@ -182,6 +195,9 @@ public:
         invertStaticPixels,
         i2cOLED,
         i2cOLEDaltAddr,
+        pedalWireless,
+        analogInvertX,
+        analogInvertY,
         // Add here
         boolTypesCount
     } boolTypes_e;
@@ -199,6 +215,9 @@ public:
         {"InvertStaticPixels",  invertStaticPixels  },
         {"I2COLEDEnabled",      i2cOLED             },
         {"I2COLEDAltAddr",      i2cOLEDaltAddr      },
+        {"PedalWireless",       pedalWireless       },
+        {"AnalogInvertX",       analogInvertX       },
+        {"AnalogInvertY",       analogInvertY       },
     };
 
     // Variable settings indices
@@ -217,6 +236,9 @@ public:
         tempWarning,
         tempShutdown,
         analogMode,
+        cameraModel, // inserita per CAM
+        bootOutputMode,
+        inputInvertMask,    // bit N = invert input function N (see invertibleInputs)
         // Add here
         settingsTypesCount
     } settingsTypes_e;
@@ -236,6 +258,9 @@ public:
         {"TempWarning",         tempWarning         },
         {"TempDanger",          tempShutdown        },
         {"AnalogMode",          analogMode          },
+        {"CameraModel",         cameraModel         },  // inserira per CAM
+        {"BootOutputMode",      bootOutputMode      },
+        {"InputInvertMask",     inputInvertMask     },
     };
 
     enum {
@@ -243,6 +268,16 @@ public:
         analogModeDpad,
         analogModeKeys
     } analogModeSettings_e;
+
+    // What the board presents to the host when it starts. Zero is the absolute
+    // mouse, so a board that has never seen this setting behaves as it always did.
+    // In gamepad mode the aim rides one of the two analog sticks and the physical
+    // stick, if any, takes the other one; z/rz are never used.
+    enum {
+        bootOutputMouse = 0,     // absolute mouse (serial M0x0)
+        bootOutputGamepadRight,  // gamepad, aim on the right stick (serial M0x1)
+        bootOutputGamepadLeft    // gamepad, aim on the left stick (serial M0x1L)
+    } bootOutputModeSettings_e;
 
     // Profile data type indices
     // this MUST match the order of ProfileData_s in (FW)OpenFIREprefs
@@ -302,6 +337,15 @@ public:
         ar4_3,
         aspectRatiosCount
     } aspectRatios_e;
+    
+    // Camera model compatible // inserira per CAM
+    enum {
+        DFRobot_SEN0158 = 0,
+        PixArt_PAJ7025R2,
+        PixArt_PAJ7025R3,
+        // Add here
+        cameraModelCount
+    } cameraModel_e;
 
     /* ////
      * Shared serial control/signal codes for both boards and app.
@@ -342,6 +386,8 @@ public:
         sCaliInfoUpd,
         sTestCoords,
         sCurrentProf,
+        sTestBlobs, // 152: IR test and calibration IR view, blob area/brightness of each vertex
+        sCaliIrWarning, // 153: calibration target shot refused (WebApp IR view): bit 0 emitter missing
 
         // Push settings to board
         sCommitStart = 0xAA, // 170
@@ -362,12 +408,36 @@ public:
         // for non-RP2040 boards that don't have a magic number-type reset
         sRebootToBootloader = 0xF0, // 245
 
+        // Trailer of the board information (see sDock2): the complete version of the
+        // firmware, 6.2.0-stable. It carries text, so a length byte follows the marker.
+        //
+        // Rule of the trailer, fixed once and for all: after the USB table come items,
+        // each one a separator and a marker. The two markers below that are only a flag
+        // (sError, sPedalWireless) are two bytes; EVERY OTHER MARKER carries a length
+        // byte and then that many bytes of data. An App that does not know a marker can
+        // therefore always skip it and keep reading the ones after it, however many are
+        // added in the years to come.
+        sVersionFull = 0xF9, // 249
+
         sError = 0xFA, // 250
+
+        
+        // Trailer of the board information: a wireless pedal is paired (see sDock2).
+        sPedalWireless = 0xFB, // 251
+        
+        
         sSave = 0xFC, // 252
         sClearFlash = 0xFD, // 253
         // Terminates out of any current mode, or undocks
         serialTerminator = 0xFE // 254
     } serialCmdTypes_e;
+
+    // Optional fourth byte of sCaliProfile + sCaliStart (App to board). Older Apps send
+    // three bytes and older firmware ignores the fourth, so both keep working as before.
+    enum {
+        caliFlagIrView = 0x01   // send the IR emitters during calibration (sTestBlobs + sTestCoords)
+                                // and refuse the target shots while an emitter is missing
+    } caliStartFlags_e;
 
     enum {
         usbPID = 0,
@@ -465,9 +535,9 @@ public:
         // Board Type: ESP32
         {"esp32-s3-devkitc-1",      {/*00*/ unavailable,    btnTrigger,     btnGunRight,    btnUnmapped,    analogX,
                                      /*05*/ analogY,        tempPin,        btnUnmapped,    camSDA,         camSCL,
-                                     /*10*/ btnUnmapped,    btnUnmapped,    btnUnmapped,    btnUnmapped,    neoPixel,
-                                     /*15*/ periphSCL,      rumblePin,      solenoidPin,    periphSDA,      btnUnmapped,
-                                     /*20*/ btnUnmapped,    btnGunC,        unavailable,    unavailable,    unavailable,
+                                     /*10*/ cam_SPI_CS,     cam_SPI_MOSI,   cam_SPI_SCK,    cam_SPI_MISO,   neoPixel,
+                                     /*15*/ periphSCL,      rumblePin,      solenoidPin,    periphSDA,      unavailable,
+                                     /*20*/ unavailable,    btnGunC,        unavailable,    unavailable,    unavailable,
                                      /*25*/ unavailable,    unavailable,    unavailable,    unavailable,    unavailable,
                                      /*30*/ unavailable,    unavailable,    unavailable,    unavailable,    unavailable,
                                      /*35*/ btnHome,        btnGunA,        btnGunB,        btnSelect,      btnStart,
@@ -600,8 +670,8 @@ public:
         {boardArchs[boardESP32_S3],{/*00*/ pinSystem,                               pinHasADC | pinAnyI2C | pinAnySPI,      pinHasADC | pinAnyI2C | pinAnySPI,      pinSystem,                              pinHasADC | pinAnyI2C | pinAnySPI,
                                     /*05*/ pinHasADC | pinAnyI2C | pinAnySPI,       pinHasADC | pinAnyI2C | pinAnySPI,      pinHasADC | pinAnyI2C | pinAnySPI,      pinHasADC | pinAnyI2C | pinAnySPI,      pinHasADC | pinAnyI2C | pinAnySPI,
                                     /*10*/ pinHasADC | pinAnyI2C | pinAnySPI,       pinAnyI2C | pinAnySPI,                  pinAnyI2C | pinAnySPI,                  pinAnyI2C | pinAnySPI,                  pinAnyI2C | pinAnySPI,
-                                    /*15*/ pinAnyI2C | pinAnySPI,                   pinAnyI2C | pinAnySPI,                  pinAnyI2C | pinAnySPI,                  pinAnyI2C | pinAnySPI,                  pinAnyI2C | pinAnySPI,
-                                    /*20*/ pinAnyI2C | pinAnySPI,                   pinAnyI2C | pinAnySPI,                  pinAnyI2C | pinAnySPI,                  pinAnyI2C | pinAnySPI,                  pinAnyI2C | pinAnySPI,
+                                    /*15*/ pinAnyI2C | pinAnySPI,                   pinAnyI2C | pinAnySPI,                  pinAnyI2C | pinAnySPI,                  pinAnyI2C | pinAnySPI,                  pinSystem,
+                                    /*20*/ pinSystem,                               pinAnyI2C | pinAnySPI,                  pinAnyI2C | pinAnySPI,                  pinAnyI2C | pinAnySPI,                  pinAnyI2C | pinAnySPI,
                                     /*25*/ pinAnyI2C | pinAnySPI,                   pinSystem,                              pinSystem,                              pinSystem,                              pinSystem,
                                     /*30*/ pinSystem,                               pinSystem,                              pinSystem,                              pinAnyI2C | pinAnySPI,                  pinAnyI2C | pinAnySPI,
                                     /*35*/ pinAnyI2C | pinAnySPI,                   pinAnyI2C | pinAnySPI,                  pinAnyI2C | pinAnySPI,                  pinAnyI2C | pinAnySPI,                  pinAnyI2C | pinAnySPI,
@@ -746,8 +816,8 @@ public:
         {"esp32-s3-devkitc-1",      {/*00*/   posNothing,   19 | posLeft,   18 | posLeft,  10  | posRight,   19 | posRight,
                                      /*05*/ 18 | posRight,  17 | posRight, 16  | posRight,   11 | posRight,  8  | posRight,
                                      /*10*/ 7  | posRight,  6  | posRight, 5  | posRight,   4  | posRight,  3  | posRight,
-                                     /*15*/ 15 | posRight,  14 | posRight,  13 | posRight,  12 | posRight,    3  | posLeft,
-                                     /*20*/  4  | posLeft,   5  | posLeft,     posNothing,     posNothing,     posNothing,
+                                     /*15*/ 15 | posRight,  14 | posRight,  13 | posRight,  12 | posRight,    posNothing,
+                                     /*20*/   posNothing,   5  | posLeft,     posNothing,     posNothing,     posNothing,
                                      /*25*/   posNothing,     posNothing,     posNothing,     posNothing,     posNothing,
                                      /*30*/   posNothing,     posNothing,     posNothing,     posNothing,     posNothing,
                                      /*35*/ 10 | posLeft,   11 | posLeft,   12 | posLeft,   13 | posLeft,   14 | posLeft,

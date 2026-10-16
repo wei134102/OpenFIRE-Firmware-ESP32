@@ -19,14 +19,7 @@
 #define _OPENFIRECOMMON_H_
 
 #include <stdint.h>
-
-// = [ESP32_PORT] ===========================================================================================
-#ifdef PAJ7025_CAM
-    #include <DFRobotIRPositionEx_Wrapper.h>
-#else
-    #include <DFRobotIRPositionEx.h>
-#endif // PAJ7025_CAM
-// = [ESP32_PORT] ===========================================================================================
+#include <OpenFIRECamera.h>
 
 #ifdef USE_SQUARE_ADVANCED
     #include <OpenFIRE_Square_Advanced.h>
@@ -66,14 +59,13 @@ public:
     //            external NeoPixels)
     static void FeedbackSet();
 
-    /// @brief    Unsets any currently mapped pins back to board defaults (non-pullup inputs).
-    /// @note     This should be run before any sync operation, to ensure no problems
-    ///           when setting pins to any new values.
-    static void PinsReset();
+    /// @brief Releases hardware resources using the pin map currently active.
+    /// @param pinMap Active hardware pin map; nullptr uses OF_Prefs::pins.
+    /// @note Call before reinitializing hardware with a different pin map.
+    static void PinsReset(const int8_t *pinMap = nullptr);
 
-    /// @brief    (Re-)sets IR camera position object.
-    /// @note     This is run at startup, and can also be run from Docked mode
-    ///           when new camera pins are defined.
+    /// @brief Selects and initializes the configured camera and positioning algorithms.
+    /// @note  Called at startup and after camera/pin reinitialization.
     static void CameraSet();
 
     /// @brief    Macro for functions to run when gun enters new gunmode
@@ -82,6 +74,24 @@ public:
     /// @note     Some cleanup functions are performed depending on the mode
     ///           being switched away from.
     static void SetMode(const FW_Const::GunMode_e&);
+
+    /// @brief    Applies the output mode saved as the startup default
+    /// @details  Run once at boot, and never again: from then on the mode belongs
+    ///           to whoever sets it. Serial command M0xN and the pause menus change
+    ///           it at will and it stays changed until the next change, as it always has.
+    ///           Nothing puts this value back, on purpose: M0x9 (MiSTer) also
+    ///           rewrites the gamepad button map in RAM, so restoring these two
+    ///           flags alone would leave the board half in one mode and half in
+    ///           the other. The default is the absolute mouse, so a board whose
+    ///           setting was never changed starts exactly as it always did.
+    static void ApplyBootOutputMode();
+
+    /// @brief Switch the output presented to the host, as the OF_Const bootOutput* values
+    /// @details Out of range values select the absolute mouse
+    static void SetOutputMode(const uint32_t &mode);
+
+    /// @brief Output in use, as the OF_Const bootOutput* values
+    static uint8_t GetOutputMode();
 
     /// @brief    Set new IR mode and apply it to the selected profile.
     /// @param    RunMode_e
@@ -145,6 +155,9 @@ public:
     /// @brief    Checks Button Descriptor and replaces instances of 0xFF/0xFE with player-relative Start/Select
     static void UpdateStartSelect();
 
+    /// @brief Shows the firmware update message and enters the MCU bootloader.
+    static void RebootToBootloader();
+
     // initial gunmode
     static inline FW_Const::GunMode_e gunMode = FW_Const::GunMode_Init;
 
@@ -155,11 +168,13 @@ public:
     static inline uint32_t stateFlags = FW_Const::StateFlagsDtrReset;
 
     //// Camera
-    // IR positioning camera
-    static inline DFRobotIRPositionEx *dfrIRPos = nullptr;
-
     // flag to warn docked server if camera is not working currently
     static inline bool camNotAvailable = false;
+
+    // Calibration started by an App that asked for the IR view (sCaliStart, caliFlagIrView):
+    // the IR emitters are sent during calibration, and the target shots are refused
+    // while an emitter is missing (see ExecCalMode). False in every other case.
+    static inline bool caliIrView = false;
 
     static inline uint32_t camWarningTimestamp = 0;
     #define CAM_WARNING_INTERVAL 3000
@@ -240,14 +255,8 @@ public:
     #endif // USES_DISPLAY
 };
 
-// button runtime data arrays
-static inline LightgunButtonsStatic<ButtonCount> lgbData;
-
 #ifdef ARDUINO_ARCH_ESP32
 
-// #include <Arduino.h>
-// #include <freertos/FreeRTOS.h>
-// #include <freertos/queue.h>
 
 // funzione per esp32 per emulare il comportamento di rp2040.fifo per la comunicazione multicore
 

@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<!--
+    OpenFIRE Web App - home of the published site.
+
+    Not the app: one button. It asks the lightgun which firmware it runs, looks that
+    version up in versions.json and opens the app published for it (v/<version>/).
+    The app itself never lives here - every version of it lives in its own folder.
+
+    The look is the one of the project's home page (the "hub"): same colours, same
+    top bar, same cards, so moving between the two does not feel like another site.
+
+    The scripts between the markers are joined into launcher.js by
+    scripts/webapp_build.py (python scripts/webapp_build.py launcher). The connection and
+    the reading of the first packet are the same files the app uses, so there is one
+    implementation of the protocol and not two.
+
+    Served from webapp/launcher/ it also runs unbundled, for development.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenFIRE ESP32 Web App</title>
+<meta name="description" content="OpenFIRE ESP32: the browser configuration app, in the version that belongs to your firmware.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 90.691 90.691'%3E%3Crect width='90.691' height='90.691' ry='9.6' fill='%232a2a2a'/%3E%3Cg transform='translate(2,2)'%3E%3Cpath fill='%23fff' d='M86.6 40H81.3C79.6 22.2 65.4 7.9 47.6 6.3V0h-7V6.1C22.8 7.9 8.5 22.1 6.9 40h-7v7h7c1.7 17.8 15.9 32.1 33.7 33.7v5.6h7V80.7C65.4 79 79.7 64.8 81.3 47h5.3zm-72.9 3.5c0-16.8 13.6-30.4 30.4-30.4 16.8 0 28.4 11.8 30.2 26.9H40.6V73.7C25.5 72 13.7 59.1 13.7 43.5ZM47.6 73.6V60.9H59.8V55.2H47.6V46.9H74.3C72.7 60.9 61.6 72 47.6 73.6Z'/%3E%3C/g%3E%3C/svg%3E">
+<style>
+/*  I colori sono gli stessi della pagina iniziale del progetto e della web app di
+    configurazione, così passare dall'una all'altra non sembra cambiare sito.     */
+:root {
+    color-scheme: light;
+    --bg: #eef0f4;
+    --surface: #ffffff;
+    --surface-2: #f6f7f9;
+    --surface-3: #e9ecf1;
+    --border: #d3d8e0;
+    --border-strong: #b9c0cc;
+    --text: #1c2230;
+    --muted: #556070;
+    --faint: #8b94a3;
+    --accent: #0a7fc2;
+    --accent-soft: rgba(10, 127, 194, 0.12);
+    --focus: 0 0 0 3px rgba(10, 127, 194, 0.35);
+    --link: #0a6fb0;
+    --danger: #b3261e;
+    --shadow: 0 1px 2px rgba(20, 28, 45, 0.06), 0 2px 6px rgba(20, 28, 45, 0.06);
+    --shadow-pop: 0 10px 30px rgba(20, 28, 45, 0.22);
+    --card-lift: 0 10px 26px rgba(20, 28, 45, 0.14);
+    /* Il vetro del pannello: la superficie del tema, ma semitrasparente, come
+       sui pannelli della pagina degli strumenti. */
+    --panel-glass: rgba(255, 255, 255, 0.72);
+    --radius: 8px;
+    --control-h: 32px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+/* Le stesse variabili valgono in due casi: sistema scuro senza una scelta
+   esplicita di chiaro, e scelta esplicita di scuro. In CSS puro i due
+   selettori non si possono unire, quindi il blocco è ripetuto. */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        color-scheme: dark;
+        --bg: #14161b;
+        --surface: #1d2027;
+        --surface-2: #252932;
+        --surface-3: #2d323c;
+        --border: #363b47;
+        --border-strong: #4a5160;
+        --text: #e6e8ed;
+        --muted: #a6aebb;
+        --faint: #767f8f;
+        --accent: #2fa6e4;
+        --accent-soft: rgba(47, 166, 228, 0.16);
+        --focus: 0 0 0 3px rgba(47, 166, 228, 0.4);
+        --link: #8ab4f8;
+        --danger: #f2b8b5;
+        --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.25);
+        --shadow-pop: 0 12px 34px rgba(0, 0, 0, 0.55);
+        --card-lift: 0 12px 30px rgba(0, 0, 0, 0.5);
+        --panel-glass: rgba(29, 32, 39, 0.72);
+    }
+}
+:root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #14161b;
+    --surface: #1d2027;
+    --surface-2: #252932;
+    --surface-3: #2d323c;
+    --border: #363b47;
+    --border-strong: #4a5160;
+    --text: #e6e8ed;
+    --muted: #a6aebb;
+    --faint: #767f8f;
+    --accent: #2fa6e4;
+    --accent-soft: rgba(47, 166, 228, 0.16);
+    --focus: 0 0 0 3px rgba(47, 166, 228, 0.4);
+    --link: #8ab4f8;
+    --danger: #f2b8b5;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.25);
+    --shadow-pop: 0 12px 34px rgba(0, 0, 0, 0.55);
+    --card-lift: 0 12px 30px rgba(0, 0, 0, 0.5);
+    --panel-glass: rgba(29, 32, 39, 0.72);
+}
+
+/* ----- Base --------------------------------------------------------------------- */
+* { box-sizing: border-box; }
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    -webkit-text-size-adjust: 100%;
+    display: flex;
+    flex-direction: column;
+}
+/* Il bagliore sta sulla pagina, non dentro al pannello: cosi' resta dietro al
+   vetro e ci si intravede attraverso. Lo stesso del flasher e degli strumenti. */
+body::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto;
+    height: 320px;
+    background: radial-gradient(85% 75% at 50% 0%, var(--accent-soft), transparent 72%);
+    pointer-events: none;
+    z-index: 0;
+}
+a { color: var(--link); }
+button, select { font: inherit; color: inherit; }
+:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 6px; }
+
+.icon {
+    width: 20px; height: 20px; flex: none;
+    fill: none; stroke: currentColor; stroke-width: 1.8;
+    stroke-linecap: round; stroke-linejoin: round;
+}
+
+/* ----- Barra superiore ----------------------------------------------------------- */
+.topbar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+}
+.topbar .spacer { flex: 1; }
+/* I comandi stanno su una riga flex: così restano allineati fra loro e
+   distanziati. Impilati in linea si allineerebbero alla base del testo, e il
+   menu del tema finirebbe più in alto del selettore della lingua. */
+.topbar .controls { display: flex; align-items: center; gap: 8px; }
+.brand { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.brand svg { width: 24px; height: 24px; display: block; border-radius: 5px; }
+.brand-name { font-weight: 600; font-size: 0.95rem; white-space: nowrap; }
+/* Il marchio in alto a sinistra riporta alla pagina iniziale del progetto. */
+a.brand { text-decoration: none; color: inherit; border-radius: 6px; }
+a.brand:hover .brand-name { color: var(--accent); }
+
+.control {
+    height: var(--control-h);
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 0 8px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.control:hover { background: var(--surface-3); border-color: var(--border-strong); }
+select.control { padding-right: 4px; min-height: 30px; font-size: 13px; }
+.control .icon { width: 18px; height: 18px; }
+.theme-button .caret { width: 10px; height: 10px; stroke-width: 2.4; }
+
+.theme-wrap { position: relative; display: flex; }
+.theme-menu {
+    position: absolute; right: 0; top: calc(100% + 4px);
+    min-width: 172px; padding: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-pop);
+    display: none; flex-direction: column; gap: 2px;
+    z-index: 5;
+}
+.theme-menu[data-open="true"] { display: flex; }
+.theme-menu button {
+    display: flex; align-items: center; gap: 8px;
+    width: 100%; padding: 7px 10px;
+    background: none; border: 0; border-radius: 6px;
+    text-align: left; cursor: pointer; font-size: 14px;
+}
+.theme-menu button:hover { background: var(--accent-soft); }
+.theme-menu button[aria-checked="true"] { color: var(--accent); font-weight: 600; }
+.theme-menu .tick { margin-left: auto; width: 16px; height: 16px; opacity: 0; }
+.theme-menu button[aria-checked="true"] .tick { opacity: 1; }
+
+/* ----- Impaginazione ------------------------------------------------------------- */
+main { flex: 1; width: 100%; max-width: 920px; margin: 0 auto; padding: 30px 16px 48px; }
+
+/* Il pannello di vetro che raccoglie tutta la pagina. E' posizionato perche'
+   deve stare sopra al bagliore, non sotto. */
+.panel {
+    position: relative;
+    background: var(--panel-glass);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--card-lift);
+    padding: 0 28px 24px;
+}
+
+/* ----- Apertura ------------------------------------------------------------------ */
+.hero { padding: 40px 0 30px; text-align: center; position: relative; }
+.hero-mark {
+    position: relative;
+    width: 64px; height: 64px; margin: 0 auto 16px;
+    border-radius: 14px; overflow: hidden;
+    box-shadow: var(--shadow);
+}
+.hero-mark svg { width: 100%; height: 100%; display: block; }
+.hero h1 {
+    margin: 0 0 12px; position: relative;
+    font-size: clamp(1.9rem, 5.4vw, 2.8rem);
+    line-height: 1.12; letter-spacing: -0.025em;
+}
+.hero h1 .accent { color: var(--accent); }
+.hero p {
+    margin: 0 auto; max-width: 58ch; position: relative;
+    color: var(--muted); font-size: clamp(1rem, 2.2vw, 1.12rem); line-height: 1.55;
+}
+/* Con quale firmware funziona: detto piano, in corsivo, sotto al sottotitolo. */
+.hero p.compat {
+    margin: 10px auto 0; max-width: 52ch;
+    font-style: italic; font-size: 0.92rem; line-height: 1.5;
+}
+
+/* ----- Il pulsante, e quel che ha da dire ---------------------------------------- */
+.actions { position: relative; padding-top: 28px; }
+.connect {
+    display: inline-flex; align-items: center; gap: 10px;
+    height: 52px; padding: 0 26px;
+    font-size: 1.05rem; font-weight: 600;
+    color: #fff; background: var(--accent);
+    border: 0; border-radius: 10px; cursor: pointer;
+    box-shadow: var(--card-lift);
+    transition: transform 0.14s ease, filter 0.14s ease;
+}
+.connect:hover { filter: brightness(1.06); transform: translateY(-2px); }
+.connect[disabled] { opacity: 0.6; cursor: default; filter: none; transform: none; }
+.connect .icon { width: 22px; height: 22px; }
+
+.state { margin: 18px auto 0; min-height: 1.5em; max-width: 52ch; color: var(--muted); line-height: 1.5; }
+.state.bad { color: var(--danger); }
+
+.more { margin-top: 18px; font-size: 0.9rem; }
+.more button {
+    background: none; border: 0; padding: 0;
+    color: var(--link); cursor: pointer; text-decoration: underline;
+}
+
+/* ----- Le versioni pubblicate ---------------------------------------------------- */
+.versions { display: none; padding-top: 6px; }
+.versions.on { display: block; }
+.versions h2 { margin: 0 0 6px; font-size: 1.15rem; letter-spacing: -0.01em; }
+.versions > p { margin: 0 0 18px; color: var(--muted); font-size: 0.93rem; line-height: 1.55; }
+
+/* ----- Riquadri ------------------------------------------------------------------ */
+.cards { display: grid; grid-template-columns: 1fr; gap: 16px; }
+@media (min-width: 720px) { .cards { grid-template-columns: repeat(2, 1fr); gap: 18px; } }
+.card {
+    display: flex; flex-direction: column; gap: 10px;
+    padding: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    text-decoration: none; color: inherit;
+    transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease;
+}
+.card:hover, .card:focus-visible { transform: translateY(-3px); box-shadow: var(--card-lift); border-color: var(--accent); }
+.card-top { display: flex; align-items: center; gap: 12px; }
+.card-icon {
+    width: 42px; height: 42px; flex: none; display: grid; place-items: center;
+    border-radius: 10px; background: var(--accent-soft); color: var(--accent);
+}
+.card-icon .icon { width: 22px; height: 22px; stroke-width: 1.7; }
+.card h2 { margin: 0; font-size: 1.08rem; line-height: 1.3; }
+.card .tag {
+    margin-left: auto; flex: none;
+    padding: 3px 9px; border-radius: 999px;
+    background: var(--accent-soft); color: var(--accent);
+    font-size: 0.78rem; font-weight: 600;
+}
+.card-go { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); font-size: 0.88rem; font-weight: 600; }
+.card-go .icon { width: 15px; height: 15px; stroke-width: 2.2; transition: transform 0.14s ease; }
+.card:hover .card-go .icon { transform: translateX(3px); }
+
+/* ----- Piede ---------------------------------------------------------------------- */
+footer {
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    padding: 20px 16px 26px;
+    text-align: center;
+    color: var(--faint);
+    font-size: 0.85rem;
+    line-height: 1.6;
+}
+footer a { color: var(--link); text-decoration: none; }
+footer a:hover { text-decoration: underline; }
+
+@media (max-width: 560px) {
+    .topbar { padding: 6px 10px; gap: 6px; }
+    .brand-name { font-size: 0.88rem; }
+    .hero { padding: 32px 0 24px; }
+    main { padding: 20px 12px 36px; }
+    .panel { padding: 0 16px 18px; }
+}
+@media (max-width: 420px) {
+    .brand-name { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .card, .card-go .icon, .connect { transition: none; }
+    .card:hover, .card:focus-visible, .connect:hover { transform: none; }
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+    <a class="brand" id="brand-link" href="https://alessandro-satanassi.github.io/OpenFIRE-ESP32/">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 90.691 90.691" aria-hidden="true"><rect width="90.691" height="90.691" ry="9.6" fill="#2a2a2a"/><g transform="translate(2,2)"><path fill="#fff" d="M86.6 40H81.3C79.6 22.2 65.4 7.9 47.6 6.3V0h-7V6.1C22.8 7.9 8.5 22.1 6.9 40h-7v7h7c1.7 17.8 15.9 32.1 33.7 33.7v5.6h7V80.7C65.4 79 79.7 64.8 81.3 47h5.3zm-72.9 3.5c0-16.8 13.6-30.4 30.4-30.4 16.8 0 28.4 11.8 30.2 26.9H40.6V73.7C25.5 72 13.7 59.1 13.7 43.5ZM47.6 73.6V60.9H59.8V55.2H47.6V46.9H74.3C72.7 60.9 61.6 72 47.6 73.6Z"/><g fill="#ed1a3b"><circle cx="24.9" cy="49" r="3.1"/><circle cx="34" cy="49" r="3.1"/><circle cx="24.9" cy="57.8" r="3.1"/><circle cx="34" cy="57.8" r="3.1"/></g><path fill="#00b3f0" d="M44.3 20.2C33 20.2 23.6 28.7 22.2 39.7h4.7c1.3-8.4 8.6-14.9 17.4-14.9 8.8 0 9.1 1.8 12.5 5.2l3.3-3.3C55.9 22.5 50.3 20.2 44.4 20.2Z"/></g></svg>
+        <span class="brand-name">OpenFIRE ESP32</span>
+    </a>
+    <span class="spacer"></span>
+    <span class="controls"></span>
+</header>
+
+<main>
+<div class="panel">
+    <section class="hero">
+        <div class="hero-mark">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 90.691 90.691" aria-hidden="true"><rect width="90.691" height="90.691" ry="9.6" fill="#2a2a2a"/><g transform="translate(2,2)"><path fill="#fff" d="M86.6 40H81.3C79.6 22.2 65.4 7.9 47.6 6.3V0h-7V6.1C22.8 7.9 8.5 22.1 6.9 40h-7v7h7c1.7 17.8 15.9 32.1 33.7 33.7v5.6h7V80.7C65.4 79 79.7 64.8 81.3 47h5.3zm-72.9 3.5c0-16.8 13.6-30.4 30.4-30.4 16.8 0 28.4 11.8 30.2 26.9H40.6V73.7C25.5 72 13.7 59.1 13.7 43.5ZM47.6 73.6V60.9H59.8V55.2H47.6V46.9H74.3C72.7 60.9 61.6 72 47.6 73.6Z"/><g fill="#ed1a3b"><circle cx="24.9" cy="49" r="3.1"/><circle cx="34" cy="49" r="3.1"/><circle cx="24.9" cy="57.8" r="3.1"/><circle cx="34" cy="57.8" r="3.1"/></g><path fill="#00b3f0" d="M44.3 20.2C33 20.2 23.6 28.7 22.2 39.7h4.7c1.3-8.4 8.6-14.9 17.4-14.9 8.8 0 9.1 1.8 12.5 5.2l3.3-3.3C55.9 22.5 50.3 20.2 44.4 20.2Z"/></g></svg>
+        </div>
+        <h1>OpenFIRE ESP32 <span class="accent">Web App</span></h1>
+        <p id="lead"></p>
+        <p class="compat" id="compat"></p>
+
+        <div class="actions">
+            <button class="connect" id="connect" type="button">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 3.5v6M16.5 3.5v6M5 9.5h14v3a7 7 0 0 1-5 6.7v4.3h-4V19.2a7 7 0 0 1-5-6.7z"/></svg>
+                <span id="connect-label"></span>
+            </button>
+
+            <div class="state" id="state" role="status" aria-live="polite"></div>
+            <div class="more"><button type="button" id="show-versions"></button></div>
+        </div>
+    </section>
+
+    <section class="versions" id="versions">
+        <h2 id="versions-title"></h2>
+        <p id="versions-lead"></p>
+        <div class="cards" id="versions-list"></div>
+    </section>
+</div>
+</main>
+
+<footer><div id="footer"></div></footer>
+
+<!-- OF:SCRIPTS  (joined in this order into launcher.js by scripts/webapp_build.py) -->
+<script src="../boards/OpenFIREshared.js"></script>
+<script src="../js/core/transport.js"></script>
+<script src="../js/core/protocol.js"></script>
+<script src="launcher.js"></script>
+<!-- /OF:SCRIPTS -->
+</body>
+</html>

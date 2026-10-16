@@ -1,4 +1,4 @@
- /*!
+/*!
  * @file OpenFIREcommon.h
  * @brief Shared methods used throughout the OpenFIRE project.
  *
@@ -17,24 +17,19 @@
 
 #include <Arduino.h>
 #include <Wire.h>
+#include <limits>
 
-// = [ESP32_PORT] ===========================================================================================
-#ifdef PAJ7025_CAM
-    #include <SPI.h>
-#endif // PAJ7025_CAM
-// = [ESP32_PORT] ===========================================================================================
 
-#ifdef ARDUINO_ARCH_RP2040
-  // for RP2040 Wii Clock Gen
-  #include <pico/stdlib.h>
-  #include <hardware/clocks.h>
-  #include <hardware/pwm.h>
-#endif // ARDUINO_ARCH_RP2040
 
 #include "OpenFIREcommon.h"
 #include "OpenFIREFeedback.h"
 #include "OpenFIRElights.h"
 #include "OpenFIREserial.h"
+#include "OpenFIREusbnet.h"
+
+#ifdef ARDUINO_ARCH_ESP32
+    #include "esp32-hal-tinyusb.h"
+#endif
 
 // ============ [ESP32_PORT] ============
 // Definition of Serial for managing wireless serial connections / redifinizione di Serial per gestire le connessione wireless seriali
@@ -58,8 +53,45 @@
 #endif // ARDUINO_ARCH_ESP32
 
 
-// button object instance (defined in OpenFIREcommon.h/OpenFIREprefs.h)
+
+// Button runtime storage, used only in this source file.
+static LightgunButtonsStatic<ButtonCount> lgbData;
+
+// Button object instance.
 LightgunButtons FW_Common::buttons(lgbData, ButtonCount);
+
+void FW_Common::RebootToBootloader()
+{
+    #ifdef USES_DISPLAY
+    if(OLED.display != nullptr) {
+        OLED.display->clearDisplay();
+        OLED.display->setTextColor(WHITE, BLACK);
+        OLED.display->setTextSize(1);
+
+        FW_Common::OLED.display->setCursor(37, 16);
+        FW_Common::OLED.display->print("Ready for");
+
+        FW_Common::OLED.display->setCursor(40, 30);
+        FW_Common::OLED.display->print("firmware");
+
+        FW_Common::OLED.display->setCursor(46, 44);
+        FW_Common::OLED.display->print("update");
+
+        // Transfer the framebuffer to the OLED before rebooting.
+        OLED.display->display();
+    }
+    #endif
+
+    #ifdef ARDUINO_ARCH_ESP32
+        #ifdef OPENFIRE_USB_NCM
+            // Stop queued NCM work before the helper disables the USB PHY.
+            if(OpenFIREUsbNetActive()) OpenFIREUsbDetach();
+        #endif
+        usb_persist_restart(RESTART_BOOTLOADER);
+    #elif defined(ARDUINO_ARCH_RP2040)
+        rp2040.rebootToBootloader();
+    #endif
+}
 
 void FW_Common::FeedbackSet()
 {
@@ -145,190 +177,143 @@ void FW_Common::FeedbackSet()
     }
 }
 
-void FW_Common::PinsReset()
+void FW_Common::PinsReset(const int8_t *pinMap)
 {
-    if(dfrIRPos != nullptr) {
-        delete dfrIRPos;
-        dfrIRPos = nullptr;
-    }
+    if(pinMap == nullptr)
+        pinMap = OF_Prefs::pins;
+
+    OpenFIRECamera::End();
 
     #ifdef USES_RUMBLE
-        if(OF_Prefs::pins[OF_Const::rumblePin] >= 0)
-            pinMode(OF_Prefs::pins[OF_Const::rumblePin], INPUT);
-    #endif // USES_RUMBLE
+        if(pinMap[OF_Const::rumblePin] >= 0)
+            pinMode(pinMap[OF_Const::rumblePin], INPUT);
+    #endif
 
     #ifdef USES_SOLENOID
-        if(OF_Prefs::pins[OF_Const::solenoidPin] >= 0)
-            pinMode(OF_Prefs::pins[OF_Const::solenoidPin], INPUT);
-    #endif // USES_SOLENOID
+        if(pinMap[OF_Const::solenoidPin] >= 0)
+            pinMode(pinMap[OF_Const::solenoidPin], INPUT);
+    #endif
 
     #ifdef USES_SWITCHES
         #ifdef USES_RUMBLE
-            if(OF_Prefs::pins[OF_Const::rumbleSwitch] >= 0)
-                pinMode(OF_Prefs::pins[OF_Const::rumbleSwitch], INPUT);
-        #endif // USES_RUMBLE
+            if(pinMap[OF_Const::rumbleSwitch] >= 0)
+                pinMode(pinMap[OF_Const::rumbleSwitch], INPUT);
+        #endif
 
         #ifdef USES_SOLENOID
-            if(OF_Prefs::pins[OF_Const::solenoidSwitch] >= 0)
-                pinMode(OF_Prefs::pins[OF_Const::solenoidSwitch], INPUT);
-        #endif // USES_SOLENOID
+            if(pinMap[OF_Const::solenoidSwitch] >= 0)
+                pinMode(pinMap[OF_Const::solenoidSwitch], INPUT);
+        #endif
 
-        if(OF_Prefs::pins[OF_Const::autofireSwitch] >= 0)
-            pinMode(OF_Prefs::pins[OF_Const::autofireSwitch], INPUT);
-    #endif // USES_SWITCHES
+        if(pinMap[OF_Const::autofireSwitch] >= 0)
+            pinMode(pinMap[OF_Const::autofireSwitch], INPUT);
+    #endif
 
     #ifdef LED_ENABLE
-        OF_RGB::LedOff();
+        // LedOff() uses OF_Prefs::pins. Call it only when that array still
+        // describes the hardware currently active.
+        if(pinMap == OF_Prefs::pins)
+            OF_RGB::LedOff();
 
         #ifdef FOURPIN_LED
             if(ledIsValid) {
-                pinMode(OF_Prefs::pins[OF_Const::ledR], INPUT);
-                pinMode(OF_Prefs::pins[OF_Const::ledG], INPUT);
-                pinMode(OF_Prefs::pins[OF_Const::ledB], INPUT);
+                if(pinMap[OF_Const::ledR] >= 0)
+                    pinMode(pinMap[OF_Const::ledR], INPUT);
+                if(pinMap[OF_Const::ledG] >= 0)
+                    pinMode(pinMap[OF_Const::ledG], INPUT);
+                if(pinMap[OF_Const::ledB] >= 0)
+                    pinMode(pinMap[OF_Const::ledB], INPUT);
             }
-        #endif // FOURPIN_LED
+            ledIsValid = false;
+        #endif
 
         #ifdef CUSTOM_NEOPIXEL
             if(OF_RGB::externPixel != nullptr) {
                 OF_RGB::externPixel->clear();
+                OF_RGB::externPixel->show();
                 delete OF_RGB::externPixel;
                 OF_RGB::externPixel = nullptr;
             }
-        #endif // CUSTOM_NEOPIXEL
-    #endif // LED_ENABLE
+        #endif
+    #endif
 
     #ifdef USES_DISPLAY
         if(OLED.display != nullptr)
             OLED.Stop();
-    #endif // USES_DISPLAY
+    #endif
 }
 
 void FW_Common::CameraSet()
 {
-
-    #ifdef PAJ7025_CAM
-    #ifdef ARDUINO_ARCH_ESP32
-    // usa OF_Prefs::pins[OF_Const::camSDA] per MISO
-    // usa OF_Prefs::pins[OF_Const::camSCL] per CLOCK
-    // il cable select lo impostiamo a -1 (default) poichè lo teniamo abilitato sempre
-    // il clock lo impostiamo a 14 Mhz o 8 Mhz fisso
- 
-    #define SPI_SCK_PIN   OF_Prefs::pins[OF_Const::cam_PAJ7025_SCK]  // Ex SCL -> diventa il Clock SPI (SCK) (clock)
-    #define SPI_MISO_PIN  OF_Prefs::pins[OF_Const::cam_PAJ7025_MISO]  // Ex SDA -> diventa il pin di LETTURA dal sensore (RX lettura)
-    #define SPI_MOSI_PIN  OF_Prefs::pins[OF_Const::cam_PAJ7025_MOSI]  // Metto -1 se non lo collego/non lo uso (TX scrittura)
-    #define SPI_CS_PIN    OF_Prefs::pins[OF_Const::cam_PAJ7025_CS]  // Metto -1 se il CS del modulo è collegato fisicamente a GND (cable select)
-
-    SPIClass* SPIWire = nullptr;
-
-    SPIWire = new SPIClass(HSPI);
-    SPIWire->begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN, SPI_CS_PIN);
-
-    dfrIRPos = new DFRobotIRPositionEx(SPIWire,SPI_CS_PIN);
-    #else // rp2040 
-
-    #define SPI_SCK_PIN   OF_Prefs::pins[OF_Const::cam_PAJ7025_SCK]  // Ex SCL -> diventa il Clock SPI (SCK) (clock)
-    #define SPI_MISO_PIN  OF_Prefs::pins[OF_Const::cam_PAJ7025_MISO]  // Ex SDA -> diventa il pin di LETTURA dal sensore (RX lettura)
-    #define SPI_MOSI_PIN  OF_Prefs::pins[OF_Const::cam_PAJ7025_MOSI]  // Metto -1 se non lo collego/non lo uso (TX scrittura)
-    #define SPI_CS_PIN    OF_Prefs::pins[OF_Const::cam_PAJ7025_CS]  // Metto -1 se il CS del modulo è collegato fisicamente a GND (cable select)
-
-    // SPI1 se si vuole lavorare sul secondo canale
-    SPI.setSCK(SPI_SCK_PIN);
-    SPI.setRX(SPI_MISO_PIN); 
-    SPI.setTX(SPI_MOSI_PIN); 
-
-    SPI.begin();
-
-    dfrIRPos = new DFRobotIRPositionEx(&SPI, -SPI_CS_PIN);
-
-    #endif // rp2040
-    #else
-    #ifdef ARDUINO_ARCH_ESP32
-        Wire.setPins(OF_Prefs::pins[OF_Const::camSDA], OF_Prefs::pins[OF_Const::camSCL]); // MODIFICATO [ESP32_PORT] per ESP32
-        dfrIRPos = new DFRobotIRPositionEx(Wire);
-    #else // rp2040   
-    // Sanity check: which channel do these pins correlate to?
-    if(bitRead(OF_Prefs::pins[OF_Const::camSCL], 1) && bitRead(OF_Prefs::pins[OF_Const::camSDA], 1)) {
-        // I2C1
-        if(bitRead(OF_Prefs::pins[OF_Const::camSCL], 0) && !bitRead(OF_Prefs::pins[OF_Const::camSDA], 0)) {
-            // SDA/SCL are indeed on verified correct pins
-            Wire1.setSDA(OF_Prefs::pins[OF_Const::camSDA]);
-            Wire1.setSCL(OF_Prefs::pins[OF_Const::camSCL]);
-            dfrIRPos = new DFRobotIRPositionEx(Wire1);
-        }
-        
-    } else if(!bitRead(OF_Prefs::pins[OF_Const::camSCL], 1) && !bitRead(OF_Prefs::pins[OF_Const::camSDA], 1)) {
-        // I2C0
-        if(bitRead(OF_Prefs::pins[OF_Const::camSCL], 0) && !bitRead(OF_Prefs::pins[OF_Const::camSDA], 0)) {
-            // SDA/SCL are indeed on verified correct pins
-            Wire.setSDA(OF_Prefs::pins[OF_Const::camSDA]);
-            Wire.setSCL(OF_Prefs::pins[OF_Const::camSCL]);
-            dfrIRPos = new DFRobotIRPositionEx(Wire);
-        }
+    if (!OpenFIRECamera::Begin()) {
+        PrintIrError();
+        return;
     }
-    #endif // rp2040
-    #endif // PAJ7025_CAM
 
+    const CameraProfile& profile = OpenFIRECamera::Profile();
 
-    #ifdef ARDUINO_ARCH_RP2040
-    if(OF_Prefs::pins[OF_Const::wiiClockGen] > -1) {
-        set_sys_clock_khz(125000, true);
-        gpio_set_function(OF_Prefs::pins[OF_Const::wiiClockGen], GPIO_FUNC_PWM);
-        uint slice_num = pwm_gpio_to_slice_num(OF_Prefs::pins[OF_Const::wiiClockGen]);
-        pwm_set_clkdiv(slice_num, 1.0f);  // for sys_clock = 125MHz
-        //pwm_set_clkdiv(slice_num, 3.0f); // for sys_clock = 150MHz
-        pwm_set_wrap(slice_num, 4);
-        pwm_set_chan_level(slice_num, pwm_gpio_to_channel(OF_Prefs::pins[OF_Const::wiiClockGen]), 2);
-        pwm_set_enabled(slice_num, true);
-    } else {
-        set_sys_clock_khz(133000, true);
-        pwm_set_enabled(pwm_gpio_to_slice_num(OF_Prefs::pins[OF_Const::wiiClockGen]), false);
-        gpio_set_function(OF_Prefs::pins[OF_Const::wiiClockGen], GPIO_FUNC_SIO);
-        gpio_put(OF_Prefs::pins[OF_Const::wiiClockGen], 0);
-        gpio_set_dir(OF_Prefs::pins[OF_Const::wiiClockGen], GPIO_IN);
-    }
-    #endif // ARDUINO_ARCH_RP2040
+    OF_Prefs::InitProfileDefaults(profile);
+
+    OpenFIREsquare.configure(profile);
+    OpenFIREdiamond.configure(profile);
+    OpenFIREper.configure(profile);
+
+    #ifdef USE_MULTI_ONE_EURO_FILTER
+        oef_multi.configure(profile);
+    #endif
+
+    OpenFIREper.source(
+        OF_Prefs::profiles[OF_Prefs::currentProfile].adjX,
+        OF_Prefs::profiles[OF_Prefs::currentProfile].adjY);
+    OpenFIREper.deinit(0);
     
-    #ifdef ARDUINO_ARCH_ESP32
-        // --- CLOCK WII CAMERA: 24 MHz @ 50% DC ---
-        #ifdef CLOCK_CAM_WII
-            /*
-            #define WII_CLOCK_FREQUENCY_HZ 25000000  // 25 MHz target //la cam wii parla di 24Mhz ma OpenFire la imposta a 25Mhz
-            // il sistema riesce a produrre Hz 24975610    .... ma con jitter il clock non è mai stabile
-            */
-            #define WII_CLOCK_FREQUENCY_HZ 20000000  // 20 MHz target (integer division of 80MHz APB to prevent jitter) .. così il clock è stabile e la cam funziona bene tra 20 e 25Mhz
-            
-            #define WII_CLOCK_DUTY_CYCLE 1      // 50%
+    camNotAvailable = false;
+}
 
-            const int gpio_pin = OF_Prefs::pins[OF_Const::wiiClockGen];  // gpio 10 sia su Esp32 pico che su esp32 wroom, si imposta da board
 
-            if (gpio_pin > -1) {
-                if (!ledcSetClockSource(LEDC_AUTO_CLK/*LEDC_USE_APB_CLK*/)) log_e("ERRORE: ledcSetClockSource fallita!"); //LEDC_USE_XTAL_CLK     // LEDC_USE_APB_CLK     // LEDC_AUTO_CLK  //  RC_FAST_CLK
-                if (!ledcAttach(gpio_pin, WII_CLOCK_FREQUENCY_HZ, 1)) { // risoluzione ad 1 per sfruttare il clock più alto possibile          
-                    log_e("ERRORE: ledcAttach fallita!");
-                } else {
-                    if (!ledcWrite(gpio_pin, WII_CLOCK_DUTY_CYCLE)) {
-                        log_e("ERRORE: ledcWrite fallita!");
-                        ledcDetach(gpio_pin);
-                    } 
-                }
-            } else {
-                log_e("Clock non attivato (GPIO %d non valido: <= -1).\n", gpio_pin);
-            }
-        #endif // CLOCK_CAM_WII
-    #endif // ARDUINO_ARCH_ESP32
 
-    // Start IR Camera with basic data format
-    if(dfrIRPos != nullptr) {
-        if(!dfrIRPos->begin(DFROBOT_IR_IIC_CLOCK, DFRobotIRPositionEx::DataFormat_Basic, (DFRobotIRPositionEx::Sensitivity_e)OF_Prefs::profiles[OF_Prefs::currentProfile].irSens)) {
-            delete dfrIRPos;
-            dfrIRPos = nullptr;
-            PrintIrError();
-        } else camNotAvailable = false;
-    } else PrintIrError();
+// Output the board starts with. The serial command M0xN and the pause menus can
+// switch it until the board is switched off; 'E' (end of serial handoff) leaves it as it is.
+void FW_Common::ApplyBootOutputMode()
+{
+    SetOutputMode(OF_Prefs::settings[OF_Const::bootOutputMode]);
+}
+
+// Also used by the pause menu; the serial M0xN command sets the same two fields.
+void FW_Common::SetOutputMode(const uint32_t &mode)
+{
+    switch(mode) {
+    case OF_Const::bootOutputGamepadRight:
+        buttons.analogOutput = true;
+        Gamepad16.stickRight = false;   // aim on the right stick, as M0x1 does
+        break;
+    case OF_Const::bootOutputGamepadLeft:
+        buttons.analogOutput = true;
+        Gamepad16.stickRight = true;    // aim on the left stick, as M0x1L does
+        break;
+    default:
+        buttons.analogOutput = false;
+        Gamepad16.stickRight = false;   // the physical stick goes back on the left
+        break;
+    }
+}
+
+uint8_t FW_Common::GetOutputMode()
+{
+    if(!buttons.analogOutput)
+        return OF_Const::bootOutputMouse;
+    return Gamepad16.stickRight ? OF_Const::bootOutputGamepadLeft : OF_Const::bootOutputGamepadRight;
 }
 
 void FW_Common::SetMode(const FW_Const::GunMode_e &newMode)
 {
+    #ifdef USE_SQUARE_ADVANCED
+        OpenFIREsquare.setCalibrationMode(newMode == FW_Const::GunMode_Calibration);
+
+        if(newMode != FW_Const::GunMode_Calibration && OF_Prefs::currentProfile < PROFILE_COUNT && !OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout)
+            OpenFIREsquare.setWideLayout((OF_Prefs::profiles[OF_Prefs::currentProfile].TRled - OF_Prefs::profiles[OF_Prefs::currentProfile].TLled) > res_y);
+    #endif
+
     if(gunMode == newMode)
         return;
     
@@ -344,8 +329,7 @@ void FW_Common::SetMode(const FW_Const::GunMode_e &newMode)
     case FW_Const::GunMode_Pause:
         break;
     case FW_Const::GunMode_Docked:
-        if(newMode != FW_Const::GunMode_Calibration)
-            Serial.println("Undocking.");
+        // Docked mode has no hardware resources that need explicit release.
         break;
     }
     
@@ -415,19 +399,157 @@ void FW_Common::SetRunMode(const FW_Const::RunMode_e &newMode)
     
     if(runMode != newMode) {
         runMode = newMode;
-        //if(!(stateFlags & FW_Const::StateFlag_PrintSelectedProfile))
-            //PrintRunMode();
     }
 }
 
-// Dedicated calibration method
+// An emitter whose brightest pixel stays below this value is reported as weak: the
+// PAJ7025 detects a blob from brightness 130 (150 on the R2 at the highest
+// sensitivity), so it is barely above that limit and can flicker in and out.
+// Used by the WebApp IR view (sTestBlobs flag), in the same way for every camera: each
+// driver provides the brightness on this scale (the DFRobot converts its intensity, see
+// ReadDFRobotFull). In calibration a weak emitter only adds "weak signal" in the Apps: the
+// target shot is accepted (see CaliIrProblems). Starting value: check it on the hardware
+// with the IR test view (?irdebug in the WebApp address shows it).
+constexpr uint8_t IR_WEAK_MAX_BRIGHTNESS = 170;
+
+// Calibration IR view only: hysteresis around IR_WEAK_MAX_BRIGHTNESS, so that the "weak signal"
+// line of the Apps does not flicker for an emitter at the limit (the colours of the crosshair
+// and of the circles follow the brightness on a continuous scale and do not use the flag).
+// A weak emitter becomes good from IR_WEAK_MAX_BRIGHTNESS + IR_WEAK_HYSTERESIS, a good one
+// becomes weak below IR_WEAK_MAX_BRIGHTNESS - IR_WEAK_HYSTERESIS (190 and 150 with the values above).
+constexpr uint8_t IR_WEAK_HYSTERESIS = 20;
+static_assert(IR_WEAK_HYSTERESIS < IR_WEAK_MAX_BRIGHTNESS &&
+              IR_WEAK_MAX_BRIGHTNESS + IR_WEAK_HYSTERESIS <= 255, "the hysteresis must stay within 0..255");
+
+// Problem of the IR emitters for a calibration target shot (sCaliIrWarning bit).
+constexpr uint8_t CALI_IR_MISSING = 0x01;   // the camera does not see all four emitters
+
+// Checks the last camera frame: all four emitters seen. A weak emitter does not refuse the
+// shot. With the Extended format, an emitter seen but still without Extended data (the first
+// Full read after the format switch failed) counts as missing.
+static uint8_t CaliIrProblems()
+{
+    const unsigned int seenFlags = OpenFIRECamera::Seen();
+
+    if((seenFlags & 0x0FU) != 0x0FU)
+        return CALI_IR_MISSING;
+
+    if(OpenFIRECamera::DataFormat() == OpenFIRECamera::DataFormat_Extended) {
+        for(uint8_t i = 0; i < 4; ++i) {
+            if(!OpenFIRECamera::Object(i).valid)
+                return CALI_IR_MISSING;
+        }
+    }
+
+    return 0;
+}
+
+// Calibration IR view: weak flag last sent for each vertex (SendTestBlobs), for
+// IR_WEAK_HYSTERESIS. None (plain limit for the next flag) when the vertex is not seen,
+// outside the calibration and at the start of every calibration (ExecCalMode), so the
+// hysteresis never carries over from an emitter that was lost or from a previous calibration.
+enum TestBlobState_e : uint8_t {
+    TestBlobState_None = 0,
+    TestBlobState_Good,
+    TestBlobState_Weak
+};
+static TestBlobState_e testBlobState[4] = {TestBlobState_None, TestBlobState_None,
+                                           TestBlobState_None, TestBlobState_None};
+
+// Standalone calibration only. Set to 0 for the original stationary cursor.
+// Solo calibrazione dalla lightgun. Impostare 0 per il cursore fermo originale.
+#ifndef CALI_CURSOR_ORBIT_ENABLED
+#define CALI_CURSOR_ORBIT_ENABLED 1
+#endif
+
+#if CALI_CURSOR_ORBIT_ENABLED
+constexpr uint16_t CALI_CURSOR_RADIUS_PX = 10;       // px in the 1920x1080 reference space
+constexpr float CALI_CURSOR_REV_PER_SEC = 3.0f;    // revolutions per second / giri al secondo
+constexpr uint32_t CALI_CURSOR_UPDATE_US = 10000;  // at most 100 reports/s; no extra delay
+
+constexpr int32_t CALI_CURSOR_HID_MAX = 32767;
+constexpr int32_t CALI_CURSOR_SCREEN_X = res_x >> 2;
+constexpr int32_t CALI_CURSOR_SCREEN_Y = res_y >> 2;
+static_assert(CALI_CURSOR_RADIUS_PX > 0 &&
+              2U * CALI_CURSOR_RADIUS_PX < CALI_CURSOR_SCREEN_X &&
+              2U * CALI_CURSOR_RADIUS_PX < CALI_CURSOR_SCREEN_Y, "cursor radius must fit inside the screen");
+static_assert(CALI_CURSOR_REV_PER_SEC > 0.0f && CALI_CURSOR_REV_PER_SEC <= 10.0f,
+              "cursor speed must be greater than 0 and at most 10 revolutions/s");
+constexpr uint32_t CALI_CURSOR_TURN_US = (uint32_t)(1000000.0f / CALI_CURSOR_REV_PER_SEC + 0.5f);
+static_assert(CALI_CURSOR_TURN_US <= std::numeric_limits<uint32_t>::max() / 32U,
+              "cursor speed too low for 32-bit phase arithmetic");
+constexpr int32_t CALI_CURSOR_RADIUS_X =
+    (CALI_CURSOR_RADIUS_PX * CALI_CURSOR_HID_MAX + (CALI_CURSOR_SCREEN_X - 1) / 2) / (CALI_CURSOR_SCREEN_X - 1);
+constexpr int32_t CALI_CURSOR_RADIUS_Y =
+    (CALI_CURSOR_RADIUS_PX * CALI_CURSOR_HID_MAX + (CALI_CURSOR_SCREEN_Y - 1) / 2) / (CALI_CURSOR_SCREEN_Y - 1);
+
+// 32 positions per turn from an 18-byte quarter-wave table. No runtime trigonometry.
+static int16_t CaliCursorSin(uint8_t phase)
+{
+    static constexpr int16_t quarter[9] = {0, 6393, 12539, 18204, 23170, 27245, 30273, 32137, 32767};
+    const uint8_t offset = phase & 7U;
+    const int16_t value = quarter[(phase & 8U) ? 8U - offset : offset];
+    return (phase & 16U) ? -value : value;
+}
+
+static void CaliCursorPosition(int32_t targetX, int32_t targetY, uint32_t phaseUs,
+                               int32_t &cursorX, int32_t &cursorY)
+{
+    uint8_t phase = (uint8_t)(phaseUs * 32U / CALI_CURSOR_TURN_US);
+    // At the edges start at the tangent point: the target stays on the actual edge,
+    // not at the circle centre. Only the visual circle is shifted inside the screen.
+    if(targetY == 0) phase += 24U;
+    else if(targetY == CALI_CURSOR_HID_MAX) phase += 8U;
+    else if(targetX == 0) phase += 16U;
+    const int32_t centreX = targetX == 0 ? CALI_CURSOR_RADIUS_X :
+                           targetX == CALI_CURSOR_HID_MAX ? CALI_CURSOR_HID_MAX - CALI_CURSOR_RADIUS_X : targetX;
+    const int32_t centreY = targetY == 0 ? CALI_CURSOR_RADIUS_Y :
+                           targetY == CALI_CURSOR_HID_MAX ? CALI_CURSOR_HID_MAX - CALI_CURSOR_RADIUS_Y : targetY;
+    cursorX = centreX + CALI_CURSOR_RADIUS_X * CaliCursorSin(phase + 8U) / 32767;
+    cursorY = centreY + CALI_CURSOR_RADIUS_Y * CaliCursorSin(phase) / 32767;
+}
+
+extern Adafruit_USBD_HID usbHid;
+
+static bool CaliCursorReport(int32_t cursorX, int32_t cursorY)
+{
+    if(!TinyUSBDevices.onBattery) {
+        // Animation is optional: skip a busy USB endpoint instead of waiting.
+        // sendReport can also refuse after ready(); do not change the last position then.
+        if(!usbHid.ready()) return false;
+        hid_abs_mouse_report_t report = AbsMouse5.absmouse5Report;
+        report.x = (int16_t)cursorX;
+        report.y = (int16_t)cursorY;
+        if(!usbHid.sendReport(HID_RID_e::HID_RID_MOUSE, &report, sizeof(report))) return false;
+        AbsMouse5.move((int16_t)cursorX, (int16_t)cursorY);
+        TinyUSBDevices.newReport[TinyUSBDevices_::reportMouse] = false;
+    } else {
+        // Keep the existing radio/Bluetooth routing, including the dongle.
+        AbsMouse5.move((int16_t)cursorX, (int16_t)cursorY);
+        AbsMouse5.report();
+    }
+    return true;
+}
+#endif // CALI_CURSOR_ORBIT_ENABLED
+
 void FW_Common::ExecCalMode(const bool &fromDesktop)
 {
     buttons.ReportDisable();
 
+    // Calibration IR view: every emitter starts again from the plain weak limit.
+    for(uint8_t i = 0; i < 4; ++i)
+        testBlobState[i] = TestBlobState_None;
+
     uint8_t calStage = 0;
-    char buf[6];
-    buf[0] = OF_Const::sCaliInfoUpd;
+    bool communicationFailed = false;
+    uint8_t caliPayload[5];
+
+    // Queste sostituiscono i vecchi valori hardcoded (512 e 384) e 
+    // garantiscono una calibrazione perfetta sia per la DFRobot (4:3) che per la PixArt (1:1).
+    // Center of the unified Mouse coordinate space.
+    const CameraProfile& cameraProfile = OpenFIRECamera::Profile();
+    const int CENTER_X = cameraProfile.mouseResX / 2;
+    const int CENTER_Y = cameraProfile.mouseResY / 2;
 
     // hold values in a buffer till calibration is complete
     int topOffset;
@@ -451,7 +573,7 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
     OF_Prefs::profiles[OF_Prefs::currentProfile].leftOffset = 0;
     OF_Prefs::profiles[OF_Prefs::currentProfile].rightOffset = 0;
 
-    // Force center mouse to center
+    // Force center mouse to center (Absolute HID range 0-32767)
     AbsMouse5.move(32768/2, 32768/2);
     AbsMouse5.report();
 
@@ -463,18 +585,36 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
     int32_t mouseTargetX = mouseCurrentX;
     int32_t mouseTargetY = mouseCurrentY;
     bool mouseMoving = false;
+    #if CALI_CURSOR_ORBIT_ENABLED
+        uint32_t cursorOrbitStamp = micros();
+        uint32_t cursorOrbitPhaseUs = 0;
+    #endif
 
     // Jack in, CaliMan, execute!!!
     SetMode(FW_Const::GunMode_Calibration);
-    Serial.printf("%c%c", OF_Const::sCaliStageUpd, FW_Const::Cali_Init);
+    #ifdef USES_DISPLAY
+        OLED.CalibrationStageUpdate(FW_Const::Cali_Init);
+    #endif // USES_DISPLAY
+    if(fromDesktop) {
+        const uint8_t stage = FW_Const::Cali_Init;
+        if(!OF_Serial::AppSerialSendResponse(OF_Const::sCaliStageUpd, &stage, 1))
+            goto calibration_failed;
+    }
 
     while(gunMode == FW_Const::GunMode_Calibration) {
         buttons.Poll(1);
+
+        if(fromDesktop)
+            OF_Serial::SerialProcessingDocked();
+        const bool desktopCancel = fromDesktop && OF_Serial::AppSerialTakeCalibrationCancel();
 
         if(irPosUpdateTick) {
             irPosUpdateTick = 0;
             GetPosition();
         }
+
+        if(fromDesktop && camNotAvailable)
+            goto calibration_failed;
 
         // Handle incremental mouse movement
         if (mouseMoving) {
@@ -497,38 +637,55 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
 
             if (mouseCurrentX == mouseTargetX && mouseCurrentY == mouseTargetY) {
                 mouseMoving = false;
+                #if CALI_CURSOR_ORBIT_ENABLED
+                    cursorOrbitStamp = micros();
+                    cursorOrbitPhaseUs = 0;
+                #endif
                 delay(5);  // Optional small delay
             }
         }
+        #if CALI_CURSOR_ORBIT_ENABLED
+        else if(!fromDesktop && buttons.pressed != FW_Const::BtnMask_Trigger) {
+            const uint32_t now = micros();
+            const uint32_t elapsed = now - cursorOrbitStamp; // wrap-safe micros() difference
+            if(elapsed >= CALI_CURSOR_UPDATE_US) {
+                cursorOrbitStamp = now;
+                cursorOrbitPhaseUs = (cursorOrbitPhaseUs + elapsed % CALI_CURSOR_TURN_US) % CALI_CURSOR_TURN_US;
+                int32_t cursorX;
+                int32_t cursorY;
+                CaliCursorPosition(mouseTargetX, mouseTargetY, cursorOrbitPhaseUs, cursorX, cursorY);
+                if((cursorX != mouseCurrentX || cursorY != mouseCurrentY) && CaliCursorReport(cursorX, cursorY)) {
+                    // Travel to the next target starts at the last reported position.
+                    // Camera mouseX/mouseY and the calibration targets are never modified.
+                    mouseCurrentX = cursorX;
+                    mouseCurrentY = cursorY;
+                }
+            }
+        }
+        #endif // CALI_CURSOR_ORBIT_ENABLED
+
+        // WebApp IR view: every target shot (centre, the four edges, final centre) is refused
+        // while an emitter is missing, so that each reading is taken with all four emitters
+        // seen (a weak one is accepted). The WebApp is told why (sCaliIrWarning) and the stage
+        // does not change.
+        // With a narrow camera close to the screen an emitter can leave the field at the edges:
+        // the player then steps back. The confirmation of the verify stage is not checked.
+        const uint8_t shotRefusal =
+            (fromDesktop && caliIrView && buttons.pressed == FW_Const::BtnMask_Trigger && !mouseMoving &&
+             calStage <= FW_Const::Cali_Center)
+            ? CaliIrProblems() : 0;
 
         // Handle button presses and calibration stages
-        if((buttons.pressedReleased & (FW_Const::ExitPauseModeBtnMask | FW_Const::ExitPauseModeHoldBtnMask) || Serial.read() == OF_Const::serialTerminator) && !justBooted) {
-            Serial.printf("%c%c", OF_Const::sCaliStageUpd, FW_Const::Cali_Verify+1);
-            Serial.flush();
-
-            // Reapplying backed up data
-            OF_Prefs::profiles[OF_Prefs::currentProfile].topOffset = _topOffset;
-            OF_Prefs::profiles[OF_Prefs::currentProfile].bottomOffset = _bottomOffset;
-            OF_Prefs::profiles[OF_Prefs::currentProfile].leftOffset = _leftOffset;
-            OF_Prefs::profiles[OF_Prefs::currentProfile].rightOffset = _rightOffset;
-            OF_Prefs::profiles[OF_Prefs::currentProfile].TLled = _TLled;
-            OF_Prefs::profiles[OF_Prefs::currentProfile].TRled = _TRled;
-            OF_Prefs::profiles[OF_Prefs::currentProfile].adjX = _adjX;
-            OF_Prefs::profiles[OF_Prefs::currentProfile].adjY = _adjY;
-
-            // Re-print the profile
-            stateFlags |= FW_Const::StateFlag_PrintSelectedProfile;
-
-            // Exit back to docked mode or run mode, depending on if pinged from Desktop App
-            if(fromDesktop)
-                SetMode(FW_Const::GunMode_Docked);
-            else SetMode(FW_Const::GunMode_Run);
-
-            return;
+        if(((buttons.pressedReleased & (FW_Const::ExitPauseModeBtnMask | FW_Const::ExitPauseModeHoldBtnMask)) && !justBooted) ||
+           desktopCancel) {
+            goto calibration_cancelled;
+        } else if(shotRefusal) {
+            if(!OF_Serial::AppSerialSendResponse(OF_Const::sCaliIrWarning, &shotRefusal, 1))
+                goto calibration_failed;
         } else if(buttons.pressed == FW_Const::BtnMask_Trigger && !mouseMoving) {
-            Serial.printf("%c%c", OF_Const::sCaliStageUpd, ++calStage);
-            // Ensure our messages go through, or else the HID reports eat UART.
-            Serial.flush();
+            ++calStage;
+            if(fromDesktop && !OF_Serial::AppSerialSendResponse(OF_Const::sCaliStageUpd, &calStage, 1))
+                goto calibration_failed;
 
             switch(calStage) {
                 case FW_Const::Cali_Init:
@@ -545,17 +702,17 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                     leftOffset = 0;
                     rightOffset = 0;
 
-                    // Set Cam center offsets
+                    // Set Cam center offsets using dynamic CENTER_X and CENTER_Y
                     if(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout) {
-                        OF_Prefs::profiles[OF_Prefs::currentProfile].adjX = (OpenFIREdiamond.testMedianX() - (512 << 2)) * cos(OpenFIREdiamond.Ang()) -
-                                                                     (OpenFIREdiamond.testMedianY() - (384 << 2)) * sin(OpenFIREdiamond.Ang()) + (512 << 2);
-                        OF_Prefs::profiles[OF_Prefs::currentProfile].adjY = (OpenFIREdiamond.testMedianX() - (512 << 2)) * sin(OpenFIREdiamond.Ang()) +
-                                                                     (OpenFIREdiamond.testMedianY() - (384 << 2)) * cos(OpenFIREdiamond.Ang()) + (384 << 2);
+                        OF_Prefs::profiles[OF_Prefs::currentProfile].adjX = (OpenFIREdiamond.testMedianX() - CENTER_X) * cos(OpenFIREdiamond.Ang()) -
+                                                                             (OpenFIREdiamond.testMedianY() - CENTER_Y) * sin(OpenFIREdiamond.Ang()) + CENTER_X;
+                        OF_Prefs::profiles[OF_Prefs::currentProfile].adjY = (OpenFIREdiamond.testMedianX() - CENTER_X) * sin(OpenFIREdiamond.Ang()) +
+                                                                             (OpenFIREdiamond.testMedianY() - CENTER_Y) * cos(OpenFIREdiamond.Ang()) + CENTER_Y;
                     } else {
-                        OF_Prefs::profiles[OF_Prefs::currentProfile].adjX = (OpenFIREsquare.testMedianX() - (512 << 2)) * cos(OpenFIREsquare.Ang()) -
-                                                                     (OpenFIREsquare.testMedianY() - (384 << 2)) * sin(OpenFIREsquare.Ang()) + (512 << 2);
-                        OF_Prefs::profiles[OF_Prefs::currentProfile].adjY = (OpenFIREsquare.testMedianX() - (512 << 2)) * sin(OpenFIREsquare.Ang()) +
-                                                                     (OpenFIREsquare.testMedianY() - (384 << 2)) * cos(OpenFIREsquare.Ang()) + (384 << 2);
+                        OF_Prefs::profiles[OF_Prefs::currentProfile].adjX = (OpenFIREsquare.testMedianX() - CENTER_X) * cos(OpenFIREsquare.Ang()) -
+                                                                             (OpenFIREsquare.testMedianY() - CENTER_Y) * sin(OpenFIREsquare.Ang()) + CENTER_X;
+                        OF_Prefs::profiles[OF_Prefs::currentProfile].adjY = (OpenFIREsquare.testMedianX() - CENTER_X) * sin(OpenFIREsquare.Ang()) +
+                                                                             (OpenFIREsquare.testMedianY() - CENTER_Y) * cos(OpenFIREsquare.Ang()) + CENTER_Y;
                         // Work out LED locations by assuming height is 100%
                         OF_Prefs::profiles[OF_Prefs::currentProfile].TLled = (res_x / 2) - ((OpenFIREsquare.W() * (res_y  / OpenFIREsquare.H())) / 2);
                         OF_Prefs::profiles[OF_Prefs::currentProfile].TRled = (res_x / 2) + ((OpenFIREsquare.W() * (res_y  / OpenFIREsquare.H())) / 2);
@@ -576,10 +733,10 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                     // Set Offset buffer
                     topOffset = mouseY;
 
-                    buf[1] = 1;
-                    memcpy(&buf[2], &topOffset, sizeof(int));
-                    Serial.write(buf, sizeof(buf));
-                    Serial.flush();
+                    caliPayload[0] = 1;
+                    memcpy(&caliPayload[1], &topOffset, sizeof(int));
+                    if(fromDesktop && !OF_Serial::AppSerialSendResponse(OF_Const::sCaliInfoUpd, caliPayload, sizeof(caliPayload)))
+                        goto calibration_failed;
 
                     // Set mouse movement to bottom position
                     if(!fromDesktop) {
@@ -592,10 +749,10 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                     // Set Offset buffer
                     bottomOffset = (res_y - mouseY);
 
-                    buf[1] = 2;
-                    memcpy(&buf[2], &bottomOffset, sizeof(int));
-                    Serial.write(buf, sizeof(buf));
-                    Serial.flush();
+                    caliPayload[0] = 2;
+                    memcpy(&caliPayload[1], &bottomOffset, sizeof(int));
+                    if(fromDesktop && !OF_Serial::AppSerialSendResponse(OF_Const::sCaliInfoUpd, caliPayload, sizeof(caliPayload)))
+                        goto calibration_failed;
 
                     // Set mouse movement to left position
                     if(!fromDesktop) {
@@ -608,10 +765,10 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                     // Set Offset buffer
                     leftOffset = mouseX;
 
-                    buf[1] = 3;
-                    memcpy(&buf[2], &leftOffset, sizeof(int));
-                    Serial.write(buf, sizeof(buf));
-                    Serial.flush();
+                    caliPayload[0] = 3;
+                    memcpy(&caliPayload[1], &leftOffset, sizeof(int));
+                    if(fromDesktop && !OF_Serial::AppSerialSendResponse(OF_Const::sCaliInfoUpd, caliPayload, sizeof(caliPayload)))
+                        goto calibration_failed;
 
                     // Set mouse movement to right position
                     if(!fromDesktop) {
@@ -624,10 +781,10 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                     // Set Offset buffer
                     rightOffset = (res_x - mouseX);
 
-                    buf[1] = 4;
-                    memcpy(&buf[2], &rightOffset, sizeof(int));
-                    Serial.write(buf, sizeof(buf));
-                    Serial.flush();
+                    caliPayload[0] = 4;
+                    memcpy(&caliPayload[1], &rightOffset, sizeof(int));
+                    if(fromDesktop && !OF_Serial::AppSerialSendResponse(OF_Const::sCaliInfoUpd, caliPayload, sizeof(caliPayload)))
+                        goto calibration_failed;
 
                     // Save Offset buffer to profile
                     OF_Prefs::profiles[OF_Prefs::currentProfile].topOffset = topOffset;
@@ -643,28 +800,28 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                     }
                     break;
                 case FW_Const::Cali_Verify:
-                    // Apply new Cam center offsets with Offsets applied
+                    // Apply new Cam center offsets with Offsets applied using dynamic CENTER_X and CENTER_Y
                     if(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout) {
-                        OF_Prefs::profiles[OF_Prefs::currentProfile].adjX = (OpenFIREdiamond.testMedianX() - (512 << 2)) * cos(OpenFIREdiamond.Ang()) -
-                                                                     (OpenFIREdiamond.testMedianY() - (384 << 2)) * sin(OpenFIREdiamond.Ang()) + (512 << 2);
-                        OF_Prefs::profiles[OF_Prefs::currentProfile].adjY = (OpenFIREdiamond.testMedianX() - (512 << 2)) * sin(OpenFIREdiamond.Ang()) +
-                                                                     (OpenFIREdiamond.testMedianY() - (384 << 2)) * cos(OpenFIREdiamond.Ang()) + (384 << 2);
+                        OF_Prefs::profiles[OF_Prefs::currentProfile].adjX = (OpenFIREdiamond.testMedianX() - CENTER_X) * cos(OpenFIREdiamond.Ang()) -
+                                                                             (OpenFIREdiamond.testMedianY() - CENTER_Y) * sin(OpenFIREdiamond.Ang()) + CENTER_X;
+                        OF_Prefs::profiles[OF_Prefs::currentProfile].adjY = (OpenFIREdiamond.testMedianX() - CENTER_X) * sin(OpenFIREdiamond.Ang()) +
+                                                                             (OpenFIREdiamond.testMedianY() - CENTER_Y) * cos(OpenFIREdiamond.Ang()) + CENTER_Y;
                     } else {
-                        OF_Prefs::profiles[OF_Prefs::currentProfile].adjX = (OpenFIREsquare.testMedianX() - (512 << 2)) * cos(OpenFIREsquare.Ang()) -
-                                                                     (OpenFIREsquare.testMedianY() - (384 << 2)) * sin(OpenFIREsquare.Ang()) + (512 << 2);
-                        OF_Prefs::profiles[OF_Prefs::currentProfile].adjY = (OpenFIREsquare.testMedianX() - (512 << 2)) * sin(OpenFIREsquare.Ang()) +
-                                                                     (OpenFIREsquare.testMedianY() - (384 << 2)) * cos(OpenFIREsquare.Ang()) + (384 << 2);
+                        OF_Prefs::profiles[OF_Prefs::currentProfile].adjX = (OpenFIREsquare.testMedianX() - CENTER_X) * cos(OpenFIREsquare.Ang()) -
+                                                                             (OpenFIREsquare.testMedianY() - CENTER_Y) * sin(OpenFIREsquare.Ang()) + CENTER_X;
+                        OF_Prefs::profiles[OF_Prefs::currentProfile].adjY = (OpenFIREsquare.testMedianX() - CENTER_X) * sin(OpenFIREsquare.Ang()) +
+                                                                             (OpenFIREsquare.testMedianY() - CENTER_Y) * cos(OpenFIREsquare.Ang()) + CENTER_Y;
                     }
 
-                    buf[1] = 5;
-                    memcpy(&buf[2], &OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, sizeof(float));
-                    Serial.write(buf, sizeof(buf));
-                    Serial.flush();
+                    caliPayload[0] = 5;
+                    memcpy(&caliPayload[1], &OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, sizeof(float));
+                    if(fromDesktop && !OF_Serial::AppSerialSendResponse(OF_Const::sCaliInfoUpd, caliPayload, sizeof(caliPayload)))
+                        goto calibration_failed;
 
-                    buf[1] = 6;
-                    memcpy(&buf[2], &OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, sizeof(float));
-                    Serial.write(buf, sizeof(buf));
-                    Serial.flush();
+                    caliPayload[0] = 6;
+                    memcpy(&caliPayload[1], &OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, sizeof(float));
+                    if(fromDesktop && !OF_Serial::AppSerialSendResponse(OF_Const::sCaliInfoUpd, caliPayload, sizeof(caliPayload)))
+                        goto calibration_failed;
 
                     // Update Cam centre in perspective library
                     OpenFIREper.source(OF_Prefs::profiles[OF_Prefs::currentProfile].adjX, OF_Prefs::profiles[OF_Prefs::currentProfile].adjY);
@@ -672,13 +829,28 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
 
                     // Let the user test.
                     SetMode(FW_Const::GunMode_Verification);
+                    #ifdef USES_DISPLAY
+                        OLED.CalibrationStageUpdate(FW_Const::Cali_Verify);
+                    #endif // USES_DISPLAY
                     while(gunMode == FW_Const::GunMode_Verification) {
                         buttons.Poll();
+
+                        if(fromDesktop)
+                            OF_Serial::SerialProcessingDocked();
+                        const bool verificationCancel = fromDesktop && OF_Serial::AppSerialTakeCalibrationCancel();
 
                         if(irPosUpdateTick) {
                             irPosUpdateTick = 0;
                             GetPosition();
                         }
+
+                        if(fromDesktop && camNotAvailable)
+                            goto calibration_failed;
+
+                        // Cancellation wins over a simultaneous trigger/restart.
+                        if(verificationCancel ||
+                           ((buttons.pressedReleased & FW_Const::ExitPauseModeBtnMask) && !justBooted))
+                            goto calibration_cancelled;
 
                         // If it's good, move onto calibration finish.
                         if(buttons.pressed == FW_Const::BtnMask_Trigger) {
@@ -688,48 +860,44 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
                         // Press A/B to restart calibration for current profile
                         } else if(buttons.pressedReleased & FW_Const::ExitPauseModeHoldBtnMask) {
                             calStage = 0;
-                            Serial.printf("%c%c", OF_Const::sCaliStageUpd, FW_Const::Cali_Init);
-                            Serial.flush();
+                            const uint8_t stage = FW_Const::Cali_Init;
+                            if(fromDesktop && !OF_Serial::AppSerialSendResponse(OF_Const::sCaliStageUpd, &stage, 1))
+                                goto calibration_failed;
 
                             // (Re)set current values to factory defaults
                             OF_Prefs::profiles[OF_Prefs::currentProfile].topOffset = 0;
                             OF_Prefs::profiles[OF_Prefs::currentProfile].bottomOffset = 0;
                             OF_Prefs::profiles[OF_Prefs::currentProfile].leftOffset = 0;
                             OF_Prefs::profiles[OF_Prefs::currentProfile].rightOffset = 0;
-                            OF_Prefs::profiles[OF_Prefs::currentProfile].adjX = 512 << 2;
-                            OF_Prefs::profiles[OF_Prefs::currentProfile].adjY = 384 << 2;
+                            
+                            // RESET DEL CENTRO OTTICO USANDO I VALORI DINAMICI
+                            OF_Prefs::profiles[OF_Prefs::currentProfile].adjX = CENTER_X;
+                            OF_Prefs::profiles[OF_Prefs::currentProfile].adjY = CENTER_Y;
+                            
                             SetMode(FW_Const::GunMode_Calibration);
                             AbsMouse5.move(32768/2, 32768/2);
                             AbsMouse5.report();
-                        // Press C/Home to exit without committing new calibration values
-                        } else if(buttons.pressedReleased & FW_Const::ExitPauseModeBtnMask && !justBooted) {
-                            Serial.printf("%c%c", OF_Const::sCaliStageUpd, FW_Const::Cali_Verify+1);
-                            Serial.flush();
+                            #if CALI_CURSOR_ORBIT_ENABLED
+                                if(!fromDesktop) {
+                                    mouseCurrentX = mouseTargetX = 32768 / 2;
+                                    mouseCurrentY = mouseTargetY = 32768 / 2;
+                                    mouseMoving = false;
+                                    cursorOrbitStamp = micros();
+                                    cursorOrbitPhaseUs = 0;
+                                }
+                            #endif
 
-                            // Reapply backed-up data
-                            OF_Prefs::profiles[OF_Prefs::currentProfile].topOffset = _topOffset;
-                            OF_Prefs::profiles[OF_Prefs::currentProfile].bottomOffset = _bottomOffset;
-                            OF_Prefs::profiles[OF_Prefs::currentProfile].leftOffset = _leftOffset;
-                            OF_Prefs::profiles[OF_Prefs::currentProfile].rightOffset = _rightOffset;
-                            OF_Prefs::profiles[OF_Prefs::currentProfile].TLled = _TLled;
-                            OF_Prefs::profiles[OF_Prefs::currentProfile].TRled = _TRled;
-                            OF_Prefs::profiles[OF_Prefs::currentProfile].adjX = _adjX;
-                            OF_Prefs::profiles[OF_Prefs::currentProfile].adjY = _adjY;
-
-                            // Re-print the profile
-                            stateFlags |= FW_Const::StateFlag_PrintSelectedProfile;
-
-                            // Re-apply the calibration stored in the profile
-                            if(fromDesktop)
-                                SetMode(FW_Const::GunMode_Docked);
-                            else SetMode(FW_Const::GunMode_Run);
-                            return;
                         }
                     }
                     break;
                 default:
                     break;
             }
+            #ifdef USES_DISPLAY
+                // Show the next target after capturing this shot, including a restart.
+                if(gunMode == FW_Const::GunMode_Calibration)
+                    OLED.CalibrationStageUpdate(calStage);
+            #endif // USES_DISPLAY
         }
     }
 
@@ -740,6 +908,10 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
         SavePreferences();
         if(fromDesktop)
             SetMode(FW_Const::GunMode_Docked);
+        else {
+            // After confirming the first standalone calibration, return to Run.
+            SetMode(FW_Const::GunMode_Run);
+        }
     } else if(fromDesktop) {
         SetMode(FW_Const::GunMode_Docked);
     } else SetMode(FW_Const::GunMode_Run);
@@ -764,31 +936,366 @@ void FW_Common::ExecCalMode(const bool &fromDesktop)
         }
     #endif // USES_RUMBLE
 
-    Serial.printf("%c%c", OF_Const::sCaliStageUpd, FW_Const::Cali_Verify+1);
-    Serial.flush();
+    // The trigger has confirmed the new calibration. A lost final ACK must
+    // not undo values that the App may already have accepted.
+    calStage = FW_Const::Cali_Verify + 1;
+    if(fromDesktop && !OF_Serial::AppSerialSendResponse(OF_Const::sCaliStageUpd, &calStage, 1))
+        OF_Serial::AppSerialSendError();
+    return;
+
+calibration_failed:
+    communicationFailed = true;
+
+calibration_cancelled:
+    // One restore path for user cancellation and failed intermediate updates.
+    OF_Prefs::profiles[OF_Prefs::currentProfile].topOffset = _topOffset;
+    OF_Prefs::profiles[OF_Prefs::currentProfile].bottomOffset = _bottomOffset;
+    OF_Prefs::profiles[OF_Prefs::currentProfile].leftOffset = _leftOffset;
+    OF_Prefs::profiles[OF_Prefs::currentProfile].rightOffset = _rightOffset;
+    OF_Prefs::profiles[OF_Prefs::currentProfile].TLled = _TLled;
+    OF_Prefs::profiles[OF_Prefs::currentProfile].TRled = _TRled;
+    OF_Prefs::profiles[OF_Prefs::currentProfile].adjX = _adjX;
+    OF_Prefs::profiles[OF_Prefs::currentProfile].adjY = _adjY;
+    OpenFIREper.source(_adjX, _adjY);
+    OpenFIREper.deinit(0);
+    stateFlags |= FW_Const::StateFlag_PrintSelectedProfile;
+
+    SetMode(fromDesktop ? FW_Const::GunMode_Docked : FW_Const::GunMode_Run);
+
+    if(fromDesktop) {
+        if(!communicationFailed) {
+            // Reuse existing messages: reset the App's provisional values
+            // before End, so it cannot report a cancelled calibration as saved.
+            calStage = FW_Const::Cali_Init;
+            if(!OF_Serial::AppSerialSendResponse(OF_Const::sCaliStageUpd, &calStage, 1))
+                communicationFailed = true;
+            else {
+                calStage = FW_Const::Cali_Verify + 1;
+                if(!OF_Serial::AppSerialSendResponse(OF_Const::sCaliStageUpd, &calStage, 1))
+                    communicationFailed = true;
+            }
+        }
+
+        if(communicationFailed)
+            OF_Serial::AppSerialSendError();
+    }
+}
+
+// IR test view and calibration IR view (sTestBlobs): area and brightness of the camera blob
+// drawn at each vertex. Called in RunMode_Processing and with caliIrView, where GetPosition()
+// keeps the camera in Extended format, right before sTestCoords (which
+// makes the App redraw). Apps that do not know sTestBlobs ignore it.
+//
+// The trackers do not expose which camera object became which vertex, so
+// every valid blob is mapped into the same test space as sTestCoords (the
+// transform of the tracker's begin() followed by the sTestCoords mapping)
+// and paired with the nearest vertex: pairs are taken shortest first and
+// each blob and vertex is used once. A vertex estimated by the tracker (LED
+// not seen) stays unpaired, since every real blob is nearer to its own
+// vertex; a pair longer than half the shortest vertex distance is rejected.
+//
+// Payload (21 bytes): [0] format version (1), then for each vertex, in the
+// sTestCoords order: flags (bit 0 = seen by the camera, bit 1 = weak, see
+// IR_WEAK_MAX_BRIGHTNESS, with IR_WEAK_HYSTERESIS in the calibration IR view; Apps that do
+// not know bit 1 ignore it), average brightness,
+// max brightness, area (uint16, little endian; 0 when not seen).
+//
+// The pairing distances are computed in 32 bits. Coordinates are limited to
+// +-TEST_PAIR_COORD_LIMIT first: the largest squared distance is then
+// 2 * (2 * 16383)^2 = 2147221912, below INT32_MAX (2147483647). The limit is
+// not tuned: it is the largest value that keeps that sum within int32_t.
+// Blobs are always inside the test view (0 .. res_x >> 2 = 1920), so only a
+// vertex estimated more than about 8 view widths outside the view is moved,
+// and such a vertex is never near enough to a blob to be paired anyway.
+constexpr int32_t TEST_PAIR_COORD_LIMIT = 16383;
+static_assert(2 * TEST_PAIR_COORD_LIMIT <= 32767, "2 * (2 * limit)^2 must fit in int32_t");
+static_assert((res_x >> 2) <= TEST_PAIR_COORD_LIMIT, "the IR test view must be inside the pairing limit");
+
+static inline int32_t ClampTestCoord(int32_t value)
+{
+    if(value > TEST_PAIR_COORD_LIMIT)
+        return TEST_PAIR_COORD_LIMIT;
+    if(value < -TEST_PAIR_COORD_LIMIT)
+        return -TEST_PAIR_COORD_LIMIT;
+    return value;
+}
+
+static void SendTestBlobs(const int32_t (&vertexXin)[4], const int32_t (&vertexYin)[4],
+                          bool diamond, const CameraProfile& profile)
+{
+    constexpr uint8_t TEST_BLOBS_VERSION = 1;
+    constexpr uint8_t TEST_BLOB_SEEN = 0x01;
+    constexpr uint8_t TEST_BLOB_WEAK = 0x02;
+    constexpr int32_t MIN_PAIR_DISTANCE = 20; // test-space px, lower bound of the pairing limit
+
+    int32_t vertexX[4];
+    int32_t vertexY[4];
+    for(uint8_t i = 0; i < 4; ++i) {
+        vertexX[i] = ClampTestCoord(vertexXin[i]);
+        vertexY[i] = ClampTestCoord(vertexYin[i]);
+    }
+
+    const unsigned int seenFlags = OpenFIRECamera::Seen();
+    const int camMaxY = (profile.mouseResY - 1) >> profile.camToMouseShift;
+
+    int32_t blobX[4];
+    int32_t blobY[4];
+    bool blobValid[4];
+
+    for(uint8_t j = 0; j < 4; ++j) {
+        const OpenFIRECamera::ObjectData& object = OpenFIRECamera::Object(j);
+
+        // Same validity limits as Square Advanced (also keeps the shifts non-negative).
+        blobValid[j] = object.valid && ((seenFlags >> j) & 1U) &&
+                       object.x >= 0 && object.x <= profile.camMaxX &&
+                       object.y >= 0 && object.y <= camMaxY;
+        if(!blobValid[j])
+            continue;
+
+        const int trackerY = object.y << profile.camToMouseShift;
+        blobY[j] = ClampTestCoord(map(trackerY, 0, profile.mouseResY,
+                                      profile.testOffsetY, profile.testOffsetY + profile.testHeight));
+
+        if(diamond) {
+            const int trackerX = object.x << profile.camToMouseShift;
+            blobX[j] = ClampTestCoord(map(trackerX, 0, profile.mouseResX,
+                                          profile.testOffsetX + profile.testWidth, profile.testOffsetX));
+        } else {
+            #ifdef USE_SQUARE_ADVANCED
+                const int trackerX = (profile.camMaxX - object.x) << profile.camToMouseShift;
+            #else
+                const int trackerX = object.x << profile.camToMouseShift;
+            #endif // USE_SQUARE_ADVANCED
+            blobX[j] = ClampTestCoord(map(trackerX, 0, profile.mouseResX,
+                                          profile.testOffsetX, profile.testOffsetX + profile.testWidth));
+        }
+    }
+
+    // Pairing limit: half of the shortest distance between two vertices.
+    int32_t minVertexDist2 = std::numeric_limits<int32_t>::max();
+    for(uint8_t a = 0; a < 3; ++a) {
+        for(uint8_t b = a + 1; b < 4; ++b) {
+            const int32_t dx = vertexX[a] - vertexX[b];
+            const int32_t dy = vertexY[a] - vertexY[b];
+            const int32_t d2 = dx * dx + dy * dy;
+            if(d2 < minVertexDist2)
+                minVertexDist2 = d2;
+        }
+    }
+    int32_t limit2 = minVertexDist2 / 4; // (distance / 2)^2
+    if(limit2 < MIN_PAIR_DISTANCE * MIN_PAIR_DISTANCE)
+        limit2 = MIN_PAIR_DISTANCE * MIN_PAIR_DISTANCE;
+
+    int8_t vertexBlob[4] = {-1, -1, -1, -1};
+    bool blobUsed[4] = {false, false, false, false};
+
+    for(uint8_t pass = 0; pass < 4; ++pass) {
+        int32_t best2 = limit2 + 1;
+        int8_t bestVertex = -1;
+        int8_t bestBlob = -1;
+
+        for(uint8_t i = 0; i < 4; ++i) {
+            if(vertexBlob[i] >= 0)
+                continue;
+            for(uint8_t j = 0; j < 4; ++j) {
+                if(!blobValid[j] || blobUsed[j])
+                    continue;
+                const int32_t dx = vertexX[i] - blobX[j];
+                const int32_t dy = vertexY[i] - blobY[j];
+                const int32_t d2 = dx * dx + dy * dy;
+                if(d2 < best2) {
+                    best2 = d2;
+                    bestVertex = (int8_t)i;
+                    bestBlob = (int8_t)j;
+                }
+            }
+        }
+
+        if(bestVertex < 0)
+            break;
+        vertexBlob[bestVertex] = bestBlob;
+        blobUsed[bestBlob] = true;
+    }
+
+    uint8_t payload[1 + 4 * 5] = {0};
+    payload[0] = TEST_BLOBS_VERSION;
+
+    for(uint8_t i = 0; i < 4; ++i) {
+        uint8_t* entry = &payload[1 + i * 5];
+        if(vertexBlob[i] < 0) {
+            testBlobState[i] = TestBlobState_None;
+            continue; // not seen: all zero
+        }
+
+        const OpenFIRECamera::ObjectData& object = OpenFIRECamera::Object((uint8_t)vertexBlob[i]);
+        uint8_t weakLimit = IR_WEAK_MAX_BRIGHTNESS;
+        if(FW_Common::caliIrView && testBlobState[i] == TestBlobState_Weak)
+            weakLimit = IR_WEAK_MAX_BRIGHTNESS + IR_WEAK_HYSTERESIS;
+        else if(FW_Common::caliIrView && testBlobState[i] == TestBlobState_Good)
+            weakLimit = IR_WEAK_MAX_BRIGHTNESS - IR_WEAK_HYSTERESIS;
+        const bool weak = object.maxBrightness < weakLimit;
+        if(FW_Common::caliIrView)
+            testBlobState[i] = weak ? TestBlobState_Weak : TestBlobState_Good;
+        else
+            testBlobState[i] = TestBlobState_None;
+
+        entry[0] = TEST_BLOB_SEEN | (weak ? TEST_BLOB_WEAK : 0);
+        entry[1] = object.averageBrightness;
+        entry[2] = object.maxBrightness;
+        entry[3] = (uint8_t)(object.area & 0xFF);
+        entry[4] = (uint8_t)(object.area >> 8);
+    }
+
+    OF_Serial::AppSerialSendEvent(OF_Const::sTestBlobs, payload, sizeof(payload));
+}
+
+// Largest Perspective value (in absolute terms) mapped exactly by
+// MapCalibratedAxis(). Derived from 32-bit integer arithmetic, not tuned:
+// with |offset| <= res_x, (value - offset) * res stays within int32_t.
+// 271940 is about 35 screen widths: beyond it the gun aims almost parallel
+// to the screen, and the cursor is clamped to the screen edge later anyway.
+constexpr int32_t CALI_MAP_VALUE_LIMIT = (std::numeric_limits<int32_t>::max() / res_x) - res_x;
+static_assert(res_x >= res_y, "CALI_MAP_VALUE_LIMIT assumes res_x is the larger axis");
+static_assert(CALI_MAP_VALUE_LIMIT > 0, "res_x too large for 32-bit calibration mapping");
+
+// Maps one Perspective axis to the screen with the calibration offsets.
+// lowOffset is the reading taken while aiming at the top (or left) edge,
+// highOffset is res minus the reading taken at the bottom (or right) edge:
+// the two readings land exactly on 0 and res, as aimed during calibration.
+// With zero offsets the result is the plain Perspective value, as before.
+// Runs at the camera rate: only 32-bit integer operations, one multiply and
+// one divide, like the previous map().
+static inline int32_t MapCalibratedAxis(int32_t value, int32_t res, int32_t lowOffset, int32_t highOffset)
+{
+    // Limited first, so that every result stays small: the moving averages
+    // that follow add up to four results without overflowing.
+    if(value > CALI_MAP_VALUE_LIMIT)
+        value = CALI_MAP_VALUE_LIMIT;
+    else if(value < -CALI_MAP_VALUE_LIMIT)
+        value = -CALI_MAP_VALUE_LIMIT;
+
+    // A real calibration reads each screen edge within one screen of the LED
+    // range, and leaves at least a quarter of the range to the screen.
+    // Anything else is a damaged calibration: use the profile as uncalibrated.
+    if(lowOffset < -res || lowOffset > res || highOffset < -res || highOffset > res)
+        return value;
+
+    const int32_t span = res - lowOffset - highOffset;   // between -res and 3 * res
+    if(span < res / 4)
+        return value;
+
+    // map(value, lowOffset, res - highOffset, 0, res)
+    return ((value - lowOffset) * res) / span;
 }
 
 void FW_Common::GetPosition()
 {
-    if(dfrIRPos != nullptr) {
-        int error = dfrIRPos->basicAtomic(DFRobotIRPositionEx::Retry_2);
-        if(error == DFRobotIRPositionEx::Error_Success) {
+    const CameraProfile& cameraProfile = OpenFIRECamera::Profile();
+    const int CAM_COORD_RES_X = cameraProfile.mouseResX;
+    const int CAM_COORD_RES_Y = cameraProfile.mouseResY;
+
+    // Perspective code uses 2 extra precision bits (res_x/res_y are << 2).
+    constexpr int PERSPECTIVE_SCALE = 1 << 2;
+    constexpr int SCREEN_RES_X = res_x / PERSPECTIVE_SCALE;
+    constexpr int SCREEN_RES_Y = res_y / PERSPECTIVE_SCALE;
+    const int CAM_TEST_WIDTH = cameraProfile.testWidth;
+    const int CAM_TEST_HEIGHT = cameraProfile.testHeight;
+    const int CAM_TEST_OFFSET_X = cameraProfile.testOffsetX;
+    const int CAM_TEST_OFFSET_Y = cameraProfile.testOffsetY;
+
+    // Target aspect ratio used by Serial AR correction: 4:3 content.
+    constexpr int AR_CORRECTION_W = 4;
+    constexpr int AR_CORRECTION_H = 3;
+
+    if(OpenFIRECamera::IsReady()) {
+        // The IR test view (RunMode_Processing) and the WebApp IR view during calibration
+        // (caliIrView) also show blob area and brightness, which need the Extended data
+        // format; every other mode keeps Basic.
+        // Switched here, right before Read(), so it happens in the camera read context.
+        const OpenFIRECamera::DataFormat_e wantedFormat =
+            (runMode == FW_Const::RunMode_Processing || caliIrView) ? OpenFIRECamera::DataFormat_Extended
+                                                      : OpenFIRECamera::DataFormat_Basic;
+        if(OpenFIRECamera::DataFormat() != wantedFormat)
+            OpenFIRECamera::SetDataFormat(wantedFormat);
+
+        int error = OpenFIRECamera::Read();
+        if(error == OpenFIRECamera::Error_Success) {
+
+            #ifdef USE_MULTI_ONE_EURO_FILTER
+                // The filter keeps one history per LED slot, and Square and Diamond
+                // use the slots for different LEDs: restart it when the layout changes,
+                // so the two layouts are never blended.
+                static int filterLayout = -1;
+                if(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout != filterLayout) {
+                    filterLayout = OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout;
+                    oef_multi.configure(cameraProfile);
+                }
+            #endif // USE_MULTI_ONE_EURO_FILTER
            
             // if diamond layout, or square
             if(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout) { // layoutDiamond = 1
-                OpenFIREdiamond.begin(dfrIRPos->xPositions(), dfrIRPos->yPositions(), dfrIRPos->seen());
+                OpenFIREdiamond.begin(OpenFIRECamera::XPositions(), OpenFIRECamera::YPositions(), OpenFIRECamera::Seen());
 
+                // Diamond slots: 0 top, 1 right, 2 bottom, 3 left (see OpenFIRE_Diamond::configure).
+                #ifdef USE_MULTI_ONE_EURO_FILTER
+                    // Same filter as Square, applied to the four Diamond LEDs.
+                    for(int i = 0; i < 4; ++i) {
+                        X_in[i] = OpenFIREdiamond.X(i);
+                        Y_in[i] = OpenFIREdiamond.Y(i);
+                    }
+
+                    oef_multi.process(X_in, Y_in, X_out, Y_out);
+
+                    const float * const diamondX = X_out;
+                    const float * const diamondY = Y_out;
+                #else
+                    // Without the filter the integer positions are passed unchanged, as before.
+                    const int diamondX[4] = { OpenFIREdiamond.X(0), OpenFIREdiamond.X(1),
+                                              OpenFIREdiamond.X(2), OpenFIREdiamond.X(3) };
+                    const int diamondY[4] = { OpenFIREdiamond.Y(0), OpenFIREdiamond.Y(1),
+                                              OpenFIREdiamond.Y(2), OpenFIREdiamond.Y(3) };
+                #endif // USE_MULTI_ONE_EURO_FILTER
+
+                /*
                 OpenFIREper.warp(OpenFIREdiamond.X(0), OpenFIREdiamond.Y(0),
-                                OpenFIREdiamond.X(1), OpenFIREdiamond.Y(1),
-                                OpenFIREdiamond.X(2), OpenFIREdiamond.Y(2),
-                                OpenFIREdiamond.X(3), OpenFIREdiamond.Y(3),
-                                res_x / 2, 0, 0,
-                                res_y / 2, res_x / 2,
-                                res_y, res_x, res_y / 2);
+                                 OpenFIREdiamond.X(1), OpenFIREdiamond.Y(1),
+                                 OpenFIREdiamond.X(2), OpenFIREdiamond.Y(2),
+                                 OpenFIREdiamond.X(3), OpenFIREdiamond.Y(3),
+                                 res_x / 2, 0, 0,
+                                 res_y / 2, res_x / 2,
+                                 res_y, res_x, res_y / 2);
+                */
+               #ifdef USE_PERSPECTIVE_ADVANCED
+    // Adapt Diamond's vertex order to Perspective Advanced.
+    // Swap the third and fourth source/destination pairs together.
+    OpenFIREper.warp(
+        diamondX[0], diamondY[0],
+        diamondX[1], diamondY[1],
+        diamondX[3], diamondY[3],
+        diamondX[2], diamondY[2],
+
+        res_x / 2, 0,
+        0,         res_y / 2,
+        res_x,     res_y / 2,
+        res_x / 2, res_y);
+#else
+    // Preserve the original order for classic Perspective.
+    OpenFIREper.warp(
+        diamondX[0], diamondY[0],
+        diamondX[1], diamondY[1],
+        diamondX[2], diamondY[2],
+        diamondX[3], diamondY[3],
+
+        res_x / 2, 0,
+        0,         res_y / 2,
+        res_x / 2, res_y,
+        res_x,     res_y / 2);
+#endif
+
             } else { // layoutSquare = 0
-                OpenFIREsquare.begin(dfrIRPos->xPositions(), dfrIRPos->yPositions(), dfrIRPos->seen());              
+                OpenFIREsquare.begin(OpenFIRECamera::XPositions(), OpenFIRECamera::YPositions(), OpenFIRECamera::Seen());               
                
-                #ifdef USE_MULTI_ONE_EURO_FILTER 
+                #ifdef USE_MULTI_ONE_EURO_FILTER
                     X_in[0] = OpenFIREsquare.X(0);
                     Y_in[0] = OpenFIREsquare.Y(0);
                     X_in[1] = OpenFIREsquare.X(1);
@@ -801,40 +1308,62 @@ void FW_Common::GetPosition()
                     oef_multi.process(X_in, Y_in, X_out, Y_out);
 
                     OpenFIREper.warp(X_out[0], Y_out[0],
-                                X_out[1], Y_out[1],
-                                X_out[2], Y_out[2],
-                                X_out[3], Y_out[3],
-                                OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, 0,
-                                OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, 0,
-                                OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, res_y,
-                                OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, res_y);
+                                 X_out[1], Y_out[1],
+                                 X_out[2], Y_out[2],
+                                 X_out[3], Y_out[3],
+                                 OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, 0,
+                                 OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, 0,
+                                 OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, res_y,
+                                 OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, res_y);
    
                 #else
                     OpenFIREper.warp(OpenFIREsquare.X(0), OpenFIREsquare.Y(0),
-                                OpenFIREsquare.X(1), OpenFIREsquare.Y(1),
-                                OpenFIREsquare.X(2), OpenFIREsquare.Y(2),
-                                OpenFIREsquare.X(3), OpenFIREsquare.Y(3),
-                                OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, 0,
-                                OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, 0,
-                                OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, res_y,
-                                OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, res_y);
-                #endif // USE_MULTI_ONE_EURO_FILTER 
+                                 OpenFIREsquare.X(1), OpenFIREsquare.Y(1),
+                                 OpenFIREsquare.X(2), OpenFIREsquare.Y(2),
+                                 OpenFIREsquare.X(3), OpenFIREsquare.Y(3),
+                                 OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, 0,
+                                 OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, 0,
+                                 OF_Prefs::profiles[OF_Prefs::currentProfile].TLled, res_y,
+                                 OF_Prefs::profiles[OF_Prefs::currentProfile].TRled, res_y);
+                #endif // USE_MULTI_ONE_EURO_FILTER
 
             }
 
-            // Output mapped to screen resolution because offsets are measured in pixels
-            mouseX = map(OpenFIREper.getX(), 0, res_x, (0 - OF_Prefs::profiles[OF_Prefs::currentProfile].leftOffset), (res_x + OF_Prefs::profiles[OF_Prefs::currentProfile].rightOffset));                 
-            mouseY = map(OpenFIREper.getY(), 0, res_y, (0 - OF_Prefs::profiles[OF_Prefs::currentProfile].topOffset), (res_y + OF_Prefs::profiles[OF_Prefs::currentProfile].bottomOffset));         
+            // Output mapped to screen resolution because offsets are measured in pixels.
+            //
+            // Previous formula, kept for reference:
+            // mouseX = map(OpenFIREper.getX(), 0, res_x, (0 - OF_Prefs::profiles[OF_Prefs::currentProfile].leftOffset), (res_x + OF_Prefs::profiles[OF_Prefs::currentProfile].rightOffset));
+            // mouseY = map(OpenFIREper.getY(), 0, res_y, (0 - OF_Prefs::profiles[OF_Prefs::currentProfile].topOffset), (res_y + OF_Prefs::profiles[OF_Prefs::currentProfile].bottomOffset));
+            //
+            // Why it was replaced: the offsets are the readings taken during calibration
+            // while aiming at the screen edges (top/left reading, res minus bottom/right
+            // reading), so those readings must become exactly 0 and res. The previous
+            // formula stretched from 0 and res instead: aiming at an edge it returned
+            // offset * (offset1 + offset2) / res instead of the edge itself, an error of
+            // a few pixels on every calibrated edge (about 3-6 px with typical Square
+            // setups, up to 9-19 px). MapCalibratedAxis() puts the two readings exactly
+            // on the edges, gives the same result as before at the centre and with zero
+            // offsets, and treats a damaged calibration as an uncalibrated profile.
+            mouseX = MapCalibratedAxis(OpenFIREper.getX(), res_x,
+                                       OF_Prefs::profiles[OF_Prefs::currentProfile].leftOffset,
+                                       OF_Prefs::profiles[OF_Prefs::currentProfile].rightOffset);
+            mouseY = MapCalibratedAxis(OpenFIREper.getY(), res_y,
+                                       OF_Prefs::profiles[OF_Prefs::currentProfile].topOffset,
+                                       OF_Prefs::profiles[OF_Prefs::currentProfile].bottomOffset);
 
             switch(runMode) {
                 case FW_Const::RunMode_Average:
                     // 2 position moving average
-                    moveIndex ^= 1;
+                    // moveIndex can be 2 when coming from RunMode_Average2: "moveIndex ^= 1"
+                    // would then write past the end of the buffers (index 3) and keep
+                    // alternating 3 and 2, freezing the average on stale samples.
+                    moveIndex = (moveIndex == 0) ? 1 : 0;
                     moveXAxisArr[moveIndex] = mouseX;
                     moveYAxisArr[moveIndex] = mouseY;
                     mouseX = (moveXAxisArr[0] + moveXAxisArr[1]) / 2;
                     mouseY = (moveYAxisArr[0] + moveYAxisArr[1]) / 2;
                     break;
+
                 case FW_Const::RunMode_Average2:
                     // weighted average of current position and previous 2
                     if(moveIndex < 2)
@@ -846,9 +1375,10 @@ void FW_Common::GetPosition()
                     mouseX = (mouseX + moveXAxisArr[0] + moveXAxisArr[1] + moveXAxisArr[2]) / 4;
                     mouseY = (mouseY + moveYAxisArr[0] + moveYAxisArr[1] + moveYAxisArr[2]) / 4;
                     break;
+
                 default:
                     break;
-                }
+            }
 
             // Constrain that bisch so negatives don't cause underflow
             int32_t conMoveX = constrain(mouseX, 0, res_x);
@@ -858,26 +1388,67 @@ void FW_Common::GetPosition()
                 UpdateLastSeen();
 
                 if(OF_Serial::serialARcorrection) switch(OF_Prefs::profiles[OF_Prefs::currentProfile].aspectRatio) {
-                    case OF_Const::ar16_9:
-                        conMoveX = map(conMoveX, 966, 6720, 0, 32767);
+                    case OF_Const::ar16_9: {
+                        // Fit centered 4:3 content inside a 16:9 display.
+                        constexpr int correctedWidth =
+                            (res_x * AR_CORRECTION_W * 9) /
+                            (AR_CORRECTION_H * 16);
+
+                        constexpr int correctionX =
+                            (res_x - correctedWidth) / 2;
+
+                        conMoveX = map(conMoveX, correctionX, res_x - correctionX, 0, 32767);
                         conMoveX = constrain(conMoveX, 0, 32767);
                         conMoveY = map(conMoveY, 0, res_y, 0, 32767);
                         break;
-                    case OF_Const::ar16_10:
-                        conMoveX = map(conMoveX, 655, 7048, 0, 32767);
+                    }
+
+                    case OF_Const::ar16_10: {
+                        // Fit centered 4:3 content inside a 16:10 display.
+                        constexpr int correctedWidth =
+                            (res_x * AR_CORRECTION_W * 10) /
+                            (AR_CORRECTION_H * 16);
+
+                        constexpr int correctionX =
+                            (res_x - correctedWidth) / 2;
+
+                        conMoveX = map(conMoveX, correctionX, res_x - correctionX, 0, 32767);
                         conMoveX = constrain(conMoveX, 0, 32767);
                         conMoveY = map(conMoveY, 0, res_y, 0, 32767);
                         break;
-                    case OF_Const::ar3_2:
-                        conMoveX = map(conMoveX, 438, 7264, 0, 32767);
+                    }
+
+                    case OF_Const::ar3_2: {
+                        // Fit centered 4:3 content inside a 3:2 display.
+                        constexpr int correctedWidth =
+                            (res_x * AR_CORRECTION_W * 2) /
+                            (AR_CORRECTION_H * 3);
+
+                        constexpr int correctionX =
+                            (res_x - correctedWidth) / 2;
+
+                        conMoveX = map(conMoveX, correctionX, res_x - correctionX, 0, 32767);
                         conMoveX = constrain(conMoveX, 0, 32767);
                         conMoveY = map(conMoveY, 0, res_y, 0, 32767);
                         break;
-                    case OF_Const::ar5_4:
+                    }
+
+                    case OF_Const::ar5_4: {
+                        // A 5:4 display is narrower than 4:3, so the correction
+                        // is applied vertically instead of horizontally.
+                        constexpr int correctedHeight =
+                            (res_y * AR_CORRECTION_H * 5) /
+                            (AR_CORRECTION_W * 4);
+
+                        constexpr int correctionY =
+                            (res_y - correctedHeight) / 2;
+
                         conMoveX = map(conMoveX, 0, res_x, 0, 32767);
-                        conMoveY = map(conMoveY, 148, 4182, 0, 32767);
+                        conMoveY = map(conMoveY, correctionY, res_y - correctionY, 0, 32767);
                         conMoveY = constrain(conMoveY, 0, 32767);
                         break;
+                    }
+
                     case OF_Const::ar4_3:
                     default:
                         // Output mapped to Mouse resolution
@@ -895,7 +1466,7 @@ void FW_Common::GetPosition()
 
                 if(conMoveX == 0 || conMoveX == 32767)
                     offXAxis = true;
-                
+               
                 if(conMoveY == 0 || conMoveY == 32767)
                     offYAxis = true;
 
@@ -906,6 +1477,7 @@ void FW_Common::GetPosition()
                 if(buttons.analogOutput)
                      Gamepad16.moveCam(conMoveX, conMoveY);
                 else AbsMouse5.move(conMoveX, conMoveY);
+
             } else {
                 if(gunMode == FW_Const::GunMode_Verification) {
                     // Output mapped to Mouse resolution
@@ -915,86 +1487,133 @@ void FW_Common::GetPosition()
                     AbsMouse5.move(conMoveX, conMoveY);
                     AbsMouse5.report();
                 }
+
                 if(millis() - testLastStamp > 50) {
                     testLastStamp = millis();
                     // RAW Camera Output mapped to screen res (1920x1080)
-                    int rawX[4];
-                    int rawY[4];
+                    // Screen resolution is now dynamically derived from res_x/res_y.
+                    int32_t rawX[4];
+                    int32_t rawY[4];
+                    bool outsideFov[4];
+
                     // RAW Output for viewing in processing sketch mapped to 1920x1080 screen resolution
                     for (int i = 0; i < 4; ++i) {
+                        int pointX;
+                        int pointY;
+
                         if(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout) {
-                            rawX[i] = map(OpenFIREdiamond.X(i), 0, 1023 << 2, 1920, 0);
-                            rawY[i] = map(OpenFIREdiamond.Y(i), 0, 768 << 2, 0, 1080);
+                            pointX = OpenFIREdiamond.X(i);
+                            pointY = OpenFIREdiamond.Y(i);
+
+                            rawX[i] = map(pointX, 0, CAM_COORD_RES_X,
+                                          CAM_TEST_OFFSET_X + CAM_TEST_WIDTH, CAM_TEST_OFFSET_X);
+                            rawY[i] = map(pointY, 0, CAM_COORD_RES_Y,
+                                          CAM_TEST_OFFSET_Y, CAM_TEST_OFFSET_Y + CAM_TEST_HEIGHT);
                         } else {
-                            rawX[i] = map(OpenFIREsquare.X(i), 0, 1023 << 2, 0, 1920);
-                            rawY[i] = map(OpenFIREsquare.Y(i), 0, 768 << 2, 0, 1080);
+                            pointX = OpenFIREsquare.X(i);
+                            pointY = OpenFIREsquare.Y(i);
+
+                            rawX[i] = map(pointX, 0, CAM_COORD_RES_X,
+                                          CAM_TEST_OFFSET_X, CAM_TEST_OFFSET_X + CAM_TEST_WIDTH);
+                            rawY[i] = map(pointY, 0, CAM_COORD_RES_Y,
+                                          CAM_TEST_OFFSET_Y, CAM_TEST_OFFSET_Y + CAM_TEST_HEIGHT);
                         }
+
+                        outsideFov[i] =
+                            pointX < 0 || pointX > cameraProfile.mouseMaxX ||
+                            pointY < 0 || pointY > cameraProfile.mouseMaxY;
                     }
 
-                    if(runMode == FW_Const::RunMode_Processing) {
-                        int mouseXscaled = mouseX / 4;
-                        int mouseYscaled = mouseY / 4;
+                    // IR test view, and calibration with the WebApp IR view.
+                    if(runMode == FW_Const::RunMode_Processing || caliIrView) {
+                        int mouseXscaled = mouseX / PERSPECTIVE_SCALE;
+                        int mouseYscaled = mouseY / PERSPECTIVE_SCALE;
+
+                        // Encode outside-FOV state in bit 0 of each transmitted X coordinate.
+                        // Even X = inside FOV, odd X = outside FOV. rawX/rawY stay unchanged.
+                        int serialX[4];
+                        for(int i = 0; i < 4; ++i)
+                            serialX[i] = rawX[i] * 2 + (outsideFov[i] ? 1 : 0);
+
+                        int testMedianX;
+                        int testMedianY;
 
                         if(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout) {
-                            int testMedianX = map(OpenFIREdiamond.testMedianX(), 0, 1023 << 2, 1920, 0);
-                            int testMedianY = map(OpenFIREdiamond.testMedianY(), 0, 768 << 2, 0, 1080);
-                            char buf[49];
-                            buf[0] = OF_Const::sTestCoords;
-                            memcpy(&buf[1],  &rawX[0],      sizeof(int));
-                            memcpy(&buf[5],  &rawY[0],      sizeof(int));
-                            memcpy(&buf[9],  &rawX[1],      sizeof(int));
-                            memcpy(&buf[13], &rawY[1],      sizeof(int));
-                            memcpy(&buf[17], &rawX[2],      sizeof(int));
-                            memcpy(&buf[21], &rawY[2],      sizeof(int));
-                            memcpy(&buf[25], &rawX[3],      sizeof(int));
-                            memcpy(&buf[29], &rawY[3],      sizeof(int));
-                            memcpy(&buf[33], &mouseXscaled, sizeof(int));
-                            memcpy(&buf[37], &mouseYscaled, sizeof(int));
-                            memcpy(&buf[41], &testMedianX,  sizeof(int));
-                            memcpy(&buf[45], &testMedianY,  sizeof(int));
-                            Serial.write(buf, sizeof(buf));
+                            testMedianX = map(OpenFIREdiamond.testMedianX(), 0, CAM_COORD_RES_X,
+                                              CAM_TEST_OFFSET_X + CAM_TEST_WIDTH, CAM_TEST_OFFSET_X);
+                            testMedianY = map(OpenFIREdiamond.testMedianY(), 0, CAM_COORD_RES_Y,
+                                              CAM_TEST_OFFSET_Y, CAM_TEST_OFFSET_Y + CAM_TEST_HEIGHT);
                         } else {
-                            int testMedianX = map(OpenFIREsquare.testMedianX(), 0, 1023 << 2, 0, 1920);
-                            int testMedianY = map(OpenFIREsquare.testMedianY(), 0, 768 << 2, 0, 1080);
-                            char buf[49];
-                            buf[0] = OF_Const::sTestCoords;
-                            memcpy(&buf[1],  &rawX[0],      sizeof(int));
-                            memcpy(&buf[5],  &rawY[0],      sizeof(int));
-                            memcpy(&buf[9],  &rawX[1],      sizeof(int));
-                            memcpy(&buf[13], &rawY[1],      sizeof(int));
-                            memcpy(&buf[17], &rawX[2],      sizeof(int));
-                            memcpy(&buf[21], &rawY[2],      sizeof(int));
-                            memcpy(&buf[25], &rawX[3],      sizeof(int));
-                            memcpy(&buf[29], &rawY[3],      sizeof(int));
-                            memcpy(&buf[33], &mouseXscaled, sizeof(int));
-                            memcpy(&buf[37], &mouseYscaled, sizeof(int));
-                            memcpy(&buf[41], &testMedianX,  sizeof(int));
-                            memcpy(&buf[45], &testMedianY,  sizeof(int));
-                            Serial.write(buf, sizeof(buf));
+                            testMedianX = map(OpenFIREsquare.testMedianX(), 0, CAM_COORD_RES_X,
+                                              CAM_TEST_OFFSET_X, CAM_TEST_OFFSET_X + CAM_TEST_WIDTH);
+                            testMedianY = map(OpenFIREsquare.testMedianY(), 0, CAM_COORD_RES_Y,
+                                              CAM_TEST_OFFSET_Y, CAM_TEST_OFFSET_Y + CAM_TEST_HEIGHT);
                         }
+
+                        uint8_t payload[sizeof(int) * 12];
+                        memcpy(&payload[0],  &serialX[0],   sizeof(int));
+                        memcpy(&payload[4],  &rawY[0],      sizeof(int));
+                        memcpy(&payload[8],  &serialX[1],   sizeof(int));
+                        memcpy(&payload[12], &rawY[1],      sizeof(int));
+                        memcpy(&payload[16], &serialX[2],   sizeof(int));
+                        memcpy(&payload[20], &rawY[2],      sizeof(int));
+                        memcpy(&payload[24], &serialX[3],   sizeof(int));
+                        memcpy(&payload[28], &rawY[3],      sizeof(int));
+                        memcpy(&payload[32], &mouseXscaled, sizeof(int));
+                        memcpy(&payload[36], &mouseYscaled, sizeof(int));
+                        memcpy(&payload[40], &testMedianX,  sizeof(int));
+                        memcpy(&payload[44], &testMedianY,  sizeof(int));
+
+                        // Blob data first: sTestCoords makes the App redraw.
+                        if(OpenFIRECamera::DataFormat() == OpenFIRECamera::DataFormat_Extended)
+                            SendTestBlobs(rawX, rawY, OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout != 0, cameraProfile);
+
+                        OF_Serial::AppSerialSendEvent(
+                            OF_Const::sTestCoords, payload, sizeof(payload));
                     }
 
                     #ifdef USES_DISPLAY
-                        OLED.DrawVisibleIR(rawX, rawY);
+                        /*
+                        for(int i = 0; i < 4; ++i) {
+                            rawX[i] = map(rawX[i],
+                                CAM_TEST_OFFSET_X,
+                                CAM_TEST_OFFSET_X + CAM_TEST_WIDTH,
+                                0, SCREEN_RES_X);
+
+                            rawY[i] = map(rawY[i],
+                                CAM_TEST_OFFSET_Y,
+                                CAM_TEST_OFFSET_Y + CAM_TEST_HEIGHT,
+                                0, SCREEN_RES_Y);
+                        }
+                        */
+                        OLED.DrawVisibleIR(rawX, rawY,
+                            (gunMode == FW_Const::GunMode_Calibration ||
+                             gunMode == FW_Const::GunMode_Verification)
+                                ? ExtDisplay::IRDraw_Overlay : ExtDisplay::IRDraw_Clear);
                     #endif // USES_DISPLAY
                 }
             }
-        } else if(error != DFRobotIRPositionEx::Error_DataMismatch)
+        } else if(error != OpenFIRECamera::Error_DataMismatch)
             PrintIrError();
-    } else  PrintIrError();
+    } else PrintIrError();
 }
 
 void FW_Common::PrintIrError()
 {
     // set flag to warn desktop app when docking
-    if(!camNotAvailable)
+    const bool firstError = !camNotAvailable;
+    if(firstError)
         camNotAvailable = true;
 
-    if(dockedSaving) {
-        char buf[2] = { OF_Const::sError, OF_Const::sErrCam };
-        Serial.write(buf, 2);
-    } else if(millis() - camWarningTimestamp > CAM_WARNING_INTERVAL) {
-        Serial.println("CAMERROR: Not available");
+    const uint8_t error = OF_Const::sErrCam;
+    if(firstError && OF_Serial::AppSerialSendEvent(OF_Const::sError, &error, 1)) {
+        camWarningTimestamp = millis();
+        return;
+    }
+
+    if(millis() - camWarningTimestamp > CAM_WARNING_INTERVAL) {
+        if(!OF_Serial::AppSerialSendEvent(OF_Const::sError, &error, 1))
+            Serial.println("CAMERROR: Not available");
         camWarningTimestamp = millis();
     }
 }
@@ -1004,7 +1623,7 @@ void FW_Common::UpdateLastSeen()
     if(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout) {
         if(lastSeen != OpenFIREdiamond.seen()) {
             #ifdef MAMEHOOKER
-            if(!OF_Serial::serialMode)
+            if(!OF_Serial::serialMode) {
             #endif // MAMEHOOKER
                 #ifdef LED_ENABLE
                 if(!lastSeen && OpenFIREdiamond.seen())
@@ -1012,6 +1631,9 @@ void FW_Common::UpdateLastSeen()
                 else if(lastSeen && !OpenFIREdiamond.seen())
                     OF_RGB::SetLedPackedColor(OF_RGB::IRSeen0Color);
                 #endif // LED_ENABLE
+            #ifdef MAMEHOOKER
+            }
+            #endif // MAMEHOOKER
 
             lastSeen = OpenFIREdiamond.seen();
         }
@@ -1044,12 +1666,14 @@ bool FW_Common::SelectCalProfile(const int &profile)
         OF_Prefs::currentProfile = profile;
     }
 
+    SetMode(gunMode);
+
     OpenFIREper.source(OF_Prefs::profiles[profile].adjX, OF_Prefs::profiles[profile].adjY);                                                          
     OpenFIREper.deinit(0);
 
     // set IR sensitivity
-    if(OF_Prefs::profiles[profile].irSens <= DFRobotIRPositionEx::Sensitivity_Max)
-        SetIrSensitivity((DFRobotIRPositionEx::Sensitivity_e)OF_Prefs::profiles[profile].irSens);
+    if(OF_Prefs::profiles[profile].irSens <= OpenFIRECamera::Sensitivity_Max)
+        SetIrSensitivity((OpenFIRECamera::Sensitivity_e)OF_Prefs::profiles[profile].irSens);
 
     // set run mode
     if(OF_Prefs::profiles[profile].runMode < FW_Const::RunMode_Count)
@@ -1110,7 +1734,7 @@ void FW_Common::RedrawDisplay()
 
 void FW_Common::SetIrSensitivity(const int &sensitivity)
 {
-    if(sensitivity > DFRobotIRPositionEx::Sensitivity_Max)
+    if(sensitivity > OpenFIRECamera::Sensitivity_Max)
         return;
 
     if(OF_Prefs::profiles[OF_Prefs::currentProfile].irSens != sensitivity) {
@@ -1118,19 +1742,23 @@ void FW_Common::SetIrSensitivity(const int &sensitivity)
         stateFlags |= FW_Const::StateFlag_SavePreferencesEn;
     }
 
-    if(dfrIRPos != nullptr) dfrIRPos->sensitivityLevel((DFRobotIRPositionEx::Sensitivity_e)sensitivity);
-    //if(!(stateFlags & FW_Const::StateFlag_PrintSelectedProfile))
-        //PrintIrSensitivity();
+    OpenFIRECamera::SetSensitivity((OpenFIRECamera::Sensitivity_e)sensitivity);
+
 }
 
 void FW_Common::SetIrLayout(const int &layout)
 {
-    // TODO: we need an enum for layout types available
+    // Valid layouts are the OF_Const layout enum (layoutSquare, layoutDiamond).
     if(layout >= OF_Const::layoutTypes)
         return;
 
     if(OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout != layout) {
         OF_Prefs::profiles[OF_Prefs::currentProfile].irLayout = layout;
+
+        SetMode(gunMode);
+
+        OpenFIREper.deinit(0);
+
         stateFlags |= FW_Const::StateFlag_SavePreferencesEn;
     }
 }
@@ -1152,22 +1780,51 @@ int FW_Common::SavePreferences()
         #endif // USES_DISPLAY
     }
 
-    if(OF_Prefs::SaveProfiles() == OF_Prefs::Error_Success) {
+    int saveResult = OF_Prefs::SaveProfiles();
+
+    if(saveResult == OF_Prefs::Error_Success) {
+        int result = OF_Prefs::SaveToggles();
+        if(saveResult == OF_Prefs::Error_Success &&
+           result != OF_Prefs::Error_Success)
+             saveResult = result;
+
+        if(OF_Prefs::toggles[OF_Const::customPins]) {
+            result = OF_Prefs::SavePins();
+            if(saveResult == OF_Prefs::Error_Success &&
+               result != OF_Prefs::Error_Success)
+                saveResult = result;
+        }
+
+        result = OF_Prefs::SaveSettings();
+        if(saveResult == OF_Prefs::Error_Success &&
+           result != OF_Prefs::Error_Success)
+            saveResult = result;
+
+        result = OF_Prefs::SaveButtons();
+        if(saveResult == OF_Prefs::Error_Success &&
+           result != OF_Prefs::Error_Success)
+            saveResult = result;
+
+        result = OF_Prefs::SaveUSBID();
+        if(saveResult == OF_Prefs::Error_Success &&
+           result != OF_Prefs::Error_Success)
+            saveResult = result;
+    }
+
+    // During an App commit the pin map in RAM may not be active yet.
+    // Report the result through the protocol; do not drive LEDs/OLED here.
+    if(dockedSaving)
+        return saveResult;
+
+    if(saveResult == OF_Prefs::Error_Success) {
+
         #ifdef USES_DISPLAY
             OLED.ScreenModeChange(ExtDisplay::Screen_SaveSuccess);
         #endif // USES_DISPLAY
 
-        if(gunMode != FW_Const::GunMode_Docked) Serial.println("Settings saved to Flash"), Serial.flush();
-        else Serial.printf("%c%c (Successfully saved to LittleFS Storage)", OF_Const::sSave, true), Serial.flush();
-        OF_Prefs::SaveToggles();
-
-        if(OF_Prefs::toggles[OF_Const::customPins])
-            OF_Prefs::SavePins();
-
-        OF_Prefs::SaveSettings();
-        OF_Prefs::SaveButtons();
-        OF_Prefs::SaveUSBID();
-
+        if(gunMode != FW_Const::GunMode_Docked)
+            Serial.println("Settings saved to Flash"), Serial.flush();
+        
         #ifdef LED_ENABLE
             for(uint i = 0; i < 3; ++i) {
                 OF_RGB::LedUpdate(25,25,255);
@@ -1181,6 +1838,8 @@ int FW_Common::SavePreferences()
             RedrawDisplay();
         #endif // USES_DISPLAY
 
+        SetMode(gunMode);
+
         return OF_Prefs::Error_Success;
     } else {
         #ifdef USES_DISPLAY
@@ -1188,19 +1847,8 @@ int FW_Common::SavePreferences()
         #endif // USES_DISPLAY
 
         // TODO: reimpl a detailed error string
-        if(gunMode != FW_Const::GunMode_Docked) Serial.println("Error saving Preferences to Flash.");
-        else Serial.printf("%c%c (Failed to save to LittleFS Storage)", OF_Const::sSave, false), Serial.flush();
-
-        /*
-        if(nvPrefsError != OF_Prefs::Error_Success) {
-            Serial.print(NVRAMlabel);
-            Serial.print(" error: ");
-        #ifdef SAMCO_FLASH_ENABLE
-            Serial.println(OF_Prefs::ErrorCodeToString(nvPrefsError));
-        #else
-            Serial.println(nvPrefsError);
-        #endif // SAMCO_FLASH_ENABLE
-        }*/
+        if(gunMode != FW_Const::GunMode_Docked)
+            Serial.println("Error saving Preferences to Flash.");
 
         #ifdef LED_ENABLE
             for(uint i = 0; i < 2; ++i) {
@@ -1215,7 +1863,8 @@ int FW_Common::SavePreferences()
             RedrawDisplay();
         #endif // USES_DISPLAY
 
-        return OF_Prefs::Error_Write;
+        return saveResult;
+
     }
 }
 
@@ -1230,6 +1879,8 @@ void FW_Common::UpdateBindings(const bool &rebindStrSel)
         // Updates pins
         for(int i = 0; i < ButtonCount; ++i)
             LightgunButtons::ButtonDesc[i].pin = OF_Prefs::pins[i];
+        // Inputs read inverted (normally closed contacts): only with custom pins, never with board presets
+        LightgunButtons::invertMask = OF_Prefs::toggles[OF_Const::customPins] ? OF_Prefs::settings[OF_Const::inputInvertMask] : 0;
         break;
     default:
         break;

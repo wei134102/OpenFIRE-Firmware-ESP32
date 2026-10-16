@@ -35,6 +35,23 @@
 #include "OpenFIREprefs.h"
 #include "OpenFIREconstant.h"
 
+// #include "web_assets.h"
+#include "OpenFIREweb.h"
+#include "OpenFIREusbnet.h"
+
+//#include "class/net/net_device.h"
+//extern "C" volatile bool OF_NcmDataInterfaceReady;
+
+#if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_USB_NCM)
+    #include "class/net/net_device.h"
+    extern "C" volatile bool OF_NcmDataInterfaceReady;
+
+    // CDC is created after the boot choice, not by the Arduino core. Route
+    // early diagnostics through the same safe stream used by the firmware.
+    #undef Serial
+    #define Serial (*Serial_OpenFIRE_Stream)
+#endif
+
 // ===================================================================================
 // OS ABSTRACTION: DELAY REDEFINITION / RIDEFINIZIONE DEL DELAY (FREERTOS)
 // ===================================================================================
@@ -101,9 +118,98 @@
 #endif
 // ======[ESP32_PORT]====== DUAL-CORE MANAGEMENT FOR ESP32 USING FREERTOS / FINE GESTIONE DUAL CORE ESP32 (FINE INIZIALIZZAZIONE)
 
+// Buttons to hold at boot (1.5 s) to also serve the App over WiFi (web
+// configuration mode). It works with the dongle too: the access point joins
+// the channel of the ESP-NOW link. / Tasti da tenere premuti all'avvio (1,5 s)
+// per servire l'App anche via WiFi: funziona anche con il dongle, l'access
+// point si aggancia al canale del collegamento ESP-NOW.
+
+#define FIRMWARE_COMBO_BUTTON_1 OF_Prefs::pins[OF_Const::btnTrigger]
+#define FIRMWARE_COMBO_BUTTON_2 OF_Prefs::pins[OF_Const::btnGunA]
+
+#define WEBCONFIG_COMBO_BUTTON_1 OF_Prefs::pins[OF_Const::btnGunB]
+#define WEBCONFIG_COMBO_BUTTON_2 -1
+
+static const uint8_t BOOT_FLAG_NORMAL   = 0b00; // 0
+static const uint8_t BOOT_FLAG_FIRMWARE = 0b01; // 1
+static const uint8_t BOOT_FLAG_WEBAPP   = 0b10; // 2
+// Se sono validi entrambi, il risultato sarà 0b11 (cioè 3)
+
+// Reads a button pin as Poll() does, inverted when its input is set as normally closed.
+static int ReadButtonPin(const int pin)
+{
+    for(unsigned int i = 0; i < ButtonCount; ++i)
+        if(LightgunButtons::ButtonDesc[i].pin == pin)
+            return digitalRead(pin) ^ ((LightgunButtons::invertMask >> i) & 1);
+    return digitalRead(pin);
+}
+
+static uint8_t GetBootModeHeld(const int fwPin1, const int fwPin2, 
+                               const int webPin1, const int webPin2, 
+                               const unsigned long holdMs)
+{
+    bool checkFw = (fwPin1 >= 0 || fwPin2 >= 0);
+    bool checkWeb = (webPin1 >= 0 || webPin2 >= 0);
+
+    if (!checkFw && !checkWeb) return BOOT_FLAG_NORMAL;
+
+    delay(50);
+    const unsigned long holdStart = millis();
+
+    while ((millis() - holdStart) < holdMs) {
+        
+        if (checkFw) {
+            if ((fwPin1 >= 0 && ReadButtonPin(fwPin1) != LOW) || 
+                (fwPin2 >= 0 && ReadButtonPin(fwPin2) != LOW)) {
+                checkFw = false;
+            }
+        }
+
+        if (checkWeb) {
+            if ((webPin1 >= 0 && ReadButtonPin(webPin1) != LOW) || 
+                (webPin2 >= 0 && ReadButtonPin(webPin2) != LOW)) {
+                checkWeb = false;
+            }
+        }
+
+        if (!checkFw && !checkWeb) return BOOT_FLAG_NORMAL;
+
+        delay(10);
+    }
+
+    uint8_t result = BOOT_FLAG_NORMAL;
+    
+    if (checkFw)  result |= BOOT_FLAG_FIRMWARE; // Aggiunge il flag Firmware
+    if (checkWeb) result |= BOOT_FLAG_WEBAPP;   // Aggiunge il flag WebApp
+    
+    // Ritorna lo stato puro: può essere 0 (nessuno), 1 (FW), 2 (Web) o 3 (Entrambi)
+    return result; 
+}
+
+static void CheckBootRequests()
+{
+    uint8_t bootResult = GetBootModeHeld(
+        FIRMWARE_COMBO_BUTTON_1, FIRMWARE_COMBO_BUTTON_2,
+        WEBCONFIG_COMBO_BUTTON_1, WEBCONFIG_COMBO_BUTTON_2,
+        1500UL
+    );
+
+    // Se metti prima FIRMWARE, vince Firmware. 
+    // Se un domani vuoi dare precedenza alla WEBAPP, basta invertire questi due blocchi!
+    if (bootResult & BOOT_FLAG_FIRMWARE) {
+        FW_Common::RebootToBootloader();
+    } 
+    else if (bootResult & BOOT_FLAG_WEBAPP) {
+        OF_WebConfigModeActive = true;
+    }
+}
 
 // Sets up the environment
 void setup() {
+
+    #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_USB_NCM)
+        Serial_OpenFIRE_Stream = &OpenFIREUsbSerial();
+    #endif
 
     // ======== [ESP32_PORT] =========== X AVVIO DUAL CORE ESP32 =================================== 
     #if defined(ARDUINO_ARCH_ESP32) && defined(DUAL_CORE)
@@ -200,8 +306,8 @@ void setup() {
                 OF_Prefs::profiles[i].rightOffset = 0;
             }
         
-            if(OF_Prefs::profiles[i].irSens > DFRobotIRPositionEx::Sensitivity_Max)
-                OF_Prefs::profiles[i].irSens = DFRobotIRPositionEx::Sensitivity_Default;
+            if(OF_Prefs::profiles[i].irSens > OpenFIRECamera::Sensitivity_Max)
+                OF_Prefs::profiles[i].irSens = OpenFIRECamera::Sensitivity_Default;
 
             if(OF_Prefs::profiles[i].runMode >= FW_Const::RunMode_Count)
                 OF_Prefs::profiles[i].runMode = FW_Const::RunMode_Normal;
@@ -317,18 +423,30 @@ void setup() {
     // this is needed for both customs and builtins, as defaults are all uninitialized
     FW_Common::UpdateBindings(true);
 
-    // Initialize DFRobot Camera Wires & Object
+    /*FW_Common::FeedbackSet();*/
+
     FW_Common::CameraSet();
 
     // initialize buttons & feedback devices
     FW_Common::buttons.Begin();
     FW_Common::FeedbackSet();
 
+    // Output the user chose for startup. Set before the first SetMode(), so the
+    // display shows the right one straight away.
+    FW_Common::ApplyBootOutputMode();
+
     #ifdef LED_ENABLE
         OF_RGB::LedInit();
     #endif // LED_ENABLE
 // ====== [ESP32_PORT] ==== End initialize camera before the connection / fine del blocco che per opportunità è spostato sopra prima della connessione =======
 
+CheckBootRequests();
+#if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_USB_NCM)
+    // Boot choice is final: compose HID + CDC or HID + NCM, then enumerate.
+    // USB can enumerate while the existing analog calibration takes place.
+    OpenFIREUsbBegin(OF_WebConfigModeActive, POLL_RATE);
+    Serial_OpenFIRE_Stream = &OpenFIREUsbSerial();
+#endif
 
 // ===================================================================================
 // EMPIRICAL HARDWARE CALIBRATION OF ANALOG STICKS / CALIBRAZIONE EMPIRICA HARDWARE DEGLI STICK ANALOGICI
@@ -486,11 +604,27 @@ void setup() {
     // === [ESP32_PORT] === New USB initialization or wireless connection management / NUOVA GESTIONE INIZIALIZZAIZONE USB O CONNESSIONE WIRELESS ==================== //
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    TinyUSBDevices.begin(POLL_RATE);
+    #if !defined(OPENFIRE_USB_NCM)
+        TinyUSBDevices.begin(POLL_RATE);
+    #endif
     #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)   // IF WIRELESS / SE WIRELESS
         #define MILLIS_TIMEOUT  1000 //1 second / 1 secondi
         unsigned long lastMillis = millis ();
-        while ((millis () - lastMillis <= MILLIS_TIMEOUT) && (!TinyUSBDevice.mounted())) { yield(); }
+        
+        // FASE 1: Aspettiamo fino a 1 secondo. Se il dispositivo viene montato, o se il bus       
+        // si "sveglia" (suspended diventa false, segno inequivocabile che c'è un host PC), usciamo.
+        while ((millis () - lastMillis <= MILLIS_TIMEOUT) && (!TinyUSBDevice.mounted()) && TinyUSBDevice.suspended()) { yield(); }
+        
+        // FASE 2: Se abbiamo scoperto che c'è un PC attaccato (!suspended), aspettiamo con molta più 
+        // calma che Windows finisca i suoi comodi per l'enumerazione (fino a 4 secondi aggiuntivi).
+        if (!TinyUSBDevice.suspended()) {
+             unsigned long pcWaitMillis = millis();
+             while ((millis() - pcWaitMillis <= 4000) && !TinyUSBDevice.mounted()) { 
+                 yield(); 
+             }
+        }
+
+        // FASE 3: Solo se alla fine di tutto NON siamo montati, avviamo il wireless.
         if (!TinyUSBDevice.mounted()) {
             SerialWireless.init_wireless();
             SerialWireless.begin();
@@ -519,8 +653,10 @@ void setup() {
     #endif // defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
 
     if (TinyUSBDevice.mounted()) {
+        #if !defined(OPENFIRE_USB_NCM)
         Serial.begin(9600);
         Serial.setTimeout(0);
+        #endif
         #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
             if (TinyUSBDevices.onBattery) {  // in the unlikely event that the USB is mounted at the exact moment the wireless connection is established / nel caso incredibile che l'USB sia montato nel momnto esatto in cui è stata stabilita connessione wireless
                 TinyUSBDevices.onBattery = false;
@@ -540,13 +676,20 @@ void setup() {
         // /
         // CHIUDI TUTTO CIO' CHE E' USB SE E' DA CHIUDERE
         // Salvaguarda la memoria e previene errori del core USB quando non è connesso fisicamente.
-        TinyUSBDevice.clearConfiguration();
-        TinyUSBDevice.detach();
+        #if defined(OPENFIRE_USB_NCM)
+            OpenFIREUsbDetach(); // Do not rewrite descriptors while USB is running.
+        #else
+            TinyUSBDevice.clearConfiguration();
+            TinyUSBDevice.detach();
+        #endif
         
         Serial_OpenFIRE_Stream = &SerialWireless;
 
         // ===== WIRELESS PEDAL MANAGEMENT / GESTIONE DEL PEDALE WIRELESS =====
-        if((OF_Prefs::pins[OF_Const::btnPedal] == -1) && (OF_Prefs::pins[OF_Const::btnPedal2] == -1)) {
+        // Without a pin the pedal can only be wireless, and looking for one costs about
+        // nine seconds at every start: it is done only when the user asked for it.
+        if((OF_Prefs::pins[OF_Const::btnPedal] == -1) && (OF_Prefs::pins[OF_Const::btnPedal2] == -1) &&
+           OF_Prefs::toggles[OF_Const::pedalWireless]) {
             if (lastPedalSave && (lastPedalChannel == espnow_wifi_channel)) {
                 if (!SerialWireless.connection_gun_at_last_pedal()) SerialWireless.connection_gun_at_pedal();
             } else SerialWireless.connection_gun_at_pedal();
@@ -578,6 +721,24 @@ void setup() {
     #endif // USES_DISPLAY
     #endif //ARDUINO_ARCH_ESP32
 
+
+    // ================== avvia webapp ======================
+    // Web configuration mode (access point + WebSocket), requested by holding B at
+    // startup: CheckBootRequests() sets OF_WebConfigModeActive.
+    // It works both on the cable and with the dongle: WebApp_Init() uses a fixed
+    // channel when the radio is free, and the channel of the ESP-NOW link (dongle
+    // or wireless pedal) when that link is already using it.
+    // /
+    // Modalita' di configurazione web (access point + WebSocket), richiesta tenendo
+    // premuto B all'avvio: CheckBootRequests() imposta OF_WebConfigModeActive.
+    // Funziona sia via cavo sia con il dongle:
+    // WebApp_Init() usa un canale fisso quando la radio e' libera e il canale del
+    // collegamento ESP-NOW (dongle o pedale wireless) quando e' gia' in uso.
+    
+    if (OF_WebConfigModeActive) {
+        WebApp_Init();
+    }
+    
 // ===================================================================================
 // POLYMORPHIC I/O: THE VIRTUAL SERIAL PORT TRICK / IL TRUCCO DELLA SERIALE VIRTUALE
 // ===================================================================================
@@ -622,12 +783,8 @@ void setup() {
     // su batteria (da 5ms a ~15ms) offre più CPU all'ESP-NOW limitando possibili lag di sistema, ma
     // ho riscontrato che funziona comunque bene alla stessa frequenza usata con connessione via cavo,
     // quindi l'ho impostata uguale ovvero 209Hz che corrisponde a circa 5ms
-    if (TinyUSBDevices.onBattery) startIrCamTimer(209);  // set to 5ms for wireless too... e.g., 100->10ms, 66->15ms for wireless connection / impostato a 5ms anche per wireless ... es. 100->10ms 66 -> 15ms per connessione wireless
-      else startIrCamTimer(209); // 5ms for wired connection / 5ms per connessione via cavo
-    
-    FW_Common::OpenFIREper.source(OF_Prefs::profiles[OF_Prefs::currentProfile].adjX,
-                                  OF_Prefs::profiles[OF_Prefs::currentProfile].adjY);
-    FW_Common::OpenFIREper.deinit(0);
+    if (TinyUSBDevices.onBattery) startIrCamTimer(OpenFIRECamera::Profile().fps);  // set to 5ms for wireless too... e.g., 100->10ms, 66->15ms for wireless connection / impostato a 5ms anche per wireless ... es. 100->10ms 66 -> 15ms per connessione wireless
+      else startIrCamTimer(OpenFIRECamera::Profile().fps); // 5ms for wired connection / 5ms per connessione via cavo
 
     // First boot sanity checks; all zeroes are initial config
     if((OF_Prefs::profiles[OF_Prefs::currentProfile].topOffset    == 0 &&
@@ -648,7 +805,7 @@ void setup() {
 
         while(!(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_Trigger) || FW_Common::camNotAvailable) {
             // Check and process serial commands, in case user needs to change EEPROM settings.
-            if(Serial.available())
+            if(OF_Serial::AppSerialInputPending())
                 OF_Serial::SerialProcessingDocked();
             
             if(FW_Common::gunMode == FW_Const::GunMode_Docked) {
@@ -795,6 +952,10 @@ void loop1()
 
         if(Serial.available()) OF_Serial::SerialProcessing();
 
+        // Web configuration mode: an App can also dock through the WebSocket.
+        if(OF_WebConfigModeActive && OF_Serial::AppSerialWebDockPending())
+            OF_Serial::SerialProcessingWebDock();
+
         #ifdef MAMEHOOKER
             if(OF_Serial::serialMode) OF_Serial::SerialHandling();                                   // Process the force feedback from the current queue.
         #endif // MAMEHOOKER
@@ -849,7 +1010,7 @@ void loop1()
                 }
             }
         }
-        #ifndef COMMENTO
+        
         #if defined(ARDUINO_ARCH_ESP32) && defined(DUAL_CORE)
         // Block this task for 1 millisecond (or 1 tick). 
         // This allows the Idle Task (priority 0) to run,
@@ -861,7 +1022,7 @@ void loop1()
         vTaskDelay(pdMS_TO_TICKS(1));
         //yield();
         #endif // defined(ARDUINO_ARCH_ESP32) && defined(DUAL_CORE)
-        #endif // COMMENTO
+        
     }
 }
 #endif // DUAL_CORE
@@ -894,19 +1055,76 @@ void loop()
 
         pauseHoldStarted = false;
         pauseModeSelectingProfile = false;
+        pauseModeSelectingOutput = false;
     }
 
     #ifdef MAMEHOOKER
         if(Serial.available()) OF_Serial::SerialProcessing();
     #endif // MAMEHOOKER
 
+    // Web configuration mode: an App can also dock through the WebSocket.
+    // Run mode is served by ExecRunMode()/loop1(); polling here only in Pause
+    // avoids signalling the second core from the main core.
+    if(OF_WebConfigModeActive && FW_Common::gunMode == FW_Const::GunMode_Pause &&
+       OF_Serial::AppSerialWebDockPending())
+        OF_Serial::SerialProcessingWebDock();
+
     switch(FW_Common::gunMode) {
         case FW_Const::GunMode_Pause:
             if(OF_Prefs::toggles[OF_Const::simplePause]) {
-                if(pauseModeSelectingProfile) {
-                    if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_A) {
+                if(pauseModeSelectingOutput) {
+                    if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_A ||
+                       FW_Common::buttons.pressedReleased == FW_Const::BtnMask_Up) {
+                        SetOutputModeSelection(false);
+                    } else if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_B ||
+                              FW_Common::buttons.pressedReleased == FW_Const::BtnMask_Down) {
+                        SetOutputModeSelection(true);
+                    } else if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_Trigger) {
+                        OutputModeChange(outputModeSelection);
+                        pauseModeSelectingOutput = false;
+                        FW_Common::pauseModeSelection = FW_Const::PauseMode_OutputMode;
+
+                        if(!OF_Serial::serialMode)
+                            Serial.println("Going back to the main menu...");
+
+                        #ifdef LED_ENABLE
+                            OF_RGB::LedUpdate(0,100,200);
+                        #endif // LED_ENABLE
+
+                        #ifdef USES_DISPLAY
+                            FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_OutputMode);
+                        #endif // USES_DISPLAY
+
+                    } else if(FW_Common::buttons.pressedReleased & FW_Const::ExitPauseModeBtnMask) {
+                        if(!OF_Serial::serialMode)
+                            Serial.println("Exiting output mode selection.");
+
+                        pauseModeSelectingOutput = false;
+
+                        #ifdef LED_ENABLE
+                            for(uint i = 0; i < 2; ++i) {
+                                OF_RGB::LedUpdate(180,180,180);
+                                delay(125);
+                                OF_RGB::LedOff();
+                                delay(100);
+                            }
+                            OF_RGB::LedUpdate(0,100,200);
+                        #endif // LED_ENABLE
+
+                        FW_Common::pauseModeSelection = FW_Const::PauseMode_OutputMode;
+
+                        #ifdef USES_DISPLAY
+                            FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_OutputMode);
+                        #endif // USES_DISPLAY
+                    }
+                } else if(pauseModeSelectingProfile) {
+                    //if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_A) {
+                    if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_A ||
+                       FW_Common::buttons.pressedReleased == FW_Const::BtnMask_Up) {
                         SetProfileSelection(false);
-                    } else if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_B) {
+                    //} else if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_B) {
+                    } else if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_B||
+                              FW_Common::buttons.pressedReleased == FW_Const::BtnMask_Down) {
                         SetProfileSelection(true);
                     } else if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_Trigger) {
                         FW_Common::SelectCalProfile(profileModeSelection);
@@ -946,9 +1164,13 @@ void loop()
                             FW_Common::OLED.PauseListUpdate(ExtDisplay::ScreenPause_Calibrate);
                         #endif // USES_DISPLAY
                     }
-                } else if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_A) {
+                //} else if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_A) {
+                } else if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_A ||
+                            FW_Common::buttons.pressedReleased == FW_Const::BtnMask_Up) {
                     SetPauseModeSelection(false);
-                } else if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_B) {
+                //} else if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_B) {
+                } else if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_B ||
+                            FW_Common::buttons.pressedReleased == FW_Const::BtnMask_Down) {
                     SetPauseModeSelection(true);
                 } else if(FW_Common::buttons.pressedReleased == FW_Const::BtnMask_Trigger) {
                     switch(FW_Common::pauseModeSelection) {
@@ -972,6 +1194,21 @@ void loop()
                           #endif // USES_DISPLAY
                           #ifdef LED_ENABLE
                               OF_RGB::SetLedPackedColor(OF_Prefs::profiles[OF_Prefs::currentProfile].color);
+                          #endif // LED_ENABLE
+                          break;
+                        case FW_Const::PauseMode_OutputMode:
+                          outputModeSelection = FW_Common::GetOutputMode();
+                          if(!OF_Serial::serialMode) {
+                              Serial.println("Pick an output mode!");
+                              Serial.print("Current output mode: ");
+                              Serial.println(FW_Const::OutputModeLabels[outputModeSelection]);
+                          }
+                          pauseModeSelectingOutput = true;
+                          #ifdef USES_DISPLAY
+                              FW_Common::OLED.PauseOutputModeUpdate(outputModeSelection, outputModeSelection);
+                          #endif // USES_DISPLAY
+                          #ifdef LED_ENABLE
+                              OutputModeLed(outputModeSelection);
                           #endif // LED_ENABLE
                           break;
                         case FW_Const::PauseMode_Save:
@@ -1090,6 +1327,8 @@ void loop()
                         while(FW_Common::buttons.debounced)
                             FW_Common::buttons.Poll(1);
 
+                        pauseModeSelectingProfile = false;
+                        pauseModeSelectingOutput = false;
                         FW_Common::SetMode(FW_Const::GunMode_Run);
                         pauseExitHoldStarted = false;
                     }
@@ -1113,12 +1352,22 @@ void loop()
                 DecreaseIrSensitivity(OF_Prefs::profiles[OF_Prefs::currentProfile].irSens);
             } else if(FW_Common::buttons.pressedReleased == FW_Const::SaveBtnMask) {
                 FW_Common::SavePreferences();
+            } else if(FW_Common::buttons.pressedReleased == FW_Const::OutputModeNextBtnMask) {
+                OutputModeChange((uint8_t)((FW_Common::GetOutputMode() + 1) % FW_Const::OutputModeCount));
+            } else if(FW_Common::buttons.pressedReleased == FW_Const::OutputModePrevBtnMask) {
+                OutputModeChange((uint8_t)((FW_Common::GetOutputMode() + FW_Const::OutputModeCount - 1) % FW_Const::OutputModeCount));
             #ifdef USES_RUMBLE
-                } else if(FW_Common::buttons.pressedReleased == FW_Const::RumbleToggleBtnMask && OF_Prefs::pins[OF_Const::rumbleSwitch] >= 0) {
+                // Software toggle only without a hardware switch (the switch would override it in
+                // run mode) and with a rumble pin, as in the Simple Pause Menu.
+                } else if(FW_Common::buttons.pressedReleased == FW_Const::RumbleToggleBtnMask &&
+                          OF_Prefs::pins[OF_Const::rumbleSwitch] < 0 && OF_Prefs::pins[OF_Const::rumblePin] >= 0) {
                     RumbleToggle();
             #endif // USES_RUMBLE
             #ifdef USES_SOLENOID
-                } else if(FW_Common::buttons.pressedReleased == FW_Const::SolenoidToggleBtnMask && OF_Prefs::pins[OF_Const::solenoidSwitch] >= 0) {
+                // Software toggle only without a hardware switch (the switch would override it in
+                // run mode) and with a solenoid pin, as in the Simple Pause Menu.
+                } else if(FW_Common::buttons.pressedReleased == FW_Const::SolenoidToggleBtnMask &&
+                          OF_Prefs::pins[OF_Const::solenoidSwitch] < 0 && OF_Prefs::pins[OF_Const::solenoidPin] >= 0) {
                     SolenoidToggle();
             #endif // USES_SOLENOID
             } else SelectCalProfileFromBtnMask(FW_Common::buttons.pressedReleased);
@@ -1189,7 +1438,7 @@ void ExecRunMode()
         #ifdef USES_SWITCHES
             #ifdef USES_RUMBLE
                 if(OF_Prefs::pins[OF_Const::rumbleSwitch] >= 0) {
-                    OF_Prefs::toggles[OF_Const::rumble] = !digitalRead(OF_Prefs::pins[OF_Const::rumbleSwitch]);
+                    OF_Prefs::toggles[OF_Const::rumble] = !(digitalRead(OF_Prefs::pins[OF_Const::rumbleSwitch]) ^ ((LightgunButtons::invertMask >> OF_Const::rumbleSwitch) & 1));
                     #ifdef MAMEHOOKER
                     if(!OF_Serial::serialMode) {
                     #endif // MAMEHOOKER
@@ -1202,11 +1451,11 @@ void ExecRunMode()
             #endif // USES_RUMBLE
             #ifdef USES_SOLENOID
                 if(OF_Prefs::pins[OF_Const::solenoidSwitch] >= 0) {
-                    OF_Prefs::toggles[OF_Const::solenoid] = !digitalRead(OF_Prefs::pins[OF_Const::solenoidSwitch]);
+                    OF_Prefs::toggles[OF_Const::solenoid] = !(digitalRead(OF_Prefs::pins[OF_Const::solenoidSwitch]) ^ ((LightgunButtons::invertMask >> OF_Const::solenoidSwitch) & 1));
                     #ifdef MAMEHOOKER
                     if(!OF_Serial::serialMode) {
                     #endif // MAMEHOOKER
-                        if(!OF_Prefs::toggles[OF_Const::solenoid] && digitalRead(OF_Prefs::pins[OF_Const::solenoidPin])) {
+                        if(!OF_Prefs::toggles[OF_Const::solenoid] && OF_FFB::GetSolenoid()) {
                             OF_FFB::FFBShutdown();
                         }
                     #ifdef MAMEHOOKER
@@ -1215,7 +1464,7 @@ void ExecRunMode()
                 }
             #endif // USES_SOLENOID
             if(OF_Prefs::pins[OF_Const::autofireSwitch] >= 0)
-                OF_Prefs::toggles[OF_Const::autofire] = !digitalRead(OF_Prefs::pins[OF_Const::autofireSwitch]);
+                OF_Prefs::toggles[OF_Const::autofire] = !(digitalRead(OF_Prefs::pins[OF_Const::autofireSwitch]) ^ ((LightgunButtons::invertMask >> OF_Const::autofireSwitch) & 1));
         #endif // USES_SWITCHES
 
         if(FW_Common::irPosUpdateTick) {
@@ -1276,6 +1525,10 @@ void ExecRunMode()
 
         // Run through serial receive buffer once this run, if it has contents.
         if(Serial.available()) OF_Serial::SerialProcessing();
+
+        // Web configuration mode: an App can also dock through the WebSocket.
+        if(OF_WebConfigModeActive && OF_Serial::AppSerialWebDockPending())
+            OF_Serial::SerialProcessingWebDock();
 
         #ifdef MAMEHOOKER
             if(OF_Serial::serialMode) OF_Serial::SerialHandling();                                   // Process the force feedback from the current queue.
@@ -1352,16 +1605,22 @@ void ExecRunModeProcessing()
     for(;;) {
         FW_Common::buttons.Poll(1);
 
-        if(Serial.available()) {
-            #ifdef USES_DISPLAY
-                FW_Common::OLED.ScreenModeChange(ExtDisplay::Screen_Docked);
-            #endif // USES_DISPLAY
-
+        const bool sessionInput = WebAppSerial::available() > 0;
+        if(sessionInput || OF_Serial::AppSerialInputPending()) {
             OF_Serial::SerialProcessingDocked();
         }
 
-        if(FW_Common::runMode != FW_Const::RunMode_Processing)
+        if(FW_Common::dockedSaving ||
+           FW_Common::runMode != FW_Const::RunMode_Processing ||
+           FW_Common::gunMode != FW_Const::GunMode_Docked) {
+            #ifdef USES_DISPLAY
+                // Restore the logo on test exit, without replacing another mode's screen.
+                if(!FW_Common::dockedSaving &&
+                   FW_Common::gunMode == FW_Const::GunMode_Docked)
+                    FW_Common::OLED.ScreenModeChange(ExtDisplay::Screen_Docked);
+            #endif // USES_DISPLAY
             return;
+        }
 
         if(FW_Common::irPosUpdateTick) {
             FW_Common::irPosUpdateTick = 0;
@@ -1377,53 +1636,99 @@ void ExecGunModeDocked()
     FW_Common::buttons.ReleaseAll();
 
     #ifdef LED_ENABLE
-        OF_RGB::LedUpdate(127, 127, 255);
+        if(!FW_Common::dockedSaving)
+            OF_RGB::LedUpdate(127, 127, 255);
     #endif // LED_ENABLE
 
     unsigned long tempChecked = millis();
     unsigned long aStickChecked = millis();
     unsigned long currentMillis = millis();
 
-    char buf[64];
-    int pos = sprintf(&buf[0], "%.1f"
-                                #ifdef GIT_HASH
-                                "-%s"
-                                #endif // GIT_HASH
-                                , OPENFIRE_VERSION
-                                #ifdef GIT_HASH
-                                , GIT_HASH
-                                #endif // GIT_HASH
-                      );
-    buf[pos++] = OF_Const::serialTerminator;
-    pos += sprintf(&buf[pos], "%s", OPENFIRE_BOARD);
-    buf[pos++] = OF_Const::serialTerminator;
-    memcpy(&buf[pos], &OF_Prefs::usb, sizeof(OF_Prefs::USBMap_t));
-    pos += sizeof(OF_Prefs::USBMap_t);
-    if(FW_Common::camNotAvailable) {
-        buf[pos++] = OF_Const::serialTerminator;
-        buf[pos++] = OF_Const::sError;
-    }
-    Serial.write(buf, pos);
-    Serial.flush();
-
+    // Board information: version, board name, USB table and the trailer markers, the
+    // longest of which is the complete version. 64 bytes were already nearly all used.
+    char buf[96];
+    bool sendBoardInfo = true;
     for(;;) {
-        FW_Common::buttons.Poll(1);
+        if(sendBoardInfo) {
+            int pos = sprintf(&buf[0], "%.1f"
+                                        #ifdef GIT_HASH
+                                        "-%s"
+                                        #endif // GIT_HASH
+                                        , OPENFIRE_VERSION
+                                        #ifdef GIT_HASH
+                                        , GIT_HASH
+                                        #endif // GIT_HASH
+                              );
+            buf[pos++] = OF_Const::serialTerminator;
+            pos += sprintf(&buf[pos], "%s", OPENFIRE_BOARD);
+            buf[pos++] = OF_Const::serialTerminator;
+            memcpy(&buf[pos], &OF_Prefs::usb, sizeof(OF_Prefs::USBMap_t));
+            pos += sizeof(OF_Prefs::USBMap_t);
+            if(FW_Common::camNotAvailable) {
+                buf[pos++] = OF_Const::serialTerminator;
+                buf[pos++] = OF_Const::sError;
+            }
+            // A wireless pedal answers even though no pin is mapped to it: the App needs to
+            // know, or it would describe a working pedal as not connected. Kept after the
+            // camera marker, which an App that does not know this one still finds first.
+            #if defined(ARDUINO_ARCH_ESP32) && defined(OPENFIRE_WIRELESS_ENABLE)
+                if(TinyUSBDevices.is_pedal_wireless) {
+                    buf[pos++] = OF_Const::serialTerminator;
+                    buf[pos++] = OF_Const::sPedalWireless;
+                }
+            #endif
+
+            // Complete version of the firmware, 7.0.0 or 7.0.0-beta1 (the same numbers as
+            // OPENFIRE_VERSION_STRING, without going through String): the web App uses it
+            // to open the page published for this firmware. Like every marker that is not
+            // just a flag it carries its own length, so an App that does not know it skips
+            // it and still reads what comes after (see sVersionFull in OpenFIREshared.h).
+            {
+                char version[32];
+                const int length = snprintf(version, sizeof(version), "%d.%d.%d%s",
+                                            OPENFIRE_VERSION_MAJOR, OPENFIRE_VERSION_MINOR,
+                                            OPENFIRE_VERSION_PATCH, OPENFIRE_VERSION_TAIL);
+                if(length > 0 && length < (int)sizeof(version) &&
+                   pos + 3 + length <= (int)sizeof(buf)) {
+                    buf[pos++] = OF_Const::serialTerminator;
+                    buf[pos++] = OF_Const::sVersionFull;
+                    buf[pos++] = (char)length;
+                    memcpy(&buf[pos], version, length);
+                    pos += length;
+                }
+            }
+
+            const bool boardInfoSent = OF_Serial::AppSerialSendResponse(OF_Const::sDock2, buf, (uint8_t)pos);
+        
+            sendBoardInfo = false;
+
+            // Nobody answered the board information (the App is gone, or the dock
+            // bytes did not come from an App): end that session, so it cannot keep
+            // the gun docked and the other link (serial / WiFi) refused.
+            if(!boardInfoSent) {
+                OF_Serial::AppSerialEndUnansweredSession();
+                if(FW_Common::gunMode != FW_Const::GunMode_Docked)
+                    return;
+            }
+        }
+
         currentMillis = millis();
 
         if(!FW_Common::dockedSaving) {
+            FW_Common::buttons.Poll(1);
             if(FW_Common::buttons.pressed) {
                 for(uint i = 0; i < ButtonCount; ++i)
                     if(bitRead(FW_Common::buttons.pressed, i)) {
-                        buf[0] = OF_Const::sBtnPressed, buf[1] = i;
-                        Serial.write(buf, 2);
+                        buf[0] = i;
+                        OF_Serial::AppSerialSendEvent(OF_Const::sBtnPressed, buf, 1);
                     }
             }
 
             if(FW_Common::buttons.released) {
                 for(uint i = 0; i < ButtonCount; ++i)
                     if(bitRead(FW_Common::buttons.released, i)) {
-                        buf[0] = OF_Const::sBtnReleased, buf[1] = i;
-                        Serial.write(buf, 2);
+                        buf[0] = i;
+                        OF_Serial::AppSerialSendEvent(OF_Const::sBtnReleased, buf, 1);
                     }
             }
 
@@ -1432,8 +1737,8 @@ void ExecGunModeDocked()
                     OF_FFB::TemperatureUpdate();
 
                     if(currentMillis - tempChecked >= 1000) {
-                        buf[0] = OF_Const::sTemperatureUpd, buf[1] = OF_FFB::temperatureCurrent;
-                        Serial.write(buf, 2);
+                        buf[0] = OF_FFB::temperatureCurrent;
+                        OF_Serial::AppSerialSendEvent(OF_Const::sTemperatureUpd, buf, 1);
 
                         tempChecked = currentMillis;
                     }
@@ -1467,26 +1772,47 @@ void ExecGunModeDocked()
                         analogValueY = (uint16_t)map(rawY, ANALOG_STICK_DEADZONE_Y_MAX, 4095, ANALOG_STICK_CENTER_Y, 4095);
                     else 
                         analogValueY = ANALOG_STICK_CENTER_Y;
-                    #else                  
+                    #else  // rp2040                
                     // Leggiamo il valore puro dall'ADC (0-4095)
                     uint16_t analogValueX = analogRead(OF_Prefs::pins[OF_Const::analogX]);
                     uint16_t analogValueY = analogRead(OF_Prefs::pins[OF_Const::analogY]);
-                    #endif // COMMENTO
+                    #endif // esp32/rp2040
+
+                    // Same optional inversion as AnalogStickPoll(), so the test view shows
+                    // the direction actually sent. / Stessa inversione opzionale di
+                    // AnalogStickPoll(): il test mostra la direzione realmente inviata.
+                    #ifdef ARDUINO_ARCH_ESP32
+                    // The resting centre stays exactly at the centre. / Il centro a riposo resta esatto.
+                    if(OF_Prefs::toggles[OF_Const::analogInvertX] && analogValueX != ANALOG_STICK_CENTER_X) analogValueX = (uint16_t)(4095 - analogValueX);
+                    if(OF_Prefs::toggles[OF_Const::analogInvertY] && analogValueY != ANALOG_STICK_CENTER_Y) analogValueY = (uint16_t)(4095 - analogValueY);
+                    #else  // rp2040
+                    if(OF_Prefs::toggles[OF_Const::analogInvertX]) analogValueX = (uint16_t)(4095 - analogValueX);
+                    if(OF_Prefs::toggles[OF_Const::analogInvertY]) analogValueY = (uint16_t)(4095 - analogValueY);
+                    #endif // esp32/rp2040
                     
-                    buf[0] = OF_Const::sAnalogPosUpd;
-                    memcpy(&buf[1], (uint8_t*)&analogValueX, sizeof(uint16_t));
-                    memcpy(&buf[3], (uint8_t*)&analogValueY, sizeof(uint16_t));
-                    Serial.write(buf, 5);
+                    memcpy(&buf[0], (uint8_t*)&analogValueX, sizeof(uint16_t));
+                    memcpy(&buf[2], (uint8_t*)&analogValueY, sizeof(uint16_t));
+                    OF_Serial::AppSerialSendEvent(OF_Const::sAnalogPosUpd, buf, 4);
                 }
             #endif // USES_ANALOG
         }
 
-        if(Serial.available()) OF_Serial::SerialProcessingDocked();
+        if(OF_Serial::AppSerialInputPending()) {
+            const uint32_t sessionBefore = OF_Serial::AppSerialSessionId();
+            OF_Serial::SerialProcessingDocked();
+            // Stay here during recovery: returning to the first-boot caller
+            // could resume initialization with a partly updated configuration.
+            // A session that replaced an abandoned one also needs board info.
+            if(OF_Serial::AppSerialSessionIsActive() &&
+               OF_Serial::AppSerialSessionId() != sessionBefore)
+                sendBoardInfo = true;
+        }
 
         if(FW_Common::gunMode != FW_Const::GunMode_Docked)
             return;
 
-        if(FW_Common::runMode == FW_Const::RunMode_Processing)
+        if(!FW_Common::dockedSaving &&
+           FW_Common::runMode == FW_Const::RunMode_Processing)
             ExecRunModeProcessing();
     }
 }
@@ -1603,6 +1929,16 @@ void AnalogStickPoll()
         analogValueY = ANALOG_STICK_CENTER_Y;
     }
 
+    // 2b. OPTIONAL AXIS INVERSION / INVERSIONE OPZIONALE DEGLI ASSI
+    // For sticks wired or mounted the other way round. Applied before every output,
+    // so stick, D-pad, arrow keys and the test view all follow the same direction.
+    // /
+    // Per stick collegati o montati al contrario. Applicata prima di ogni uscita:
+    // stick, D-pad, frecce e test seguono tutti la stessa direzione.
+    // The resting centre stays exactly at the centre. / Il centro a riposo resta esatto.
+    if(OF_Prefs::toggles[OF_Const::analogInvertX] && analogValueX != ANALOG_STICK_CENTER_X) analogValueX = (uint16_t)(4095 - analogValueX);
+    if(OF_Prefs::toggles[OF_Const::analogInvertY] && analogValueY != ANALOG_STICK_CENTER_Y) analogValueY = (uint16_t)(4095 - analogValueY);
+
     // 3. OUTPUT MANAGEMENT / GESTIONE OUTPUT
     if(OF_Prefs::settings[OF_Const::analogMode] == OF_Const::analogModeStick) {
         Gamepad16.moveStick(analogValueX, analogValueY);
@@ -1617,7 +1953,7 @@ void AnalogStickPoll()
         // Usando analogValueX/Y le soglie sono fisse, sicure e simmetriche.
         // Niente cast, niente underflow, nessun tasto bloccato.
 
-        // TODO: need to consider inverted axis toggle, currently assumes axises are inverted by default
+        // Directions assume the default inverted axes; the AnalogInvertX/Y toggles are applied above.
         // would this also benefit from custom Analog->Digital deadzone?
 
         if(analogValueY < 1200)      newPos = 2; // down
@@ -1656,6 +1992,10 @@ void AnalogStickPoll()
 {
     int analogValueX = analogRead(OF_Prefs::pins[OF_Const::analogX]);
     int analogValueY = analogRead(OF_Prefs::pins[OF_Const::analogY]);
+
+    // Optional axis inversion, as on ESP32. / Inversione opzionale degli assi, come su ESP32.
+    if(OF_Prefs::toggles[OF_Const::analogInvertX]) analogValueX = 4095 - analogValueX;
+    if(OF_Prefs::toggles[OF_Const::analogInvertY]) analogValueY = 4095 - analogValueY;
     
     if(OF_Prefs::settings[OF_Const::analogMode] == OF_Const::analogModeStick) {
         // Analog stick deadzone should help mitigate overwriting USB commands for the other input channels.
@@ -1669,7 +2009,7 @@ void AnalogStickPoll()
     } else {
         uint32_t newPos = 0;
 
-        // TODO: need to consider inverted axis toggle, currently assumes axises are inverted by default
+        // Directions assume the default inverted axes; the AnalogInvertX/Y toggles are applied above.
         // would this also benefit from custom Analog->Digital deadzone?
         if(analogValueY < 1200)
             newPos = 2; // down
@@ -1802,6 +2142,12 @@ void SetPauseModeSelection(const bool &isIncrement)
               OF_RGB::LedUpdate(200,50,0);
           #endif // LED_ENABLE
           break;
+        case FW_Const::PauseMode_OutputMode:
+          Serial.println("Selecting: Switch output mode");
+          #ifdef LED_ENABLE
+              OF_RGB::LedUpdate(0,100,200);
+          #endif // LED_ENABLE
+          break;
         case FW_Const::PauseMode_Save:
           Serial.println("Selecting: Save Settings");
           #ifdef LED_ENABLE
@@ -1895,15 +2241,98 @@ void SelectCalProfileFromBtnMask(const uint32_t &mask)
     }
 }
 
+// Simple Pause Mode - scrolls up/down output modes list
+// Bool determines if it's incrementing or decrementing the list
+void SetOutputModeSelection(const bool &isIncrement)
+{
+    if(isIncrement) {
+        if(outputModeSelection >= FW_Const::OutputModeCount - 1)
+            outputModeSelection = 0;
+        else outputModeSelection++;
+    } else {
+        if(outputModeSelection == 0)
+            outputModeSelection = FW_Const::OutputModeCount - 1;
+        else outputModeSelection--;
+    }
+
+    #ifdef LED_ENABLE
+        OutputModeLed(outputModeSelection);
+    #endif // LED_ENABLE
+
+    #ifdef USES_DISPLAY
+        FW_Common::OLED.PauseOutputModeUpdate(outputModeSelection, FW_Common::GetOutputMode());
+    #endif // USES_DISPLAY
+
+    if(!OF_Serial::serialMode) {
+        Serial.print("Selecting output mode: ");
+        Serial.println(FW_Const::OutputModeLabels[outputModeSelection]);
+    }
+}
+
+// Pause mode output switch (absolute mouse / gamepad right stick / gamepad left stick),
+// the same as the serial M0xN command: it lasts until the gun is switched off or
+// something switches it again, the startup output stays the one set in the App.
+void OutputModeChange(const uint8_t &mode)
+{
+    if(mode >= FW_Const::OutputModeCount)
+        return;
+
+    FW_Common::SetOutputMode(mode);
+    FW_Common::buttons.ReleaseAll();
+
+    if(!OF_Serial::serialMode) {
+        Serial.print("Output mode: ");
+        Serial.println(FW_Const::OutputModeLabels[mode]);
+    }
+
+    #ifdef USES_DISPLAY
+        FW_Common::OLED.TopPanelUpdate(FW_Const::OutputModeLabels[mode]);
+    #endif // USES_DISPLAY
+
+    #ifdef LED_ENABLE
+        for(uint32_t i = 0; i < 2; ++i) {
+            OutputModeLed(mode);
+            delay(150);
+            OF_RGB::LedOff();
+            delay(100);
+        }
+        OF_RGB::SetLedPackedColor(OF_Prefs::profiles[OF_Prefs::currentProfile].color);
+    #elif defined(USES_DISPLAY)
+        delay(500); // keep the message readable
+    #endif // LED_ENABLE
+
+    #ifdef USES_DISPLAY
+        FW_Common::OLED.TopPanelUpdate("Using ", OF_Prefs::profiles[OF_Prefs::currentProfile].name);
+    #endif // USES_DISPLAY
+}
+
+#ifdef LED_ENABLE
+// LED colour of each output mode in the pause menus
+void OutputModeLed(const uint8_t &mode)
+{
+    switch(mode) {
+    case OF_Const::bootOutputGamepadRight:
+        OF_RGB::SetLedPackedColor(WikiColor::Blue);
+        break;
+    case OF_Const::bootOutputGamepadLeft:
+        OF_RGB::SetLedPackedColor(WikiColor::Cyan);
+        break;
+    default:
+        OF_RGB::SetLedPackedColor(WikiColor::Green);
+        break;
+    }
+}
+#endif // LED_ENABLE
+
 void IncreaseIrSensitivity(const uint32_t &sens)
 {
-    if(sens < DFRobotIRPositionEx::Sensitivity_Max)
-        FW_Common::SetIrSensitivity(sens-1);
+    if(sens < OpenFIRECamera::Sensitivity_Max)
+        FW_Common::SetIrSensitivity(sens+1);
 }
 
 void DecreaseIrSensitivity(const uint32_t &sens)
 {
-    if(sens > DFRobotIRPositionEx::Sensitivity_Min)
+    if(sens > OpenFIRECamera::Sensitivity_Min)
         FW_Common::SetIrSensitivity(sens-1);
 }
 
@@ -2050,9 +2479,9 @@ void SolenoidToggle()
             OF_RGB::SetLedPackedColor(WikiColor::Yellow);                 // Set a color,
         #endif // LED_ENABLE
 
-        digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], HIGH);                          // Engage the solenoid on to notify the user,
+        OF_FFB::SetSolenoid(HIGH);                          // Engage the solenoid on to notify the user,
         delay(300);                                               // Hold it that way for a bit,
-        digitalWrite(OF_Prefs::pins[OF_Const::solenoidPin], LOW);                           // Release it,
+        OF_FFB::SetSolenoid(LOW);                           // Release it,
 
         #ifdef LED_ENABLE
             OF_RGB::SetLedPackedColor(OF_Prefs::profiles[OF_Prefs::currentProfile].color);    // And reset the LED back to pause mode color

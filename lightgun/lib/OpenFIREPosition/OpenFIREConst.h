@@ -22,31 +22,23 @@
 #ifndef _OPENFIRECONST_H_
 #define _OPENFIRECONST_H_
 
-// DFRobot IR positioning camera resolution
-constexpr int CamResX = 1024;
-constexpr int CamResY = 768;
+#include <stdint.h>
 
-// DFRobot IR positioning camera maximum X and Y
-constexpr int CamMaxX = CamResX - 1;
-constexpr int CamMaxY = CamResY - 1;
+// ============================================================================
+// OPENFIRE GLOBAL COORDINATE SPACE
+// ============================================================================
 
-// shift amount for extra precision for the maths
-// since the median is an average of 4 values, use 2 more bits
-constexpr int CamToMouseShift = 2;
-
-// multiplier to convert IR camera position to mouse position
-constexpr int CamToMouseMult = 1 << CamToMouseShift;
-
-// mouse resolution
-constexpr int MouseResX = CamResX * CamToMouseMult;
-constexpr int MouseResY = CamResY * CamToMouseMult;
-
-// Mouse position maximum X and Y
-constexpr int MouseMaxX = MouseResX - 1;
-constexpr int MouseMaxY = MouseResY - 1;
-
-// Perspective code stuff
+// Camera-independent perspective coordinate space.
 constexpr int res_x = 1920 << 2;
 constexpr int res_y = 1080 << 2;
+
+
+// ============================================================================
+// GLOBAL IR GEOMETRY
+// ============================================================================
+
+// Physical Square LED rectangle base / height ratio.
+// Used by Square tracking, profile defaults and calibration.
+constexpr float IR_SQUARE_BASE_HEIGHT_RATIO = 0.711f;
 
 #endif // _OPENFIRECONST_H_

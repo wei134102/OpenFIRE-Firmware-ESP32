@@ -50,13 +50,7 @@
 #include <LittleFS.h>
 #include <OpenFIREBoard.h>
 
-// = [ESP32_PORT] ===========================================================================================
-#ifdef PAJ7025_CAM
-    #include <DFRobotIRPositionEx_Wrapper.h>
-#else
-    #include <DFRobotIRPositionEx.h>
-#endif // PAJ7025_CAM
-// = [ESP32_PORT] ===========================================================================================
+
 
 #include <LightgunButtons.h>
 #include <TinyUSB_Devices.h>
@@ -64,6 +58,9 @@
 #include "boards/OpenFIREshared.h"
 #include "OpenFIREDefines.h"
 #include "OpenFIREconstant.h"
+
+#include "OpenFIREConst.h"
+#include <OpenFIRECameraProfile.h>
 
 /// @brief Static instance of preferences to save in non-volatile memory
 class OF_Prefs
@@ -100,22 +97,41 @@ public:
 
     /// @brief Instance of profile data 
     
-    #ifdef USE_MULTI_ONE_EURO_FILTER
-    static inline ProfileData_t profiles[PROFILE_COUNT] = {
-        {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, DFRobotIRPositionEx::Sensitivity_Default, FW_Const::RunMode_Normal, OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF0000, "Profile A"},
-        {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, DFRobotIRPositionEx::Sensitivity_Default, FW_Const::RunMode_Normal, OF_Const::layoutSquare, OF_Const::ar16_9, 0x00FF00, "Profile B"},
-        {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, DFRobotIRPositionEx::Sensitivity_Default, FW_Const::RunMode_Normal, OF_Const::layoutSquare, OF_Const::ar16_9, 0x0000FF, "Profile Start"},
-        {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, DFRobotIRPositionEx::Sensitivity_Default, FW_Const::RunMode_Normal, OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF00FF, "Profile Select"}
-    };
-    #else
-    static inline ProfileData_t profiles[PROFILE_COUNT] = {
-        {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, DFRobotIRPositionEx::Sensitivity_Default, 1, OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF0000, "Profile A"},
-        {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, DFRobotIRPositionEx::Sensitivity_Default, 1, OF_Const::layoutSquare, OF_Const::ar16_9, 0x00FF00, "Profile B"},
-        {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, DFRobotIRPositionEx::Sensitivity_Default, 1, OF_Const::layoutSquare, OF_Const::ar16_9, 0x0000FF, "Profile Start"},
-        {0, 0, 0, 0, 500 << 2, 1420 << 2, 512 << 2, 384 << 2, DFRobotIRPositionEx::Sensitivity_Default, 1, OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF00FF, "Profile Select"}
-    };
-    #endif // USE_MULTI_ONE_EURO_FILTER
+        // Default profile geometry.
+    // TLled/TRled are Perspective-space anchors based on the ideal
+    // Square LED base/height ratio.
+    static constexpr float DEFAULT_PROFILE_TLLED =
+        ((float)res_x - ((float)res_y * IR_SQUARE_BASE_HEIGHT_RATIO)) * 0.5f;
 
+    static constexpr float DEFAULT_PROFILE_TRLED =
+        ((float)res_x + ((float)res_y * IR_SQUARE_BASE_HEIGHT_RATIO)) * 0.5f;
+
+
+    #ifdef USE_MULTI_ONE_EURO_FILTER
+    static constexpr int DEFAULT_PROFILE_RUN_MODE = FW_Const::RunMode_Normal;
+    #else
+    static constexpr int DEFAULT_PROFILE_RUN_MODE = FW_Const::RunMode_Average;
+    #endif
+
+    static inline ProfileData_t profiles[PROFILE_COUNT] = {
+        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED,
+         0.0f, 0.0f, 0, DEFAULT_PROFILE_RUN_MODE,
+         OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF0000, "Profile A"},
+
+        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED,
+         0.0f, 0.0f, 0, DEFAULT_PROFILE_RUN_MODE,
+         OF_Const::layoutSquare, OF_Const::ar16_9, 0x00FF00, "Profile B"},
+
+        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED,
+         0.0f, 0.0f, 0, DEFAULT_PROFILE_RUN_MODE,
+         OF_Const::layoutSquare, OF_Const::ar16_9, 0x0000FF, "Profile Start"},
+
+        {0, 0, 0, 0, DEFAULT_PROFILE_TLLED, DEFAULT_PROFILE_TRLED,
+         0.0f, 0.0f, 0, DEFAULT_PROFILE_RUN_MODE,
+         OF_Const::layoutSquare, OF_Const::ar16_9, 0xFF00FF, "Profile Select"}
+    };
+
+    static void InitProfileDefaults(const CameraProfile& profile);
 
     static inline uint currentProfile = 0;
 
@@ -131,16 +147,19 @@ public:
         false,          // low buttons mode
         false,          // rumble force-feedback mode
         false,          // invert static pixels
-        #ifdef ARDUINO_ARCH_ESP32
-        false, //true, //false,          // i2c OLED enabled //[ESP32_PORT] per abilitare subito display
-        #else //rp2040
         false,          // i2c OLED enabled
-        #endif //ARDUINO_ARCH_ESP32
         false,          // i2c OLED alt address
+        false,          // wireless pedal: look for one when no pedal pin is set
+        false,          // analog stick: invert the X axis
+        false,          // analog stick: invert the Y axis
     };
 
     /// @brief Pin functions array
     static inline int8_t pins[OF_Const::boardInputsCount] = { -1 };
+
+    #ifndef CAMERA_DEFAULT
+        #define CAMERA_DEFAULT OF_Const::PixArt_PAJ7025R2
+    #endif
 
     /// @brief System variables array
     static inline uint32_t settings[OF_Const::settingsTypesCount] = {
@@ -162,6 +181,9 @@ public:
         38,                         // temp warning
         45,                         // temp shutoff
         OF_Const::analogModeStick,  // analog stick mode
+        CAMERA_DEFAULT, // OF_Const::PixArt_PAJ7025R2, // camera model
+        OF_Const::bootOutputMouse,  // output mode at boot: unchanged behaviour
+        0,                          // input invert mask: no input inverted
     };
 
     typedef struct USBMap_s {
@@ -199,7 +221,7 @@ public:
 
     /// @brief Generic loading method using provided pointers to a block of data and its associated string map for lookups
     /// @return An error code from Errors_e
-    static int LoadToPtr(File, void*, const std::unordered_map<std::string_view, int>&);
+    static int LoadToPtr(File, void*, const std::unordered_map<std::string_view, int>&, const size_t&);
 
     /// @brief Load preferences
     /// @return An error code from Errors_e
@@ -211,7 +233,7 @@ public:
 
     /// @brief Load toggles (macro for LoadToPtr)
     /// @return An error code from Errors_e
-    static int LoadToggles() { return LoadToPtr(LittleFS.open("/toggles.conf", "r"), toggles, OFPresets.boolTypes_Strings); }
+    static int LoadToggles() { return LoadToPtr(LittleFS.open("/toggles.conf", "r"), toggles, OFPresets.boolTypes_Strings, sizeof(toggles) / OF_Const::boolTypesCount); }
 
     /// @brief Save current toggles states (macro for SaveToPtr)
     /// @return An error code from Errors_e
@@ -219,7 +241,7 @@ public:
 
     /// @brief Load pin mapping (macro for LoadToPtr)
     /// @return An error code from Errors_e
-    static int LoadPins() { return LoadToPtr(LittleFS.open("/pins.conf", "r"), pins, OFPresets.boardInputs_Strings); }
+    static int LoadPins() { return LoadToPtr(LittleFS.open("/pins.conf", "r"), pins, OFPresets.boardInputs_Strings, sizeof(pins) / OF_Const::boardInputsCount); }
 
     /// @brief Save current pin mapping (macro for SaveToPtr)
     /// @return An error code from Errors_e
@@ -227,7 +249,7 @@ public:
 
     /// @brief Load settings (macro for LoadToPtr)
     /// @return An error code from Errors_e
-    static int LoadSettings() { return LoadToPtr(LittleFS.open("/settings.conf", "r"), settings, OFPresets.settingsTypes_Strings); }
+    static int LoadSettings() { return LoadToPtr(LittleFS.open("/settings.conf", "r"), settings, OFPresets.settingsTypes_Strings, sizeof(settings) / OF_Const::settingsTypesCount); }
 
     /// @brief Save current settings (macro for SaveToPtr)
     /// @return An error code from Errors_e
@@ -235,7 +257,7 @@ public:
 
     /// @brief Load settings (macro for LoadToPtr)
     /// @return An error code from Errors_e
-    static int LoadButtons() { return LoadToPtr(LittleFS.open("/btns.conf", "r"), backupButtonDesc, OFPresets.boardInputs_Strings); }
+    static int LoadButtons() { return LoadToPtr(LittleFS.open("/btns.conf", "r"), backupButtonDesc, OFPresets.boardInputs_Strings, sizeof(backupButtonDesc[0])); }
 
     /// @brief Save current settings (macro for SaveToPtr)
     /// @return An error code from Errors_e

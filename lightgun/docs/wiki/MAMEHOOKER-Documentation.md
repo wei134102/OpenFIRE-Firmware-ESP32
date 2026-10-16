@@ -1,10 +1,15 @@
 ### Table of Contents:
  - [MAMEHOOKER Setup Guide](#mamehooker-setup-guide)
  - [How does MAMEHOOKER work?](#how-does-mamehooker-work)
- - [How does configuration files work?](#how-does-configuration-files-work)
+ - [How do configuration files work?](#how-do-configuration-files-work)
  - [Opening, Writing to, and Closing COM Ports](#opening-writing-to-and-closing-com-ports)
  - [Light Gun Serial Commands](#light-gun-serial-commands)
  - [MAMEHOOKER's Pipe & State Modifiers](#mamehookers-pipe--state-modifiers)
+
+> **OpenFIRE ESP32 7.0.0:** these commands work exactly as in the original OpenFIRE. They reach the gun through its serial port: the gun's own USB port, or its dongle's port when it plays wirelessly. Only one program can use the port at a time, so close the WebApp first. Start the gun normally: in the offline WebApp mode (B held at startup) its USB serial port is not available.
+
+> **OpenFIRE ESP32 7.0.0:** questi comandi funzionano esattamente come nell'OpenFIRE originale. Arrivano alla pistola attraverso la sua porta seriale: la porta USB della pistola, oppure quella del suo dongle quando gioca senza fili. La porta può essere usata da un solo programma alla volta, quindi chiudi prima la WebApp. Avvia la pistola normalmente: nella modalità WebApp offline (B premuto all'avvio) la sua porta seriale USB non è disponibile.
+
 
 ## MAMEHOOKER Setup Guide
 
@@ -49,7 +54,9 @@ output                    windows
  * DemulShooter is needed to provide outputs for PC/Windows-based arcade games and other compatible things. Games in DemulShooter will usually provide a `PX_CtmRecoil` & `PX_Damaged` (PX = player number, i.e. P1 or P2); the former intended for solenoid, the latter intended for rumble.
  * Supermodel & native Flycast *technically* provides outputs natively, but it only provides lamp control and no other significant peripheral functionality.
 
-## How does configuration files work?
+<a id="how-does-configuration-files-work"></a>
+
+## How do configuration files work?
 
 This is the basic anatomy of a MAMEHOOKER-compatible ini file - games can have either all of or less outputs available, and depends on the game whether they provide that output channel or not, but these are what you'll want to focus on mainly:
 
@@ -159,7 +166,7 @@ Again, does what it says on the tin; signals the gun to exit serial mode and go 
 ### `M` - Mode Commands
 These set different parameters on the gun to tell it how it should behave in the game. The different "modes" are:
  * `M0` - Device Output Mode
-   * `x0` - Mouse & Keyboard
+   * `x0` - Mouse & Keyboard (on OpenFIRE ESP32 an analog stick used as a gamepad stick also goes back to the left stick, as at startup)
    * `x1` - Gamepad, w/ Camera mapped to Right Stick
      * `L` - Maps Camera to Left Stick instead (**OpenFIRE exclusive**)
    * `x2` - 'Hybrid'

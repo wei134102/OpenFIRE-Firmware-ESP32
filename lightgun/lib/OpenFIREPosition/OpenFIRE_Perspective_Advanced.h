@@ -30,31 +30,25 @@
 #ifndef OpenFIRE_Perspective_Advanced_h
 #define OpenFIRE_Perspective_Advanced_h
 
-#include "OpenFIREConst.h" 
+#include "OpenFIREConst.h"
+#include <OpenFIRECameraProfile.h>
 
 // ==============================================================================
-// PARAMETRI FISICI DELLA LIGHTGUN
+// PARAMETRI MATEMATICI E FISICI
 // ==============================================================================
-// Valori di calibrazione di default per l'ottica. k1 compensa la distorsione a barilotto 
-// tipica delle lenti grandangolari economiche delle telecamere IR.
-#define DEFAULT_LENS_K1 0.006f       
-
 // Regola l'altezza della mira (asse Y) in base alla distanza del giocatore dalla TV.
-// Serve a compensare la differenza fisica di altezza tra la canna della pistola 
+// Serve a compensare la differenza fisica di altezza tra la canna della pistola
 // e il sensore ottico posizionato al suo interno (o sopra).
-#define DEFAULT_PARALLAX_FACTOR 0.0f  
+static constexpr float DEFAULT_PARALLAX_FACTOR = 0.0f;
 
-// Costanti matematiche assolute (Calcolate dal compilatore, costo zero su ESP32).
-// Normalizzano le coordinate in un range tra 0 e 1 prima dei calcoli matriciali.
-// È vitale per prevenire l'overflow aritmetico e la perdita di precisione catastrofica 
-// durante le moltiplicazioni incrociate nel calcolo della matrice prospettica.
-static constexpr float NORM_SCALE = 10000.0f;  
-static constexpr float INV_NORM_SCALE = 1.0f / 10000.0f; 
+// Scala numerica interna: non rappresenta né la risoluzione della camera né quella
+// del monitor. Mantenerla fissa preserva esattamente il comportamento numerico
+// già validato con DFRobot e limita le perdite di precisione nelle omografie.
+static constexpr float NORM_SCALE = 10000.0f;
+static constexpr float INV_NORM_SCALE = 1.0f / NORM_SCALE;
 
-static constexpr float CX = (float)MouseResX * 0.5f;
-static constexpr float CY = (float)MouseResY * 0.5f;
-static constexpr float INV_CX = 1.0f / CX;
-static constexpr float INV_CY = 1.0f / CY;
+// Soglia minima dell'area espressa come frazione dell'intero spazio Mouse.
+static constexpr float MIN_QUAD_AREA_RATIO = 7.947286e-7f;
 // ==============================================================================
 
 class OpenFIRE_Perspective {
@@ -69,11 +63,21 @@ private:
   float dstmatrix[9];
   float warpmatrix[9];
 
-  float srcX = CX;
-  float srcY = CY;
+  float srcX = 0.0f;
+  float srcY = 0.0f;
 
-  float k1 = DEFAULT_LENS_K1;              
-  float parallaxFactor = DEFAULT_PARALLAX_FACTOR;  
+  float cx = 0.0f;
+  float cy = 0.0f;
+  float invCx = 0.0f;
+  float invCy = 0.0f;
+  float minQuadArea = 0.0f;
+
+  // Lens correction parameters supplied by OpenFIRECameraProfile.h.
+  float k1 = 0.0f;
+  float k2 = 0.0f;
+  float lensCorrectionMax = 1.2f;
+  float lensCorrectionMin = 0.8f;
+  float parallaxFactor = DEFAULT_PARALLAX_FACTOR;
   
   // Tracciamento dell'area per il parallasse. L'area calcolata viene usata come proxy 
   // affidabile e leggero (al posto della trigonometria) per stimare i cambiamenti 
@@ -88,10 +92,13 @@ private:
   inline float calculateQuadArea(float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3);
 
 public:
+  void configure(const CameraProfile& profile);
   void warp(float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3, float dx0, float dy0, float dx1, float dy1, float dx2, float dy2, float dx3, float dy3);
   void source(float adjustedX, float adjustedY);
   
+  // Mantiene la vecchia API K1-only e aggiunge l'overload K1+K2.
   void setLensCorrection(float coefficientK1);
+  void setLensCorrection(float coefficientK1, float coefficientK2);
   void setDynamicParallax(float hardwareOffset); 
   
   void deinit(bool set);

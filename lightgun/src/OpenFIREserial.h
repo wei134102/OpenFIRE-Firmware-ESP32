@@ -20,22 +20,54 @@
 
 #include <Arduino.h>
 #include <unordered_map>
-#include <string>
+#include <string_view>
 #include "OpenFIREDefines.h"
+#include "OpenFIREweb.h"
 
 class OF_Serial
 {
 public:
-
     /// @brief    Method for processing the Serial buffer when docked to the Desktop App
     /// @details  Only method that allows for reading/writing to system settings.
     static void SerialProcessingDocked();
 
-    /// @brief    Generic method for sending data over Serial to connected host
-    static void SerialBatchSend(void*, const std::unordered_map<std::string_view, int> &, const size_t&, const int& = -1);
+    /// @brief    Web configuration mode: looks for the raw dock handshake on the
+    ///           WebSocket link while the gun is not docked (Run/Pause).
+    /// @details  An App can dock on the serial port (SerialProcessing) or on the
+    ///           WebSocket, one at a time: while one of them is docked the dock
+    ///           attempts of the other link are discarded.
+    static void SerialProcessingWebDock();
 
-    /// @brief    Generic method for reading commit data over Serial from connected host
-    static void SerialBatchRecv(const char*, void*, const std::unordered_map<std::string_view, int> &, const size_t&, const size_t&, const size_t&);
+    /// @brief    True when SerialProcessingWebDock() has something to do.
+    static bool AppSerialWebDockPending();
+
+    static bool AppSerialSessionIsActive() { return appSerialSessionActive; }
+
+    /// @brief    Changes every time a new App session begins (used to resend board info).
+    static uint32_t AppSerialSessionId() { return appSerialSessionCounter; }
+
+    /// @brief    True when SerialProcessingDocked() has something to do: bytes on the
+    ///           session link, dock attempts on either link, a closed WebSocket page.
+    static bool AppSerialInputPending();
+
+    /// @brief    Ends a session whose App never answered (no valid frame received),
+    ///           so it cannot keep the other link blocked.
+    static void AppSerialEndUnansweredSession();
+
+    /// @brief    Sends an acknowledged response to the Desktop App.
+    static bool AppSerialSendResponse(uint8_t command,
+                                      const void *payload = nullptr,
+                                      uint8_t length = 0,
+                                      bool final = false);
+
+    /// @brief    Sends a real-time event without acknowledgement or retry.
+    static bool AppSerialSendEvent(uint8_t command, const void *payload = nullptr, uint8_t length = 0);
+
+    /// @brief    Returns and clears a calibration-cancel request received from the App.
+    static bool AppSerialTakeCalibrationCancel();
+
+    /// @brief Send an existing error code (zero = fatal operation error).
+    static void AppSerialSendError(uint8_t = 0);
 
     // Main routine that prints information to connected serial monitor when the gun enters Pause Mode.
     static void PrintResults();
@@ -67,9 +99,6 @@ public:
         SerialQueueBitsCount
     };
 
-    static inline char TXbuf[64];
-    static inline char RXbuf[64];
-
     static inline bool serialMode = false;                         // Set if we're prioritizing force feedback over serial commands or not.
     static inline bool serialQueue[SerialQueueBitsCount] = {false};// Array of events we've queued from the serial receipt.
     static inline bool serialARcorrection = false;                 // 4:3 AR correction mode flag
@@ -87,6 +116,125 @@ public:
     #endif // MAMEHOOKER
 
 private:
+    // Desktop App serial framing. The two start bytes are used only to find
+    // frame boundaries and are deliberately excluded from the CRC.
+    static constexpr uint8_t  APP_SERIAL_START_1       = 0xA5;
+    static constexpr uint8_t  APP_SERIAL_START_2       = 0x5A;
+    static constexpr uint8_t  APP_SERIAL_MAX_PAYLOAD   = 200;
+    static constexpr uint8_t  APP_SERIAL_OVERHEAD      = 7;
+    static constexpr uint16_t APP_SERIAL_MAX_FRAME     = APP_SERIAL_MAX_PAYLOAD + APP_SERIAL_OVERHEAD;
+    static constexpr uint16_t APP_SERIAL_FRAME_TIMEOUT = 250;
+    static constexpr uint16_t APP_SERIAL_ACK_TIMEOUT   = 500;
+    // Additional attempts after the initial transmission.
+    static constexpr uint8_t  APP_SERIAL_MAX_RETRIES   = 3;
+
+    // sError payload: [retry required] [originating request command].
+    static constexpr uint8_t APP_SERIAL_ERR_COMMIT_RETRY = 0x82;
+
+    enum AppSerialType_e : uint8_t {
+        APP_SERIAL_TYPE_REQUEST  = 0x00,
+        APP_SERIAL_TYPE_RESPONSE = 0x01,
+        APP_SERIAL_TYPE_EVENT    = 0x02,
+        APP_SERIAL_TYPE_ACK      = 0x03,
+        APP_SERIAL_TYPE_MASK     = 0x03,
+        APP_SERIAL_FLAG_FINAL    = 0x80
+    };
+
+    typedef struct AppSerialFrame_t {
+        uint8_t typeFlags;
+        uint8_t command;
+        uint8_t sequence;
+        uint8_t length;
+        uint8_t payload[APP_SERIAL_MAX_PAYLOAD];
+        uint8_t crc;
+    } AppSerialFrame_s;
+
+    static uint8_t AppSerialCRC8(const uint8_t *data, uint16_t length);
+    static bool AppSerialWriteFrame(uint8_t typeFlags, uint8_t command,
+                                    uint8_t sequence, const void *payload,
+                                    uint8_t length);
+    static bool AppSerialSendReliable(uint8_t typeFlags, uint8_t command,
+                                      const void *payload, uint8_t length,
+                                      uint8_t sequence = 0);
+    static bool AppSerialReadFrame(AppSerialFrame_s &frame);
+    static void AppSerialHandleFrame(const AppSerialFrame_s &frame);
+    static bool AppSerialRequestMatchesLast(const AppSerialFrame_s &frame);
+    static void AppSerialProcessDeferredRequest();
+    static void AppSerialDispatchRequest(const AppSerialFrame_s &frame);
+    // Returns true when the commit state machine consumed the request.
+    static bool AppSerialDispatchCommit(const AppSerialFrame_s &frame,
+                                        bool fullDisconnect);
+    static void AppSerialRestoreRunState();
+    static void AppSerialSendAck(uint8_t command, uint8_t sequence);
+    static void AppSerialSendCommitError(const AppSerialFrame_s &frame);
+    static void AppSerialSessionBegin();
+    static void AppSerialSessionEnd();
+    // Shared by the USB (SerialProcessing) and WebSocket dock handshakes:
+    // selects the link of the new App session and enters Docked mode.
+    static void AppSerialEnterDockedMode(WebAppLink link);
+    // Raw dock handshake on one link while no session is active; the bytes of a
+    // link that does not own the active session are discarded. True if docked.
+    static bool AppSerialPollDock(WebAppLink link);
+    // Takes the "WebSocket page closed" notice; true only for a WebSocket session.
+    static bool AppSerialTakeLinkLost();
+    // The App disappeared (WebSocket closed/replaced, or a new App docked on the
+    // same link): end its session without replying, keeping unsaved data protected.
+    static void AppSerialAbandonSession();
+    static uint8_t AppSerialNextSequence();
+
+    static bool AppSerialSendRecords(
+        uint8_t command, const void *data,
+        const std::unordered_map<std::string_view, int> &fields,
+        size_t dataSize, int profile = -1, bool sendFinal = true);
+    static bool AppSerialReceiveRecord(
+        const uint8_t *payload, uint8_t length, void *data,
+        const std::unordered_map<std::string_view, int> &fields,
+        size_t dataSize, bool profileData = false);
+
+    // Frame buffers and receive-parser state.
+    static inline uint8_t appSerialRxBuffer[APP_SERIAL_MAX_FRAME];
+    static inline uint8_t appSerialTxBuffer[APP_SERIAL_MAX_FRAME];
+    static inline uint16_t appSerialRxLength = 0;
+    static inline unsigned long appSerialRxTimestamp = 0;
+
+    // Session and outgoing-response state.
+    static inline uint8_t appSerialTxSequence = 0;
+    static inline uint8_t appSerialRawDockState[2] = { 0, 0 };        // per WebAppLink
+    static inline unsigned long appSerialRawDockTimestamp[2] = { 0, 0 };
+    static inline bool appSerialSessionActive = false;
+    static inline uint32_t appSerialSessionCounter = 0;
+
+    // Re-dock detection inside an active session: a raw "sDock1 sDock2" pair is
+    // accepted only when it starts on a clean frame boundary (nothing discarded
+    // since the last valid frame), so frame payload bytes can never trigger it,
+    // and only after the App has sent at least one valid frame in this session,
+    // so the App's own dock retries (sent before it received the board info)
+    // are ignored exactly as before.
+    static inline bool appSerialRxClean = true;
+    static inline bool appSerialRedockRequested = false;
+    static inline bool appSerialSessionConfirmed = false;
+
+    // A request received while a reliable response is waiting for its ACK
+    // is retained and processed after the current transaction has completed.
+    static inline bool appSerialWaitingForAck = false;
+    static inline bool appSerialDispatching = false;
+    static inline bool appSerialProcessingDeferred = false;
+    static inline bool appSerialDeferredValid = false;
+    static inline AppSerialFrame_s appSerialDeferredFrame = {};
+
+    // Identity of the last request, used to acknowledge retries without
+    // executing the same command twice.
+    static inline bool appSerialLastRxValid = false;
+    static inline uint8_t appSerialLastRxCommand = 0;
+    static inline uint8_t appSerialLastRxSequence = 0;
+    static inline uint8_t appSerialLastRxLength = 0;
+    static inline uint8_t appSerialLastRxCRC = 0;
+
+    // Configuration transaction and calibration state.
+    static inline bool appSerialCommitActive = false;
+    static inline bool appSerialCommitFailed = false;
+    static inline bool appSerialCalibrationCancel = false;
+
     #ifdef MAMEHOOKER
 
     #ifdef LED_ENABLE

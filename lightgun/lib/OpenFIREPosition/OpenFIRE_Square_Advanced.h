@@ -26,6 +26,7 @@
 
 #include <stdint.h>
 #include "OpenFIREConst.h"
+#include <OpenFIRECameraProfile.h>
 
 
 class OpenFIRE_Square {
@@ -33,6 +34,8 @@ public:
     //================================================================
     // ENUM PUBBLICO E API
     //================================================================
+
+    void configure(const CameraProfile& profile);
 
     // Metodo principale di elaborazione
     void begin(const int* px, const int* py, unsigned int seen);
@@ -48,6 +51,28 @@ public:
     float Ang() const { return angle; }
     unsigned int seen() const { return seenFlags; }
 
+    void setCalibrationMode(bool enabled) { calibrationMode = enabled; }
+    //void setWideLayout(bool enabled) { wideLayout = enabled; }
+
+    void setWideLayout(bool enabled) {
+        if (wideLayout != enabled) {
+            wideLayout = enabled;
+
+            start = 0;
+            is_tracking_stable = false;
+            prev_num_points_seen = 0;
+            prev_point_seen_mask = 0;
+            current_point_seen_mask = 0;
+
+            for (uint8_t i = 0; i < 4; i++) {
+                offset_X[i] = 0.0f;
+                offset_Y[i] = 0.0f;
+                motion_X[i] = motion_Y[i] = 0;
+            }
+        }
+    }
+
+
 private:
     //================================================================
     // STATO DEL TRACKER
@@ -56,19 +81,28 @@ private:
     // Le coordinate finali sono conservate in interi perché rappresentano i pixel virtuali
     // del mouse. Vengono traslate usando il bit-shift (CamToMouseShift) per garantire
     // la massima velocità della ALU rispetto all'uso dei float.
+    /*
     int  FinalX[4] = {400 * CamToMouseMult, 623 * CamToMouseMult, 400 * CamToMouseMult, 623 * CamToMouseMult};
     int  FinalY[4] = {200 * CamToMouseMult, 200 * CamToMouseMult, 568 * CamToMouseMult, 568 * CamToMouseMult};
-    
-    int  medianX = MouseMaxX / 2;
-    int  medianY = MouseMaxY / 2;
+    */
+    int FinalX[4] = {0, 0, 0, 0};
+    int FinalY[4] = {0, 0, 0, 0};
+   
+    int  medianX = 0;
+    int  medianY = 0;
     
     // Registro a scorrimento (shift register) ereditato dalle API originali di Samco.
     // Viene mantenuto per non rompere la retrocompatibilità con funzioni esterne
     // che si aspettano di leggere uno storico di stabilità a 5 frame per singolo sensore.
-    unsigned int see[4];
+    unsigned int see[4] = {0, 0, 0, 0};
     
+    /*
     float height = (568 * CamToMouseMult) - (200 * CamToMouseMult);
     float width = (623 * CamToMouseMult) - (400 * CamToMouseMult);
+    */
+    float height = (float)(FinalY[2] - FinalY[0]);
+    float width  = (float)(FinalX[1] - FinalX[0]);  
+     
     float angle = 0;
 
     unsigned int start = 0;
@@ -82,7 +116,10 @@ private:
     // ideal_aspect_ratio conserva l'ultima proporzione reale nota del rettangolo IR.
     // È vitale per la gestione a 2 punti, dove dobbiamo decidere se stiamo guardando
     // il lato lungo o corto del sensore senza avere tutti i riferimenti ottici.
+    /*
     float ideal_aspect_ratio = 16.0f / 9.0f; 
+    */
+    float ideal_aspect_ratio = IR_SQUARE_BASE_HEIGHT_RATIO;
     
     uint8_t prev_num_points_seen = 0; 
     
@@ -102,10 +139,17 @@ private:
     int prev2_medianX;
     int prev2_medianY;
  
+    /*
     float height_left = (568 * CamToMouseMult) - (200 * CamToMouseMult);
     float height_right = (568 * CamToMouseMult) - (200 * CamToMouseMult);
     float width_top = (623 * CamToMouseMult) - (400 * CamToMouseMult);
     float width_bottom = (623 * CamToMouseMult) - (400 * CamToMouseMult);
+    */
+    float height_left  = height;
+    float height_right = height;
+    float width_top    = width;
+    float width_bottom = width;
+
 
     /////////////////////////////////////////////////////////////////////
 
@@ -116,9 +160,10 @@ private:
     float offset_X[4] = {0.0f, 0.0f, 0.0f, 0.0f};
     float offset_Y[4] = {0.0f, 0.0f, 0.0f, 0.0f};
     
-    // Definisce la reattività del filtro anti-glitch. Un valore di 0.25 significa che
-    // ogni errore ottico istantaneo viene assorbito al 25% per frame, distribuendo 
-    // l'anomalia su ~4 frame. Mantiene il feeling "snappy" ma uccide il tremolio.
+    // COSTANTE_MOLLA scales the movement-based consumption, not a fixed
+    // percentage of the remaining error. Four-LED recovery also uses a
+    // motion-dependent percentage defined in begin().
+    float FPS_NORMALIZATION = 1.0f;
     float COSTANTE_MOLLA = 0.25f; 
     
     // Questo è un muro matematico. Quando mancano dei punti ottici, l'algoritmo valuta 6 combinazioni.
@@ -130,6 +175,20 @@ private:
     int prev_GeomY[4] = {0, 0, 0, 0};
 
     /////////////////////////////////////////////////////////////////////
+
+    int camMaxX = 0;
+    uint8_t camToMouseShift = 0;
+    int camToMouseMult = 1;
+    int mouseResX = 0;
+    int mouseResY = 0;
+
+    bool calibrationMode = false;    // true = è in corso la calibrazione
+    bool wideLayout = false;         // true = configurazione con base maggiore di altezza ad esempio per sensori sugli angoli del monitor
+
+    // Signed motion in whole internal-coordinate units, used only during
+    // four-LED spring recovery. No fixed-point scaling or noise estimator.
+    int32_t motion_X[4] = {0, 0, 0, 0};
+    int32_t motion_Y[4] = {0, 0, 0, 0};
 
 };
 
