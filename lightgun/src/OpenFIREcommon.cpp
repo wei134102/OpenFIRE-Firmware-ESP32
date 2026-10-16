@@ -1879,6 +1879,8 @@ void FW_Common::UpdateBindings(const bool &rebindStrSel)
         // Updates pins
         for(int i = 0; i < ButtonCount; ++i)
             LightgunButtons::ButtonDesc[i].pin = OF_Prefs::pins[i];
+        // Inputs read inverted (normally closed contacts): only with custom pins, never with board presets
+        LightgunButtons::invertMask = OF_Prefs::toggles[OF_Const::customPins] ? OF_Prefs::settings[OF_Const::inputInvertMask] : 0;
         break;
     default:
         break;

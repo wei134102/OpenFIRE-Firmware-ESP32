@@ -157,8 +157,8 @@ uint32_t LightgunButtons::Poll(unsigned long minTicks)
                     // Se il bit corrispondente è a 1 (premuto), state = 0, altrimenti state = 1
                     state = (TinyUSBDevices.pedals_wireless_state & mask) ? 0 : 1;
                 } else {
-                    // read the pin, expected to return 0 or 1
-                    state = digitalRead(btn.pin);
+                    // read the pin, expected to return 0 or 1, inverted for normally closed inputs
+                    state = digitalRead(btn.pin) ^ ((invertMask >> i) & 1);
                 }
                 // [ESP32_PORT]
 

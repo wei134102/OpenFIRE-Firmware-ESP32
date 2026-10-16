@@ -111,6 +111,12 @@ def extract_shared(project_dir, report=False):
             data[match.group(1)] = value
             names[match.group(1)] = value
 
+    # --- static const <integer type> NAME[] = {...}; (e.g. invertibleInputs) ---
+    array_pattern = re.compile(r'static\s+const(?:expr)?\s+(?:unsigned\s+|signed\s+)?(?:int|long|short|char|u?int\d+_t)\s+'
+                               r'([A-Za-z_][A-Za-z0-9_]*)\s*\[\s*\w*\s*\]\s*=\s*\{([^}]*)\}\s*;')
+    for match in array_pattern.finditer(_strip_comments(content)):
+        data[match.group(1)] = [_eval(v, names, problems, match.group(1)) for v in match.group(2).split(',') if v.strip()]
+
     # --- std::unordered_multimap boardsAltPresets (one board can have several presets) ---
     presets = {}
     alt = re.search(r'unordered_multimap[\s\S]*?\s+boardsAltPresets\s*=\s*\{([\s\S]*?)\n\s*\};', content)

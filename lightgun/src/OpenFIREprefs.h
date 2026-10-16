@@ -183,6 +183,7 @@ public:
         OF_Const::analogModeStick,  // analog stick mode
         CAMERA_DEFAULT, // OF_Const::PixArt_PAJ7025R2, // camera model
         OF_Const::bootOutputMouse,  // output mode at boot: unchanged behaviour
+        0,                          // input invert mask: no input inverted
     };
 
     typedef struct USBMap_s {

@@ -751,6 +751,11 @@ fieldset.plain { border: 0; padding: 0; margin: 8px 0 0; }
 
 .pin-box { width: 11.5rem; }
 
+/* Inverted input (NC) checkbox: its place is kept when hidden, so the boxes never move. */
+.pins-tab .pins-col { grid-template-columns: auto auto auto; }
+.pin-invert { font-size: 12px; gap: 3px; white-space: nowrap; }
+.pin-invert.off { visibility: hidden; }
+
 .gpio-label {
     font-size: 12.5px;
     color: var(--gpio-none);
@@ -777,6 +782,7 @@ fieldset.plain { border: 0; padding: 0; margin: 8px 0 0; }
     background: var(--surface);
 }
 
+.pins-bottom-left { display: flex; align-items: center; gap: 8px 18px; flex-wrap: wrap; }
 .pins-bottom-right { display: flex; align-items: center; justify-content: flex-end; gap: 10px 14px; flex-wrap: wrap; }
 .tool-button { border-color: var(--border); background: var(--surface-2); }
 .presets-box { min-width: 15rem; }

@@ -20,6 +20,19 @@
 
     const FIRECON_NAME = (n) => `FIRECon P${n}`;
     const NAME_MAX = 15;
+    const NC_PREFIX = 'NC:';   // .ofl record of an inverted input (normally closed contact)
+    const OFL_CHECKSUM = 'Checksum';
+    const OFL_END = 'End';
+
+    /** CRC-8 (polynomial 0x07, initial value 0) of the .ofl bytes before the checksum record. */
+    function crc8(bytes) {
+        let crc = 0;
+        for (const byte of bytes) {
+            crc ^= byte;
+            for (let bit = 0; bit < 8; ++bit) crc = (crc & 0x80) ? ((crc << 1) ^ 0x07) & 0xFF : (crc << 1) & 0xFF;
+        }
+        return crc;
+    }
 
     /** Ranges of the spin boxes of the Qt App (appmainwindow.ui), by settingsTypes_e name. */
     const SETTING_RANGES = {
@@ -280,6 +293,28 @@
 
         get customPins() { return !!this.cur && !!this.cur.toggles[this.B.customPins]; }
 
+        // ----- Inverted inputs (normally closed contacts) ---------------------------
+
+        /** The input can be read inverted: one of invertibleInputs, with custom pins only
+            (the board ignores the inversions with its default layout). */
+        invertible(fn) {
+            return this.customPins && (this.S.invertibleInputs || []).includes(fn);
+        }
+
+        /** Bit fn of settings[inputInvertMask]: the input is read inverted. */
+        inverted(fn) {
+            const i = this.T.inputInvertMask;
+            return i !== undefined && fn >= 0 && fn < 32 && !!((this.cur.settings[i] >>> fn) & 1);
+        }
+
+        setInverted(fn, on) {
+            const i = this.T.inputInvertMask;
+            if (i === undefined || !(fn >= 0 && fn < 32)) return;
+            const bit = (1 << fn) >>> 0;
+            const mask = this.cur.settings[i] >>> 0;
+            this.cur.settings[i] = (on ? (mask | bit) : (mask & ~bit)) >>> 0;
+        }
+
         /** A pin box changed: index = function value + 1 (0 = unmapped). Returns status messages. */
         changePin(gpio, index) {
             const messages = [];
@@ -409,21 +444,39 @@
             return messages;
         }
 
-        /** Custom layout file (.ofl): board type + '\n', then (function name, NUL, GPIO byte) records. */
+        /** Custom layout file (.ofl): board type + '\n', then records of (name, NUL, one byte):
+            - (function name, NUL, GPIO) for every mapped function;
+            - ("NC:" + function name, NUL, 0) for every inverted input;
+            - ("Checksum", NUL, CRC-8 of every byte before this record), then ("End", NUL, 0) as the last bytes.
+            Readers skip the records they don't know, so later versions can add records without changing
+            this layout. Older readers (Qt app, previous WebApp) still read the pins: an unknown name is
+            followed by a byte they read as the start of the next name, and the file ends with a NUL. */
         exportLayout() {
             const bytes = [];
             const push = (text) => { for (const c of text) bytes.push(c.charCodeAt(0) & 0xFF); };
             push(this.board.type + '\n');
+            const inverted = [];
             for (const [name, value] of Object.entries(this.S.boardInputs_Strings)) {
                 if (value > this.E.btnUnmapped && this.pinMapped(value)) {
                     push(name);
                     bytes.push(0, this.pinOf(value) & 0xFF);
+                    if (this.invertible(value) && this.inverted(value)) inverted.push(name);
                 }
             }
+            for (const name of inverted) {
+                push(NC_PREFIX + name);
+                bytes.push(0, 0);
+            }
+            const crc = crc8(bytes);
+            push(OFL_CHECKSUM);
+            bytes.push(0, crc);
+            push(OFL_END);
+            bytes.push(0, 0);
             return Uint8Array.from(bytes);
         }
 
-        /** Returns 'ok' | 'mismatch'. */
+        /** Returns 'ok' | 'mismatch' (other board) | 'corrupt' (incomplete, damaged or without the
+            checksum and end records: nothing changed). */
         importLayout(data) {
             const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
             const newline = bytes.indexOf(0x0A);
@@ -431,13 +484,32 @@
             if (newline < 0 || firstLine !== this.board.type) return 'mismatch';
 
             const layout = new Array(this.pinCount).fill(this.E.btnUnmapped);
+            const inverted = [];
             let offset = newline + 1;
-            while (offset < bytes.length) {
+            let checked = -1;   // offset just after a valid checksum record
+            for (;;) {
+                if (offset >= bytes.length) return 'corrupt';   // no end record
+                const start = offset;
                 const end = bytes.indexOf(0, offset);
-                if (end < 0 || end + 1 >= bytes.length) break;
+                if (end < 0 || end + 1 >= bytes.length) return 'corrupt';
                 const name = String.fromCharCode(...bytes.subarray(offset, end));
                 const gpio = bytes[end + 1];
                 offset = end + 2;
+                if (name === OFL_END) {
+                    // The end record must follow the checksum record and be the last bytes of the file.
+                    if (start !== checked || offset !== bytes.length || gpio !== 0) return 'corrupt';
+                    break;
+                }
+                if (name === OFL_CHECKSUM) {
+                    if (gpio !== crc8(bytes.subarray(0, start))) return 'corrupt';
+                    checked = offset;
+                    continue;
+                }
+                if (name.startsWith(NC_PREFIX)) {
+                    const fn = this.S.boardInputs_Strings[name.slice(NC_PREFIX.length)];
+                    if (fn !== undefined) inverted.push(fn);
+                    continue;
+                }
                 const value = this.S.boardInputs_Strings[name];
                 if (value !== undefined && gpio < layout.length) layout[gpio] = value;
             }
@@ -447,6 +519,8 @@
             this.altPresetIndex = -1;
             this._applyLayout(layout, messages);
             this._pinSideEffects();
+            // The inversions come from the file only: none in the file = none inverted.
+            for (const fn of this.S.invertibleInputs || []) this.setInverted(fn, inverted.includes(fn));
             // Qt: "recover previous toggles that may have been turned off in the process" (saved values).
             if (this.pinMapped(this.E.solenoidPin)) this.setToggle(this.B.solenoid, this.orig.toggles[this.B.solenoid]);
             if (this.pinMapped(this.E.rumblePin)) this.setToggle(this.B.rumble, this.orig.toggles[this.B.rumble]);

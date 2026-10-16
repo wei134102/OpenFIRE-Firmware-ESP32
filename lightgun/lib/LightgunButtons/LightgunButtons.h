@@ -101,6 +101,10 @@ public:
     /// @brief The buttons that must be defined in the sketch.
     static Desc_t ButtonDesc[];
 
+    /// @brief Inputs read inverted (normally closed contacts): bit N inverts button N.
+    /// @details Zero (the default) reads every button as before.
+    static inline uint32_t invertMask = 0;
+
     /// @brief Bit mask of newly pressed buttons from last poll, 1 if pressed.
     /// @details Resets on each Poll().
     uint32_t pressed;

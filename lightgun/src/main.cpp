@@ -135,6 +135,15 @@ static const uint8_t BOOT_FLAG_FIRMWARE = 0b01; // 1
 static const uint8_t BOOT_FLAG_WEBAPP   = 0b10; // 2
 // Se sono validi entrambi, il risultato sarà 0b11 (cioè 3)
 
+// Reads a button pin as Poll() does, inverted when its input is set as normally closed.
+static int ReadButtonPin(const int pin)
+{
+    for(unsigned int i = 0; i < ButtonCount; ++i)
+        if(LightgunButtons::ButtonDesc[i].pin == pin)
+            return digitalRead(pin) ^ ((LightgunButtons::invertMask >> i) & 1);
+    return digitalRead(pin);
+}
+
 static uint8_t GetBootModeHeld(const int fwPin1, const int fwPin2, 
                                const int webPin1, const int webPin2, 
                                const unsigned long holdMs)
@@ -150,15 +159,15 @@ static uint8_t GetBootModeHeld(const int fwPin1, const int fwPin2,
     while ((millis() - holdStart) < holdMs) {
         
         if (checkFw) {
-            if ((fwPin1 >= 0 && digitalRead(fwPin1) != LOW) || 
-                (fwPin2 >= 0 && digitalRead(fwPin2) != LOW)) {
+            if ((fwPin1 >= 0 && ReadButtonPin(fwPin1) != LOW) || 
+                (fwPin2 >= 0 && ReadButtonPin(fwPin2) != LOW)) {
                 checkFw = false;
             }
         }
 
         if (checkWeb) {
-            if ((webPin1 >= 0 && digitalRead(webPin1) != LOW) || 
-                (webPin2 >= 0 && digitalRead(webPin2) != LOW)) {
+            if ((webPin1 >= 0 && ReadButtonPin(webPin1) != LOW) || 
+                (webPin2 >= 0 && ReadButtonPin(webPin2) != LOW)) {
                 checkWeb = false;
             }
         }
@@ -1429,7 +1438,7 @@ void ExecRunMode()
         #ifdef USES_SWITCHES
             #ifdef USES_RUMBLE
                 if(OF_Prefs::pins[OF_Const::rumbleSwitch] >= 0) {
-                    OF_Prefs::toggles[OF_Const::rumble] = !digitalRead(OF_Prefs::pins[OF_Const::rumbleSwitch]);
+                    OF_Prefs::toggles[OF_Const::rumble] = !(digitalRead(OF_Prefs::pins[OF_Const::rumbleSwitch]) ^ ((LightgunButtons::invertMask >> OF_Const::rumbleSwitch) & 1));
                     #ifdef MAMEHOOKER
                     if(!OF_Serial::serialMode) {
                     #endif // MAMEHOOKER
@@ -1442,7 +1451,7 @@ void ExecRunMode()
             #endif // USES_RUMBLE
             #ifdef USES_SOLENOID
                 if(OF_Prefs::pins[OF_Const::solenoidSwitch] >= 0) {
-                    OF_Prefs::toggles[OF_Const::solenoid] = !digitalRead(OF_Prefs::pins[OF_Const::solenoidSwitch]);
+                    OF_Prefs::toggles[OF_Const::solenoid] = !(digitalRead(OF_Prefs::pins[OF_Const::solenoidSwitch]) ^ ((LightgunButtons::invertMask >> OF_Const::solenoidSwitch) & 1));
                     #ifdef MAMEHOOKER
                     if(!OF_Serial::serialMode) {
                     #endif // MAMEHOOKER
@@ -1455,7 +1464,7 @@ void ExecRunMode()
                 }
             #endif // USES_SOLENOID
             if(OF_Prefs::pins[OF_Const::autofireSwitch] >= 0)
-                OF_Prefs::toggles[OF_Const::autofire] = !digitalRead(OF_Prefs::pins[OF_Const::autofireSwitch]);
+                OF_Prefs::toggles[OF_Const::autofire] = !(digitalRead(OF_Prefs::pins[OF_Const::autofireSwitch]) ^ ((LightgunButtons::invertMask >> OF_Const::autofireSwitch) & 1));
         #endif // USES_SWITCHES
 
         if(FW_Common::irPosUpdateTick) {

@@ -16,6 +16,7 @@ This manual takes you from a freshly flashed gun to your first game: placing the
  - [IR Emitter Setup](#ir-emitter-setup)
  - [Board Configuration](#board-configuration)
    - [Configuration with the WebApp](#configuration-with-the-webapp)
+   - [Normally closed (NC) inputs](#normally-closed-nc-inputs)
    - [Special boot modes](#special-boot-modes)
    - [Camera, display and startup settings](#camera-display-and-startup-settings)
  - [First-time Setup](#first-time-setup)
@@ -104,6 +105,18 @@ Switch on the gun holding **B** for about 2 seconds (see [Special boot modes](#s
 - **Serial port:** in this mode the gun's USB serial port is replaced by the network connection. Online configuration and serial programs such as MAMEHOOKER are not available on the gun's USB port until you restart the gun normally. The dongle keeps its serial port, but do not use it with another program while the WebApp is connected to the gun.
 
 Use one configuration page at a time. When you have finished, save, close the page and **restart the gun without holding any buttons** to return to normal play.
+
+<a id="normally-closed-nc-inputs"></a>
+
+### Normally closed (NC) inputs
+
+Buttons, pedals and switches are normally open: they connect their pin to GND when pressed or on. A **normally closed** device, such as the loader switch of the Blamcon Vyper, does the opposite. To use one, in **Board Layout**:
+
+1. Tick **Use Custom Pins**.
+2. Tick **Edit NC Inputs**: it unlocks the **NC** boxes next to the pins. It is not saved and goes off at every connection, so the inversions cannot be changed by mistake.
+3. Tick **NC** next to the input, then **Save and Send Settings**.
+
+The **NC** box appears only for buttons, pedals and the Rumble, Solenoid and Autofire switches. The inversion belongs to the function, so it follows it if you move it to another pin. With the board's default layout (Use Custom Pins off) no input is inverted.
 
 <a id="special-boot-modes"></a>
 
@@ -372,6 +385,7 @@ Questo manuale ti accompagna da una pistola con il firmware appena installato al
  - [Configurazione Emettitori IR](#configurazione-emettitori-ir-italiano)
  - [Configurazione della Scheda](#configurazione-della-scheda-italiano)
    - [Configurazione con la WebApp](#configurazione-con-la-webapp)
+   - [Ingressi normalmente chiusi (NC)](#ingressi-normalmente-chiusi-nc)
    - [Modalità speciali all'avvio](#modalita-speciali-allavvio)
    - [Telecamera, display e impostazioni di avvio](#telecamera-display-e-impostazioni-di-avvio)
  - [Prima Configurazione](#prima-configurazione-italiano)
@@ -465,6 +479,18 @@ Accendi la pistola tenendo premuto **B** per circa 2 secondi (vedi [Modalità sp
 - **Porta seriale:** in questa modalità la porta seriale USB della pistola è sostituita dal collegamento di rete. La configurazione online e i programmi seriali come MAMEHOOKER non sono disponibili sulla porta USB della pistola finché non la riavvii normalmente. Il dongle mantiene la propria porta seriale, ma non usarla con un altro programma mentre la WebApp è collegata alla pistola.
 
 Usa una sola pagina di configurazione alla volta. Al termine salva, chiudi la pagina e **riavvia la pistola senza tenere premuti pulsanti** per tornare al gioco normale.
+
+<a id="ingressi-normalmente-chiusi-nc"></a>
+
+### Ingressi normalmente chiusi (NC)
+
+Pulsanti, pedali e interruttori sono normalmente aperti: collegano il loro pin a GND quando sono premuti o accesi. Un dispositivo **normalmente chiuso**, come l'interruttore del caricatore della Blamcon Vyper, fa il contrario. Per usarlo, in **Layout Scheda**:
+
+1. Spunta **Usa pin personalizzati**.
+2. Spunta **Modifica ingressi NC**: sblocca le caselle **NC** accanto ai pin. Non viene salvata e si spegne a ogni connessione, così le inversioni non si possono cambiare per errore.
+3. Spunta **NC** accanto all'ingresso, poi **Salva e invia impostazioni**.
+
+La casella **NC** compare solo per pulsanti, pedali e gli interruttori Rumble, Solenoide e Autofire. L'inversione appartiene alla funzione, quindi la segue se la sposti su un altro pin. Con il layout predefinito della scheda (Usa pin personalizzati spento) nessun ingresso è invertito.
 
 <a id="modalita-speciali-allavvio"></a>
 
